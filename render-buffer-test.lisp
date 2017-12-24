@@ -28,6 +28,7 @@
     (run!)))
 
 (defmethod cl-user::contents-will-mount ((self test1) display)
+  (declare (ignorable display))
   (with-slots (loop x y buffer) self
     (setf loop
           (runloop ()
@@ -35,8 +36,7 @@
             (incf y)
             (with-writes-to-render-buffer (buffer)
               (set-color 1.0 1.0 0.0 1.0)
-              (draw-rect x y 20 20))
-            (cl-user::redisplay display)))))
+              (draw-rect x y 20 20))))))
 
 (defmethod cl-user::contents-will-unmount ((self test1) display)
   (declare (ignorable display))
@@ -51,8 +51,7 @@
   (dx 1)
   (dy 1)
   (buffer (make-render-buffer))
-  update-loop
-  display-loop)
+  update-loop)
 
 (defmethod cl-user::draw ((self test2))
   (gl:clear-color 0.0 0.0 0.0 1.0)
@@ -75,20 +74,17 @@
     (draw-rect x y 20 20)))
 
 (defmethod cl-user::contents-will-mount ((self test2) display)
-  (with-slots (x y buffer update-loop display-loop) self
+  (declare (ignorable display))
+  (with-slots (x y buffer update-loop) self
     (setf update-loop
           (runloop (:sleep (/ 1.0 40.0))
             (update-bouncing-box self)
             (with-writes-to-render-buffer (buffer)
               (set-color 1.0 1.0 0.0 1.0)
-              (draw-rect x y 20 20))))
-    (setf display-loop
-          (runloop (:sleep (/ 1.0 30.0))
-            (cl-user::redisplay display)))))
+              (draw-rect x y 20 20))))))
 
 (defmethod cl-user::contents-will-unmount ((self test2) display)
   (declare (ignorable display))
-  (stoploop (test2-display-loop self))
   (stoploop (test2-update-loop self)))
 
 ;; (cl-user::display-contents (make-test2))
@@ -104,10 +100,9 @@
   (a (/ (random 100) 100.0)))
 
 (defstruct test3
-  (boxes (loop repeat 40 collect (make-bouncy-box)))
+  (boxes (loop repeat 4000 collect (make-bouncy-box)))
   (buffer (make-render-buffer))
-  update-loop
-  display-loop)
+  update-loop)
 
 (defmethod cl-user::draw ((self test3))
   (gl:clear-color 0.0 0.0 0.0 1.0)
@@ -116,19 +111,16 @@
     (run!)))
 
 (defmethod cl-user::contents-will-mount ((self test3) display)
-  (with-slots (boxes buffer update-loop display-loop) self
+  (declare (ignorable display))
+  (with-slots (boxes buffer update-loop) self
     (setf update-loop
           (runloop (:sleep (/ 1.0 60.0))
             (map nil 'update-bouncing-box boxes)
             (with-writes-to-render-buffer (buffer)
-              (map nil 'draw-bouncing-box boxes))))
-    (setf display-loop
-          (runloop (:sleep (/ 1.0 60.0))
-            (cl-user::redisplay display)))))
+              (map nil 'draw-bouncing-box boxes))))))
 
 (defmethod cl-user::contents-will-unmount ((self test3) display)
   (declare (ignorable display))
-  (stoploop (test3-display-loop self))
   (stoploop (test3-update-loop self)))
 
 (defvar *my-random-state* (make-random-state t))

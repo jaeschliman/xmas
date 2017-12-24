@@ -19,6 +19,37 @@
    (native-window :accessor native-window :initform nil)
    (contents :accessor contents :initarg :contents)))
 
+(defvar *running-displays* nil)
+(defvar *running-displays-loop* nil)
+
+(defun start-update-loop ()
+  (unless *running-displays-loop*
+    (setf *running-displays-loop*
+          (ccl::process-run-function
+           "display loop"
+           (lambda ()
+             (loop do
+                  (sleep (/ 1.0 60.0))
+                  (progmain ()
+                    (dolist (display *running-displays*)
+                      (alexandria:when-let (view (native-view display))
+                        (#/setNeedsDisplay: view #$YES))))))))))
+
+(defun stop-update-loop ()
+  (when *running-displays-loop*
+    (ccl::process-kill *running-displays-loop*)
+    (setf *running-displays-loop* nil)))
+
+(defun add-running-display (display)
+  (unless *running-displays*
+    (start-update-loop))
+  (push display *running-displays*))
+
+(defun remove-running-display (display)
+  (setf *running-displays* (remove display *running-displays*))
+  (unless *running-displays*
+    (stop-update-loop)))
+
 (defgeneric contents-will-mount (contents display)
   (:method ((anything t) display)
     (declare (ignorable display))
@@ -29,7 +60,11 @@
     (declare (ignorable display))
     (values)))
 
+(defun init-display (display)
+  (add-running-display display))
+
 (defun cleanup-display (display)
+  (remove-running-display display)
   (contents-will-unmount (contents display) display)
   (setf (native-view display) nil
         (native-window display) nil))
@@ -96,7 +131,7 @@
         (setf (native-view result) glview
               (native-window result) w
               (display w) result)
-
+        (init-display result)
         (contents-will-mount contents result)
         (#/setLevel: w 100)
         (#/orderFront: w nil)))
