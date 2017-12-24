@@ -48,8 +48,8 @@
 (defstruct test2
   (x 0)
   (y 5)
-  (dx 1)
-  (dy 1)
+  (dx 10)
+  (dy 10)
   (buffer (make-render-buffer))
   update-loop)
 
@@ -59,10 +59,10 @@
   (with-reads-from-render-buffer ((test2-buffer self))
     (run!)))
 
-(defun update-bouncing-box (box)
+(defun update-bouncing-box (box dt)
   (with-slots (x y dx dy) box
-    (incf x dx)
-    (incf y dy)
+    (incf x (* dx dt))
+    (incf y (* dy dt))
     (cond ((> x 230) (setf x 230 dx (* dx -1)))
           ((< x 0) (setf x 0 dx (* dx -1))))
     (cond ((> y 230) (setf y 230 dy (* dy -1)))
@@ -78,7 +78,7 @@
   (with-slots (x y buffer update-loop) self
     (setf update-loop
           (runloop (:sleep (/ 1.0 40.0))
-            (update-bouncing-box self)
+            (update-bouncing-box self (/ 1.0 60.0))
             (with-writes-to-render-buffer (buffer)
               (set-color 1.0 1.0 0.0 1.0)
               (draw-rect x y 20 20))))))
@@ -92,8 +92,8 @@
 (defstruct bouncy-box
   (x (random 230))
   (y (random 230))
-  (dx (/ (- 10 (random 20)) 10.0))
-  (dy (/ (- 10 (random 20)) 10.0))
+  (dx (- 50 (random 100)))
+  (dy (- 50 (random 100)))
   (r (/ (random 100) 100.0))
   (g (/ (random 100) 100.0))
   (b (/ (random 100) 100.0))
@@ -114,14 +114,17 @@
   (declare (ignorable display))
   (with-slots (boxes buffer update-loop) self
     (setf update-loop
-          (runloop (:sleep (/ 1.0 60.0))
-            (map nil 'update-bouncing-box boxes)
-            (with-writes-to-render-buffer (buffer)
-              (map nil 'draw-bouncing-box boxes))))))
+          (runloop:make-runloop
+           :function
+           (lambda (dt)
+             (dolist (box boxes)
+               (update-bouncing-box box dt))
+             (with-writes-to-render-buffer (buffer)
+               (map nil 'draw-bouncing-box boxes)))))))
 
 (defmethod cl-user::contents-will-unmount ((self test3) display)
   (declare (ignorable display))
-  (stoploop (test3-update-loop self)))
+  (runloop:kill-runloop (test3-update-loop self)))
 
 (defvar *my-random-state* (make-random-state t))
 

@@ -1,0 +1,32 @@
+(defpackage :runloop (:use :cl :alexandria) (:export #:make-runloop #:kill-runloop))
+(in-package :runloop)
+
+(defun make-runloop (&key (name "runloop") (step (/ 1.0 60.0)) function)
+  (bt:make-thread
+   (lambda ()
+     (let ((dt step) start end wait (first-step t)
+           (unit internal-time-units-per-second))
+       (declare (ignorable dt))
+       (loop do
+            (unless first-step
+              (setf dt (/ (- (get-internal-real-time) start)
+                          unit)))
+            (setf
+             first-step nil
+             start (get-internal-real-time))
+            (funcall function
+                     ;;; not sure what's going on yet, but using dt
+                     ;;; appears to give stuttering...
+                     ;;; just hardcoding the step appears to give smoother
+                     ;;; results...
+                     ;; dt
+                     step
+                     )
+            (setf end (get-internal-real-time))
+            (let ((elapsed (/ (- end start) unit)))
+              (setf wait (- step (mod elapsed step))))
+            (sleep wait))))
+   :name name))
+
+(defun kill-runloop (runloop)
+  (bt:destroy-thread runloop))
