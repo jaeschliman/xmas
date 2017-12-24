@@ -9,20 +9,17 @@
 (defun make-buffer (&key (size 1024))
   (make-array size :element-type t :adjustable t :fill-pointer 0))
 
-(defvar *read-buffer* (make-buffer))
-(defvar *write-buffer* (make-buffer))
+(defvar *read-buffer* nil)
+(defvar *write-buffer* nil)
 
 (defvar *pc* 0)
 
 (defstruct render-buffer
-  (pc 0)
   (read-buffer  (make-buffer))
   (write-buffer (make-buffer))
   (back-buffer  (make-buffer))
   (back-buffer-ready? nil)
   (swap-lock    (bt:make-lock)))
-
-(defvar *render-buffer* nil)
 
 (defun swap-write-buffer! (render-buffer)
   (bt:with-lock-held ((render-buffer-swap-lock render-buffer))
@@ -60,11 +57,6 @@
 (defun read! ()
   (prog1 (aref *read-buffer* *pc*)
     (incf *pc*)))
-
-;; TODO: how to make this thread-safe?
-(defun swap-buffers! ()
-  (rotatef *read-buffer* *write-buffer*)
-  (reset-write-buffer!))
 
 (defvar *instr-table* (make-buffer))
 (defvar *instr-counter* 0)
