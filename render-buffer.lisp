@@ -2,6 +2,7 @@
 'render' the scene into a vector of bytecode which can be double/triple buffered,
  and have the drawing thread just interpret that.
 |#
+(ql:quickload :bordeaux-threads)
 (defpackage :render-buffer (:use :cl :alexandria))
 (in-package :render-buffer)
 
@@ -13,13 +14,48 @@
 
 (defvar *pc* 0)
 
-(defvar *instr-table* (make-buffer))
-(defvar *instr-counter* 0)
+(defstruct render-buffer
+  (pc 0)
+  (read-buffer  (make-buffer))
+  (write-buffer (make-buffer))
+  (back-buffer  (make-buffer))
+  (back-buffer-ready? nil)
+  (swap-lock    (bt:make-lock)))
+
+(defvar *render-buffer* nil)
+
+(defun swap-write-buffer! (render-buffer)
+  (bt:with-lock-held ((render-buffer-swap-lock render-buffer))
+    (rotatef (render-buffer-write-buffer render-buffer)
+             (render-buffer-back-buffer render-buffer))
+    (setf (render-buffer-back-buffer-ready? render-buffer) t)))
+
+(defun maybe-swap-read-buffer! (render-buffer)
+  (when (render-buffer-back-buffer-ready? render-buffer)
+    (bt:with-lock-held ((render-buffer-swap-lock render-buffer))
+      (rotatef (render-buffer-read-buffer render-buffer)
+               (render-buffer-back-buffer render-buffer))
+      (setf (render-buffer-back-buffer-ready? render-buffer) nil))))
 
 (defun write! (val)
   (vector-push-extend val *write-buffer*))
 (defun reset-write-buffer! ()
   (setf (fill-pointer *write-buffer*) 0))
+
+(defmacro with-writes-to-render-buffer ((buffer) &body body)
+  (once-only (buffer)
+    `(let ((*write-buffer* (render-buffer-write-buffer ,buffer)))
+       (reset-write-buffer!)
+       (unwind-protect (progn ,@body)
+         (swap-write-buffer! ,buffer)))))
+
+(defmacro with-reads-from-render-buffer ((buffer) &body body)
+  (once-only (buffer)
+    `(progn
+       (maybe-swap-read-buffer! ,buffer)
+       (let ((*read-buffer* (render-buffer-read-buffer ,buffer))
+             (*pc* 0))
+         ,@body))))
 
 (defun read! ()
   (prog1 (aref *read-buffer* *pc*)
@@ -29,6 +65,9 @@
 (defun swap-buffers! ()
   (rotatef *read-buffer* *write-buffer*)
   (reset-write-buffer!))
+
+(defvar *instr-table* (make-buffer))
+(defvar *instr-counter* 0)
 
 (defmacro definstr (name (&rest args) &body body)
   (let ((instr-name (symbolicate '%instr- name))
@@ -43,7 +82,6 @@
          (let ,(loop for arg in args collect `(,arg (read!)))
            ,@body))
        (vector-push-extend #',instr-name *instr-table*))))
-
 
 (defun run! ()
   (unwind-protect
