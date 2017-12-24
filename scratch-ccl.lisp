@@ -6,18 +6,49 @@
   (declare (ignorable bindings))
   `(ccl::queue-for-event-process (lambda () ,@b )))
 
-(defgeneric draw (contents))
+(defclass display ()
+  ((native-view :accessor native-view :initform nil)
+   (native-window :accessor native-window :initform nil)
+   (contents :accessor contents :initarg :contents)
+   (width :accessor display-width :initarg :width)
+   (height :accessor display-height :initarg :height)
+   (fps :reader display-fps :initarg :fps)
+   (runloop :accessor display-runloop :initform nil)
+   (renderbuffer :accessor display-renderbuffer
+                 :initform (render-buffer::make-render-buffer))))
+
+(defgeneric step-contents (contents dt)
+  (:method (contents dt) (declare (ignorable contents dt))))
+
+(defgeneric mount-contents (contents display)
+  (:method (contents (display display))
+    (setf (display-runloop display)
+          (runloop:make-runloop
+           :name "runloop"
+           :step (display-fps display)
+           :function
+           (lambda (dt)
+             (render-buffer::with-writes-to-render-buffer
+                 ((display-renderbuffer display))
+               (step-contents contents dt)))))))
+
+(defgeneric unmount-contents (contents display)
+  (:method (contents (display display))
+    (runloop:kill-runloop (display-runloop display))))
+
+(defgeneric draw (contents display)
+  (:method (contents (display display))
+    (declare (ignorable contents))
+    (gl:clear-color 0.0 0.0 0.0 1.0)
+    (gl:clear :color-buffer)
+    (render-buffer::with-reads-from-render-buffer ((display-renderbuffer display))
+      (render-buffer::run!))))
 
 (require :cocoa)
 (progmain ()
   (ql:quickload :cl-opengl)
   (ql:quickload :cl-glu)
   (ql:quickload :cl-glut))
-
-(defclass display ()
-  ((native-view :accessor native-view :initform nil)
-   (native-window :accessor native-window :initform nil)
-   (contents :accessor contents :initarg :contents)))
 
 (defvar *running-displays* nil)
 (defvar *running-displays-loop* nil)
@@ -66,6 +97,7 @@
 (defun cleanup-display (display)
   (remove-running-display display)
   (contents-will-unmount (contents display) display)
+  (unmount-contents (contents display) display)
   (setf (native-view display) nil
         (native-window display) nil))
 
@@ -74,10 +106,11 @@
   (:metaclass ns:+ns-object))
 
 (defclass my-view (ns:ns-opengl-view)
-  ((contents :accessor my-view-contents :initarg :contents :initform nil))
+  ((contents :accessor my-view-contents :initarg :contents :initform nil)
+   (display  :accessor my-view-display  :initarg :display  :initform nil))
   (:metaclass ns:+ns-object))
 
-(defun shape-gl-2d (width height)
+(defun prepare-gl-2d (width height)
   (gl:matrix-mode :projection)
   (gl:load-identity)
   (glu:ortho-2d 0 width 0 height)
@@ -87,7 +120,7 @@
   (let* ((f (#/frame self))
          (w (pref f :<NSR>ect.size.width))
          (h (pref f :<NSR>ect.size.height)))
-    (shape-gl-2d w h)))
+    (prepare-gl-2d w h)))
 
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
   (#_glClearColor 0.05 0.05 0.05 0.0)
@@ -99,8 +132,8 @@
 
 (objc:defmethod (#/drawRect: :void) ((self my-view) (a-rect :ns-rect))
   (declare (ignorable a-rect))
-  (with-slots (contents) self
-    (when contents (draw contents)))
+  (with-slots (contents display) self
+    (when contents (draw contents display)))
   (#_glFlush))
 
 (defmethod redisplay ((self display))
@@ -112,8 +145,13 @@
                                     (width 250)
                                     (height 250)
                                     (title "untitled")
-                                    (expandable nil))
-  (let ((result (make-instance 'display :contents contents)))
+                                    (expandable nil)
+                                    (fps (/ 1.0 60.0)))
+  (let ((result (make-instance 'display
+                               :fps fps
+                               :contents contents
+                               :width width
+                               :height height)))
     (progmain ()
       (let* ((w (gui::new-cocoa-window :class (find-class 'my-window)
                                        :title title
@@ -124,6 +162,7 @@
              (w-frame (#/frame w-content-view))
              (glview (make-instance 'my-view
                                     :contents contents
+                                    :display  result
                                     :with-frame w-frame
                                     :pixel-format (#/defaultPixelFormat ns:ns-opengl-view))))
         (#/addSubview: w-content-view glview)
@@ -133,36 +172,8 @@
               (display w) result)
         (init-display result)
         (contents-will-mount contents result)
+        (mount-contents contents result)
         (#/setLevel: w 100)
         (#/orderFront: w nil)))
 
     result))
-
-(defstruct my-thing (x 10) (y 10) (thread nil))
-
-(defmethod draw ((self my-thing))
-  (gl:clear-color 0.0 1.0 0.0 1.0)
-  (gl:clear :color-buffer)
-  (gl:color 0 0 1 0.5)
-  (let ((x (my-thing-x self))
-        (y (my-thing-y self)))
-    (gl:rect x y (+ x 10) (+ y 10))))
-
-
-(defmethod contents-will-mount ((self my-thing) display)
-  (let* ((fn
-          (lambda ()
-            (loop do
-                 (sleep 1)
-                 (incf (my-thing-x self) 1)
-                 (incf (my-thing-y self) 1)
-                 (redisplay display))))
-         (proc (ccl::process-run-function "my thing loop" fn)))
-    (setf (my-thing-thread self) proc)))
-
-(defmethod contents-will-unmount ((self my-thing) display)
-  (declare (ignorable display))
-  (alexandria:when-let (proc (my-thing-thread self))
-    (ccl::process-kill proc)))
-
-(display-contents (make-my-thing))
