@@ -113,7 +113,8 @@
 
 (defclass my-view (ns:ns-opengl-view)
   ((contents :accessor my-view-contents :initarg :contents :initform nil)
-   (display  :accessor my-view-display  :initarg :display  :initform nil))
+   (display  :accessor my-view-display  :initarg :display  :initform nil)
+   (requires-resize? :accessor my-view-requires-resize? :initform nil))
   (:metaclass ns:+ns-object))
 
 (defun prepare-gl-2d (width height)
@@ -144,13 +145,15 @@
 (objc:defmethod (#/windowDidResize: :void) ((self my-window) notification)
   (declare (ignorable notification))
   (let ((view (#/contentView self)))
-    (reshape-window view)
+    (setf (my-view-requires-resize? view) t)
     (multiple-value-bind (w h) (nsview-size view)
       (runloop:enqueue-runloop-event (display-runloop (display self))
                                      (cons :resize (cons w h))))))
 
 (objc:defmethod (#/drawRect: :void) ((self my-view) (a-rect :ns-rect))
   (declare (ignorable a-rect))
+  (when (my-view-requires-resize? self)
+    (reshape-window self))
   (with-slots (contents display) self
     (when contents (draw contents display)))
   (#_glFlush))
