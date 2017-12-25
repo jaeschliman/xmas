@@ -23,6 +23,17 @@
       (gl:tex-coord 0  0)
       (gl:vertex    x  y2 0))) )
 
+(definstr push-matrix ()
+  (gl:push-matrix))
+
+(definstr pop-matrix ()
+  (gl:pop-matrix))
+
+(definstr translate-scale-rotate (x y sx sy r)
+  (gl:translate x y 0.0)
+  (gl:scale sx sy 1.0)
+  (gl:rotate r 0.0 0.0 1.0))
+
 (defun draw-texture (texture)
   (when (cl-user::texture-id texture)
     (simple-draw-gl-texture (cl-user::texture-id texture)
@@ -108,3 +119,84 @@
   (draw-texture (test4-alien self)))
 
 (cl-user::display-contents (make-test4))
+
+
+(defstruct sprite
+  (x 0.0)
+  (y 0.0)
+  (sx 1.0)
+  (sy 1.0)
+  (r 0.0)
+  (texture nil)
+  (dx 0.0)
+  (dy 0.0)
+  (dsx 0.0)
+  (dsy 0.0)
+  (dr 0.0))
+
+(defun update-sprite (sprite maxx maxy dt)
+  (declare (type sprite sprite))
+  (with-slots (x y dx dy r dr) sprite
+    (incf x (* dx dt))
+    (incf y (* dy dt))
+    (incf r (* dr dt))
+    (setf r (mod r 360.0))
+    (cond ((< x 0) (setf x 0 dx (* -1 dx)))
+          ((> x maxx) (setf x maxx dx (* -1 dx))))
+    (cond ((< y 0) (setf y 0 dy (* -1 dy)))
+          ((> y maxy) (setf y maxy dy (* -1 dy))))))
+
+(defun draw-sprite (sprite)
+  (push-matrix)
+  (translate-scale-rotate (sprite-x sprite) (sprite-y sprite)
+                          (sprite-sx sprite) (sprite-sy sprite)
+                          (sprite-r sprite))
+  (draw-texture (sprite-texture sprite))
+  (pop-matrix))
+
+(defstruct test5
+  width
+  height
+  texture
+  sprites)
+
+(defmethod cl-user::contents-will-mount ((self test5) display)
+  (let ((width (cl-user::display-width display))
+        (height (cl-user::display-height display))
+        (texture (cl-user::load-texture display #P"./alien.png")))
+    (unless texture
+      (format t "missing texture!"))
+    (setf (test5-width self) width)
+    (setf (test5-height self) height)
+    (setf (test5-texture self) texture)
+    (setf (test5-sprites self)
+          (loop repeat 4000 collect
+               (make-sprite :x (random width)
+                            :y (random height)
+                            :dx (- (random 100) 50)
+                            :dy (- (random 100) 50)
+                            :r (random 360)
+                            :dr (- (random 100) 50)
+                            :sx 0.5
+                            :sy 0.5
+                            :texture texture)))))
+
+
+(defmethod cl-user::step-contents ((self test5) dt)
+  (declare (ignorable dt))
+  (let ((maxx (test5-width self)) (maxy (test5-height self)))
+    (dolist (sprite (test5-sprites self))
+      (update-sprite sprite maxx maxy dt)))
+  (dolist (sprite (test5-sprites self))
+    (draw-sprite sprite)))
+
+(defmethod cl-user::handle-event ((self test5) event)
+  (case (car event)
+    (:resize
+     (let ((w (cadr event))
+           (h (cddr event)))
+       (setf (test5-width self) w
+             (test5-height self) h)))
+    (t (format t "got unhandled event: ~S~%" event))))
+
+(cl-user::display-contents (make-test5) :width 500 :height 500 :expandable t)
