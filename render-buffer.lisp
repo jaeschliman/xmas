@@ -58,7 +58,7 @@
     (incf *pc*)))
 
 (defvar *instr-table* (make-buffer))
-(defvar *instr-counter* 0)
+(defvar *instr-counter* (length *instr-table*))
 
 (defmacro definstr (name (&rest args) &body body)
   (let ((instr-name (symbolicate '%instr- name))
@@ -73,6 +73,24 @@
          (let ,(loop for arg in args collect `(,arg (read!)))
            ,@body))
        (vector-push-extend #',instr-name *instr-table*))))
+
+(defmacro definstr-vec (name (arg) &body body)
+  (let ((instr-name (symbolicate '%instr- name))
+        (instr *instr-counter*))
+    (incf *instr-counter*)
+    `(progn
+       (defun ,name (,arg)
+         (write! ,instr)
+         (write! (length ,arg))
+         (loop for elt across ,arg do (write! elt)))
+       (defun ,instr-name ()
+         (macrolet ((do-vec! ((sym) &body body)
+                      `(loop repeat (read!)
+                          for ,sym = (read!) do
+                            ,@body)))
+           ,@body))
+       (vector-push-extend #',instr-name *instr-table*))))
+
 
 (defun run! ()
   (unwind-protect

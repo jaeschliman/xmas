@@ -21,13 +21,21 @@
       (gl:tex-coord 1  0)
       (gl:vertex    x2 y2 0)
       (gl:tex-coord 0  0)
-      (gl:vertex    x  y2 0))) )
+      (gl:vertex    x  y2 0))))
 
 (definstr push-matrix ()
   (gl:push-matrix))
 
 (definstr pop-matrix ()
   (gl:pop-matrix))
+
+(definstr-vec mult-matrix (vec)
+  (cffi:with-foreign-object (matrix '%gl:float 16)
+    (let ((i 0))
+      (do-vec! (val)
+        (setf (cffi:mem-aref matrix '%gl:float i) val)
+        (incf i))
+      (%gl:mult-matrix-f matrix))))
 
 (definstr translate-scale-rotate (x y sx sy r)
   (gl:translate x y 0.0)
@@ -200,3 +208,29 @@
     (t (format t "got unhandled event: ~S~%" event))))
 
 (cl-user::display-contents (make-test5) :width 500 :height 500 :expandable t)
+
+(defstruct test6
+  (matrix (matrix:make-matrix))
+  (scratch-matrix (matrix:make-matrix)))
+
+(defmethod cl-user::contents-will-mount ((self test6) display)
+  (declare (ignorable display))
+  (let ((m (test6-matrix self)))
+    (matrix:into-matrix (m)
+      (matrix:load-identity)
+      (matrix:translate 125.0 125.0))))
+
+(defmethod cl-user::step-contents ((self test6) dt)
+  (declare (ignorable dt))
+  (let ((matrix:*tmp-matrix* (test6-scratch-matrix self)))
+    (matrix:into-matrix ((test6-matrix self))
+      (matrix:rotate (* 40 dt))))
+  (set-color 0.0 1.0 0.0 0.5)
+  (draw-rect 10.0 10.0 20.0 20.0)
+  (push-matrix)
+  (mult-matrix (matrix:unwrap-matrix (test6-matrix self)))
+  (draw-rect 10.0 10.0 20.0 20.0)
+  (draw-rect 30.0 30.0 20.0 20.0)
+  (pop-matrix))
+
+(cl-user::display-contents (make-test6))
