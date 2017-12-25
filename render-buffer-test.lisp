@@ -54,6 +54,9 @@
 (defmethod cl-user::contents-will-unmount ((self test3) display)
   (declare (ignorable self display)))
 
+(defmethod cl-user::handle-event ((self test3) event)
+  (format t "got event: ~S~%" event))
+
 (defvar *my-random-state* (make-random-state t))
 
 ;; (let ((*random-state* *my-random-state*))

@@ -17,6 +17,9 @@
    (renderbuffer :accessor display-renderbuffer
                  :initform (render-buffer::make-render-buffer))))
 
+(defgeneric handle-event (contents event)
+  (:method (contents event) (declare (ignorable contents event))))
+
 (defgeneric step-contents (contents dt)
   (:method (contents dt) (declare (ignorable contents dt))))
 
@@ -30,7 +33,10 @@
            (lambda (dt)
              (render-buffer::with-writes-to-render-buffer
                  ((display-renderbuffer display))
-               (step-contents contents dt)))))))
+               (step-contents contents dt)))
+           :event-handler
+           (lambda (event)
+             (handle-event contents event))))))
 
 (defgeneric unmount-contents (contents display)
   (:method (contents (display display))
@@ -135,6 +141,37 @@
   (with-slots (contents display) self
     (when contents (draw contents display)))
   (#_glFlush))
+
+(objc:defmethod (#/acceptsFirstResponder :<BOOL>)
+    ((self my-view))
+  #$YES)
+
+(objc:defmethod (#/canBecomeKeyView :<BOOL>)
+    ((self my-view))
+  #$YES)
+
+(defun %translate-keycode (ns-event)
+  (case (#/keyCode ns-event)
+    (123 :left)
+    (124 :right)
+    (125 :down)
+    (126 :up)
+    (t   (let* ((nss (#/characters ns-event))
+                (s   (ccl::lisp-string-from-nsstring nss)))
+           (when (length s)
+             (aref s 0))))))
+
+(defun %enqueue-key-event (myview ns-event event)
+  (let ((key (%translate-keycode ns-event))
+        (runloop (display-runloop (my-view-display myview))))
+    (runloop:enqueue-runloop-event runloop (cons event key))))
+
+(objc:defmethod (#/keyDown: :void) ((self my-view) event)
+  (%enqueue-key-event self event :keydown))
+
+(objc:defmethod (#/keyUp: :void) ((self my-view) event)
+  (%enqueue-key-event self event :keyup)
+  (%enqueue-key-event self event :keypress))
 
 (defmethod redisplay ((self display))
   (alexandria:when-let ((view (native-view self)))
