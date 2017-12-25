@@ -10,7 +10,9 @@
    (runloop :accessor display-runloop :initform nil)
    (gl-queue :accessor display-gl-queue :initform (queues:make-queue :simple-cqueue))
    (renderbuffer :accessor display-renderbuffer
-                 :initform (render-buffer::make-render-buffer))))
+                 :initform (render-buffer::make-render-buffer))
+   (scratch-matrix :accessor display-scratch-matrix
+                   :initform (matrix:make-matrix))))
 
 (defun display-drain-gl-queue (display)
   (loop
@@ -30,18 +32,20 @@
 
 (defgeneric mount-contents (contents display)
   (:method (contents (display display))
-    (setf (display-runloop display)
-          (runloop:make-runloop
-           :name "runloop"
-           :step (display-fps display)
-           :function
-           (lambda (dt)
-             (render-buffer::with-writes-to-render-buffer
-                 ((display-renderbuffer display))
-               (step-contents contents dt)))
-           :event-handler
-           (lambda (event)
-             (handle-event contents event))))))
+    (let ((scratch-matrix (display-scratch-matrix display)))
+      (setf (display-runloop display)
+            (runloop:make-runloop
+             :name "runloop"
+             :step (display-fps display)
+             :function
+             (lambda (dt)
+               (let ((matrix:*tmp-matrix* scratch-matrix))
+                 (render-buffer::with-writes-to-render-buffer
+                     ((display-renderbuffer display))
+                   (step-contents contents dt))))
+             :event-handler
+             (lambda (event)
+               (handle-event contents event)))))))
 
 (defgeneric unmount-contents (contents display)
   (:method (contents (display display))

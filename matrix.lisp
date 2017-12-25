@@ -1,8 +1,11 @@
 (defpackage :matrix (:use :cl :alexandria)
             (:export
              #:make-matrix
+             #:copy-matrix
              #:unwrap-matrix
              #:into-matrix
+             #:cat-matrix
+             #:left-cat-matrix
              #:*current-matrix*
              #:*tmp-matrix*
              #:load-identity
@@ -72,6 +75,7 @@
    (mref/unwrapped m 0 0) sx
    (mref/unwrapped m 1 1) sy))
 
+;;this method gets called ALOT -- could use some optimizing.
 (defun cat-matrix/unwrapped (o m)
   (macrolet ((@ (&rest args) `(mref/unwrapped ,@args)))
     (loop for row from 0 to 3
@@ -96,6 +100,7 @@
 (defvar *tmp-matrix* nil)
 
 (defun make-matrix () (make-m4))
+(defun copy-matrix (m4) (make-m4 :vector (copy-seq (m4-vector m4))))
 (defun unwrap-matrix (m4) (m4-vector m4))
 
 (defmacro into-matrix ((&optional name) &body b)
@@ -109,6 +114,26 @@
          (prog1 *current-matrix*
            ,@b))))
 
+;; args are in reverse order, as the left hand side is
+;; the implied argument
+(defun cat-matrix (other &optional (m4 *current-matrix*))
+  (cat-matrix/unwrapped (m4-vector other) (m4-vector m4)))
+
+(defun left-cat-matrix (other &optional (m *current-matrix*))
+  ;;hmmmm.
+  ;; c o m = MxO into M
+  ;; l-c-m o m = OxM into M.
+
+  ;; could probably rewrite this without
+  ;; the extra storage with enough effort.
+  
+  ;; M <- OxM
+  ;; copy O into T
+  (load-matrix other *tmp-matrix*)
+  ;; T <- TxM 
+  (cat-matrix m *tmp-matrix*)
+  ;; copy T into M
+  (load-matrix *tmp-matrix* m))
 
 (defun load-identity (&optional (m4 *current-matrix*))
   (load-identity/unwrapped (m4-vector m4))) 

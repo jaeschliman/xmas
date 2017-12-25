@@ -234,3 +234,69 @@
   (pop-matrix))
 
 (cl-user::display-contents (make-test6))
+
+(defmethod draw ((self node:node))
+  (apply 'set-color (node:color self))
+  (draw-rect -20.0 -20.0 40.0 40.0))
+
+;; the fast method:
+;; (defmethod visit ((self node:node))
+;;   (push-matrix)
+;;   (translate-scale-rotate (node:x self) (node:y self)
+;;                           (node:scale-x self) (node:scale-y self)
+;;                           (node:rotation self))
+;;   (draw self)
+;;   (pop-matrix))
+
+;; the also-fast method:
+;; (defmethod visit ((self node:node))
+;;   (push-matrix)
+;;   (translate-scale-rotate (node:x self) (node:y self)
+;;                           (node:scale-x self) (node:scale-y self)
+;;                           (node:rotation self))
+;;   (node:node-transform self) ;; <- note this addition
+;;   (draw self)
+;;   (pop-matrix))
+
+;; the slow as sin method. seems to indicate that the mult-matrix
+;; method is to blame for perf trouble.
+(defmethod visit ((self node:node))
+  (push-matrix)
+  (mult-matrix (matrix:unwrap-matrix (node:node-transform self)))
+  (draw self)
+  ;;visit children here.
+  (pop-matrix))
+
+(defstruct test7
+  nodes
+  width
+  height)
+
+(defmethod cl-user::contents-will-mount ((self test7) display)
+  (with-slots (nodes width height) self
+    (setf width (cl-user::display-width display)
+          height (cl-user::display-height display)
+          nodes
+          (loop repeat 4000 collect
+               (make-instance 'node:node
+                              :x (coerce (random width) 'float) 
+                              :y (coerce (random height) 'float)
+                              :rotation (coerce (random 360) 'float)
+                              :color (list
+                                      (/ (random 100) 100.0)
+                                      (/ (random 100) 100.0)
+                                      (/ (random 100) 100.0)
+                                      (/ (random 100) 100.0)))))))
+
+(defmethod cl-user::step-contents ((self test7) dt)
+  (declare (ignorable dt))
+  (dolist (node (test7-nodes self))
+    (let ((r (node:rotation node)))
+      (incf r (* dt 100))
+      (setf r (mod r 360))
+      (setf (node:rotation node) r)))
+  (set-color 0.0 1.0 1.0 0.4)
+  (dolist (node (test7-nodes self))
+    (visit node)))
+
+(cl-user::display-contents (make-test7) :width 500 :height 500)

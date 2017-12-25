@@ -16,6 +16,7 @@
   (ql:quickload :cl-glut)
   (load "./runloop.lisp")
   (load "./render-buffer.lisp")
+  (load "./matrix.lisp")
   (load "./scratch-ccl.lisp")
   (load "./texture.lisp")
   )
