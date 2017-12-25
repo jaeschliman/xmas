@@ -117,15 +117,20 @@
   (:metaclass ns:+ns-object))
 
 (defun prepare-gl-2d (width height)
+  (gl:viewport 0 0 width height)
   (gl:matrix-mode :projection)
   (gl:load-identity)
   (glu:ortho-2d 0 width 0 height)
   (gl:matrix-mode :modelview))
-  
-(defun reshape-window (self)
+
+(defun nsview-size (self)
   (let* ((f (#/frame self))
          (w (pref f :<NSR>ect.size.width))
          (h (pref f :<NSR>ect.size.height)))
+    (values w h)))
+
+(defun reshape-window (self)
+  (multiple-value-bind (w h) (nsview-size self)
     (prepare-gl-2d w h)))
 
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
@@ -135,6 +140,14 @@
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
   (cleanup-display (display self)))
+
+(objc:defmethod (#/windowDidResize: :void) ((self my-window) notification)
+  (declare (ignorable notification))
+  (let ((view (#/contentView self)))
+    (reshape-window view)
+    (multiple-value-bind (w h) (nsview-size view)
+      (runloop:enqueue-runloop-event (display-runloop (display self))
+                                     (cons :resize (cons w h))))))
 
 (objc:defmethod (#/drawRect: :void) ((self my-view) (a-rect :ns-rect))
   (declare (ignorable a-rect))
@@ -202,7 +215,7 @@
                                     :display  result
                                     :with-frame w-frame
                                     :pixel-format (#/defaultPixelFormat ns:ns-opengl-view))))
-        (#/addSubview: w-content-view glview)
+        (#/setContentView: w glview)
         (#/setDelegate: w w)
         (setf (native-view result) glview
               (native-window result) w

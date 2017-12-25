@@ -55,9 +55,18 @@
   (declare (ignorable self display)))
 
 (defmethod cl-user::handle-event ((self test3) event)
-  (format t "got event: ~S~%" event))
+  (case (car event)
+    (:resize
+     (let ((w (cadr event))
+           (h (cddr event)))
+       (setf (test3-width self) w
+             (test3-height self) h)))
+    (t (format t "got unhandled event: ~S~%" event))))
 
 (defvar *my-random-state* (make-random-state t))
 
-;; (let ((*random-state* *my-random-state*))
-;;   (cl-user::display-contents (make-test3) :width 500 :height 500))
+(let ((*random-state* *my-random-state*))
+  (cl-user::display-contents (make-test3)
+                             :width 500
+                             :height 500
+                             :expandable t))
