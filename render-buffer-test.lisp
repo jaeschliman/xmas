@@ -6,11 +6,35 @@
 (definstr draw-rect (x y w h)
   (gl:rect x y (+ x w) (+ y h)))
 
+(definstr simple-draw-gl-texture (id w h)
+  (gl:bind-texture :texture-2d id)
+  (gl:color 1 1 1)
+  (let* ((x (- (/ w 2)))
+         (y (- (/ h 2)))
+         (x2 (+ x w))
+         (y2 (+ y h)))
+    (gl:with-primitive :quads
+      (gl:tex-coord 0  1)
+      (gl:vertex    x  y  0)
+      (gl:tex-coord 1  1)
+      (gl:vertex    x2 y  0)
+      (gl:tex-coord 1  0)
+      (gl:vertex    x2 y2 0)
+      (gl:tex-coord 0  0)
+      (gl:vertex    x  y2 0))) )
+
+(defun draw-texture (texture)
+  (when (cl-user::texture-id texture)
+    (simple-draw-gl-texture (cl-user::texture-id texture)
+                            (cl-user::texture-width texture)
+                            (cl-user::texture-height texture))))
+
+
 (defstruct bouncy-box
   (x (random 230))
   (y (random 230))
-  (dx (- 50 (random 100)))
-  (dy (- 50 (random 100)))
+  (dx (* 2 (- 50 (random 100))))
+  (dy (* 2 (- 50 (random 100))))
   (r (/ (random 100) 100.0))
   (g (/ (random 100) 100.0))
   (b (/ (random 100) 100.0))
@@ -70,3 +94,17 @@
                              :width 500
                              :height 500
                              :expandable t))
+
+(defstruct test4
+  alien)
+
+(defmethod cl-user::contents-will-mount ((self test4) display)
+  (setf (test4-alien self) (cl-user::load-texture display #P"./alien.png"))
+  (unless (test4-alien self)
+    (format t "missing texture!")))
+
+(defmethod cl-user::step-contents ((self test4) dt)
+  (declare (ignorable dt))
+  (draw-texture (test4-alien self)))
+
+(cl-user::display-contents (make-test4))

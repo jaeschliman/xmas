@@ -2,7 +2,6 @@
 'render' the scene into a vector of bytecode which can be double/triple buffered,
  and have the drawing thread just interpret that.
 |#
-(ql:quickload :bordeaux-threads)
 (defpackage :render-buffer (:use :cl :alexandria))
 (in-package :render-buffer)
 

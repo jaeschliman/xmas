@@ -1,10 +1,4 @@
 (in-package :cl-user)
-(ql:quickload :alexandria)
-
-(defmacro progmain ((&rest bindings) &body b)
-  ;;eventually do something with bindings. get later.
-  (declare (ignorable bindings))
-  `(ccl::queue-for-event-process (lambda () ,@b )))
 
 (defclass display ()
   ((native-view :accessor native-view :initform nil)
@@ -14,8 +8,19 @@
    (height :accessor display-height :initarg :height)
    (fps :reader display-fps :initarg :fps)
    (runloop :accessor display-runloop :initform nil)
+   (gl-queue :accessor display-gl-queue :initform (queues:make-queue :simple-cqueue))
    (renderbuffer :accessor display-renderbuffer
                  :initform (render-buffer::make-render-buffer))))
+
+(defun display-drain-gl-queue (display)
+  (loop
+     with queue = (display-gl-queue display)
+     for thunk = (queues:qpop queue)
+     while thunk
+     do (funcall thunk)))
+
+(defun display-enqueue-for-gl (display thunk)
+  (queues:qpush (display-gl-queue display) thunk))
 
 (defgeneric handle-event (contents event)
   (:method (contents event) (declare (ignorable contents event))))
@@ -40,6 +45,7 @@
 
 (defgeneric unmount-contents (contents display)
   (:method (contents (display display))
+    (declare (ignorable contents))
     (runloop:kill-runloop (display-runloop display))))
 
 (defgeneric draw (contents display)
@@ -47,14 +53,11 @@
     (declare (ignorable contents))
     (gl:clear-color 0.0 0.0 0.0 1.0)
     (gl:clear :color-buffer)
+    (gl:enable :texture-2d)
+    (gl:enable :blend)
+    (gl:blend-func :src-alpha :one-minus-src-alpha)
     (render-buffer::with-reads-from-render-buffer ((display-renderbuffer display))
       (render-buffer::run!))))
-
-(require :cocoa)
-(progmain ()
-  (ql:quickload :cl-opengl)
-  (ql:quickload :cl-glu)
-  (ql:quickload :cl-glut))
 
 (defvar *running-displays* nil)
 (defvar *running-displays-loop* nil)
@@ -136,7 +139,8 @@
 
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
   (#_glClearColor 0.05 0.05 0.05 0.0)
-  (reshape-window self))
+  (reshape-window self)
+  (display-drain-gl-queue (my-view-display self)))
 
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
@@ -154,6 +158,7 @@
   (declare (ignorable a-rect))
   (when (my-view-requires-resize? self)
     (reshape-window self))
+  (display-drain-gl-queue (my-view-display self))
   (with-slots (contents display) self
     (when contents (draw contents display)))
   (#_glFlush))

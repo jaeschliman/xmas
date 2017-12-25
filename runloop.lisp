@@ -1,4 +1,3 @@
-(ql:quickload :queues.simple-cqueue)
 (defpackage :runloop (:use :cl :alexandria) (:export #:make-runloop #:kill-runloop #:enqueue-runloop-event))
 (in-package :runloop)
 
