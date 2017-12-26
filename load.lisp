@@ -19,4 +19,6 @@
   (load "./matrix.lisp")
   (load "./scratch-ccl.lisp")
   (load "./texture.lisp")
+  (load "./node.lisp")
+  (load "./action.lisp")
   )
