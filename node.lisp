@@ -24,7 +24,11 @@
    #:remove-from-parent
 
    #:node-transform
-   ))
+   #:running
+   #:run-action
+   #:stop-all-actions
+   #:on-enter
+   #:on-exit))
 (in-package :node)
 
 ;;; honestly, this should probably be a struct...
@@ -45,7 +49,9 @@
    (xform                :accessor xform                :initform (matrix:make-matrix))
    (xform-dirty-p        :accessor xform-dirty-p        :initform t)
    (parent-xform         :accessor parent-xform         :initform (matrix:make-matrix))
-   (parent-xform-dirty-p :accessor parent-xform-dirty-p :initform t))
+   (parent-xform-dirty-p :accessor parent-xform-dirty-p :initform t)
+   (running              :accessor running              :initform nil)
+   (pending-actions      :accessor pending-actions      :initform nil))
   (:default-initargs
    :x        0.0 :y       0.0
    :scale-x  1.0 :scale-y 1.0
@@ -137,18 +143,3 @@
       (left-cat-matrix (node-to-parent-transform self)))
     (copy-matrix (node-to-parent-transform self))))
 
-(defmethod add-child ((parent node) (child node))
-  (unless (children parent)
-    (setf (children parent) (make-array 0 :element-type t :fill-pointer 0 :adjustable t)))
-  (vector-push-extend child (children parent))
-  (setf (parent child) parent)
-  (mark-as-dirty child))
-
-(defmethod remove-child ((parent node) (child node))
-  (when (children parent)
-    (setf (children parent) (delete child (children parent))))
-  (setf (parent child) nil))
-
-(defmethod remove-from-parent ((child node))
-  (when (parent child)
-    (remove-child (parent child) child)))

@@ -341,20 +341,31 @@
 (cl-user::display-contents (make-test7) :width 500 :height 500)
 
 
-(defstruct test8 node)
+(defstruct test8
+  node
+  started)
 
 (defmethod cl-user::contents-will-mount ((self test8) display)
-  (setf (test8-node self)
-        (make-instance 'node:node
-                       :x (/ (cl-user::display-width display) 2)
-                       :y (/ (cl-user::display-height display) 2)))
-  (action-manager:add-action action-manager:*action-manager*
-                             (action:repeat-forever
-                              (action:rotate-by 5.0 360.0))
-                             (test8-node self)))
+  (let ((node (make-instance 'node:node
+                             :x (/ (cl-user::display-width display) 2)
+                             :y (/ (cl-user::display-height display) 2)))
+        (node2 (make-instance 'node:node
+                              :x 20.0
+                              :y 20.0)))
+    (node:run-action node
+                     (action:repeat-forever
+                      (action:rotate-by 5.0 360.0)))
+    (node:run-action node2
+                     (action:repeat-forever
+                      (action:rotate-by 2.5 -360.0)))
+    (node:add-child node node2)
+    (setf (test8-node self) node)))
 
 (defmethod cl-user::step-contents ((self test8) dt)
   (declare (ignorable dt))
+  (unless (test8-started self)
+    (setf (test8-started self) t)
+    (node:on-enter (test8-node self)))
   (visit (test8-node self)))
 
 (cl-user::display-contents (make-test8))

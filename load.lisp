@@ -20,6 +20,7 @@
   (load "./node.lisp")
   (load "./action.lisp")
   (load "./action-manager.lisp")
+  (load "./node-lifecycle.lisp")
   (load "./scratch-ccl.lisp")
   (load "./texture.lisp")
   )
