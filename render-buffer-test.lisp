@@ -250,13 +250,16 @@
   (draw-rect -20.0 -20.0 40.0 40.0))
 
 ;; the fast method:
-;; (defmethod visit ((self node:node))
-;;   (push-matrix)
-;;   (translate-scale-rotate (node:x self) (node:y self)
-;;                           (node:scale-x self) (node:scale-y self)
-;;                           (node:rotation self))
-;;   (draw self)
-;;   (pop-matrix))
+(defmethod visit ((self node:node))
+  (push-matrix)
+  (translate-scale-rotate (node:x self) (node:y self)
+                          (node:scale-x self) (node:scale-y self)
+                          (node:rotation self))
+  (draw self)
+  (when (node:children self)
+    (loop for child across (node:children self) do
+         (visit child)))
+  (pop-matrix))
 
 ;; the also-fast method:
 ;; (defmethod visit ((self node:node))
@@ -282,43 +285,57 @@
 ;;   (pop-matrix))
 
 ;; the slow as sin method.
-(defmethod visit ((self node:node))
-  (push-matrix)
-  (mult-matrix (matrix:unwrap-matrix (node:node-transform self)))
-  (draw self)
-  ;;visit children here.
-  (pop-matrix))
+;; (defmethod visit ((self node:node))
+;;   (push-matrix)
+;;   (mult-matrix (matrix:unwrap-matrix (node:node-transform self)))
+;;   (draw self)
+;;   (when (node:children self)
+;;     (loop for child across (node:children self) do
+;;          (visit child)))
+;;   (pop-matrix))
 
 (defstruct test7
   nodes
   width
-  height)
+  height
+  root-node)
 
 (defmethod cl-user::contents-will-mount ((self test7) display)
-  (with-slots (nodes width height) self
-    (setf width (cl-user::display-width display)
-          height (cl-user::display-height display)
-          nodes
-          (loop repeat 4000 collect
-               (make-instance 'node:node
-                              :x (coerce (random width) 'float) 
-                              :y (coerce (random height) 'float)
-                              :rotation (coerce (random 360) 'float)
-                              :color (list
-                                      (/ (random 100) 100.0)
-                                      (/ (random 100) 100.0)
-                                      (/ (random 100) 100.0)
-                                      (/ (random 100) 100.0)))))))
+  (with-slots (nodes width height root-node) self
+    (let* ((w (cl-user::display-width display))
+           (h (cl-user::display-height display))
+           (w/2 (/ w 2))
+           (h/2 (/ h 2))
+           (diagonal (sqrt (+ (* w w) (* h h))))
+           (d/2 (/ diagonal 2)))
+      (setf width w
+            height h
+            root-node (make-instance 'node:node
+                                     :x w/2
+                                     :y h/2)
+            nodes
+            (loop
+               repeat 4000 collect
+                 (make-instance 'node:node
+                                :x (coerce (- (random diagonal) d/2) 'float)
+                                :y (coerce (- (random diagonal) d/2)'float)
+                                :rotation (coerce (random 360) 'float)
+                                :color (list
+                                        (/ (random 100) 100.0)
+                                        (/ (random 100) 100.0)
+                                        (/ (random 100) 100.0)
+                                        (/ (random 100) 100.0))))))
+    (dolist (child nodes)
+      (node:add-child root-node child))))
 
 (defmethod cl-user::step-contents ((self test7) dt)
   (declare (ignorable dt))
-  (dolist (node (test7-nodes self))
+  (dolist (node (cons (test7-root-node self) (test7-nodes self)))
     (let ((r (node:rotation node)))
       (incf r (* dt 100))
       (setf r (mod r 360))
       (setf (node:rotation node) r)))
   (set-color 0.0 1.0 1.0 0.4)
-  (dolist (node (test7-nodes self))
-    (visit node)))
+  (visit (test7-root-node self)))
 
 (cl-user::display-contents (make-test7) :width 500 :height 500)

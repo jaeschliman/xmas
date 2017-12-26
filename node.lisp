@@ -19,6 +19,10 @@
    ;; #:parent-xform
    ;; #:parent-xform-dirty-p
 
+   #:add-child
+   #:remove-child
+   #:remove-from-parent
+
    #:node-transform
    ))
 (in-package :node)
@@ -131,3 +135,19 @@
     (into-matrix ((node-to-world-transform p))
       (left-cat-matrix (node-to-parent-transform self)))
     (copy-matrix (node-to-parent-transform self))))
+
+(defmethod add-child ((parent node) (child node))
+  (unless (children parent)
+    (setf (children parent) (make-array 0 :element-type t :fill-pointer 0 :adjustable t)))
+  (vector-push-extend child (children parent))
+  (setf (parent child) parent)
+  (mark-as-dirty child))
+
+(defmethod remove-child ((parent node) (child node))
+  (when (children parent)
+    (delete child (children parent)))
+  (setf (parent child) nil))
+
+(defmethod remove-from-parent ((child node))
+  (when (parent child)
+    (remove-child (parent child) child)))
