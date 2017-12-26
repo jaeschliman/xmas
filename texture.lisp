@@ -1,4 +1,11 @@
-(in-package :cl-user)
+(defpackage :texture (:use :cl :alexandria)
+            (:export
+             #:texture-id
+             #:texture-width
+             #:texture-height
+             #:texture-path
+             #:load-texture-on-display))
+(in-package :texture)
 
 (defstruct texture
   id width height path)
@@ -23,7 +30,7 @@
               (texture-height texture) h
               (texture-id texture) id))))
 
-(defun load-texture (display pathname)
+(defun load-texture-on-display (display pathname)
   (when (probe-file (truename pathname))
     (let ((texture (make-texture :path pathname)))
       (display:display-enqueue-for-gl

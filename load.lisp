@@ -13,7 +13,7 @@
 (progmain ()
   (ql:quickload :cl-opengl)
   (ql:quickload :cl-glu)
-  (ql:quickload :cl-glut)
+  (ql:quickload :cl-glut) ;; am I even using this?
   (load "./runloop.lisp")
   (load "./render-buffer.lisp")
   (load "./matrix.lisp")
@@ -22,7 +22,7 @@
   (load "./action-manager.lisp")
   (load "./node-lifecycle.lisp")
   (load "./display.lisp")
-  (load "./scratch-ccl.lisp")
   (load "./texture.lisp")
+  (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
   )
 

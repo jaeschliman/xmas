@@ -53,10 +53,10 @@
   (gl:rotate r 0.0 0.0 1.0))
 
 (defun draw-texture (texture)
-  (when (cl-user::texture-id texture)
-    (simple-draw-gl-texture (cl-user::texture-id texture)
-                            (cl-user::texture-width texture)
-                            (cl-user::texture-height texture))))
+  (when (texture:texture-id texture)
+    (simple-draw-gl-texture (texture:texture-id texture)
+                            (texture:texture-width texture)
+                            (texture:texture-height texture))))
 
 
 (defstruct bouncy-box
@@ -128,7 +128,7 @@
   alien)
 
 (defmethod cl-user::contents-will-mount ((self test4) display)
-  (setf (test4-alien self) (cl-user::load-texture display #P"./alien.png"))
+  (setf (test4-alien self) (texture:load-texture-on-display display #P"./alien.png"))
   (unless (test4-alien self)
     (format t "missing texture!")))
 
@@ -181,7 +181,7 @@
 (defmethod cl-user::contents-will-mount ((self test5) display)
   (let ((width (display:display-width display))
         (height (display:display-height display))
-        (texture (cl-user::load-texture display #P"./alien.png")))
+        (texture (texture:load-texture-on-display display #P"./alien.png")))
     (unless texture
       (format t "missing texture!"))
     (setf (test5-width self) width)
