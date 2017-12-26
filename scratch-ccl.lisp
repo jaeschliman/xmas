@@ -12,7 +12,9 @@
    (renderbuffer :accessor display-renderbuffer
                  :initform (render-buffer::make-render-buffer))
    (scratch-matrix :accessor display-scratch-matrix
-                   :initform (matrix:make-matrix))))
+                   :initform (matrix:make-matrix))
+   (action-manager :accessor display-action-manager
+                   :initform (action-manager:make-manager))))
 
 (defun display-drain-gl-queue (display)
   (loop
@@ -32,20 +34,25 @@
 
 (defgeneric mount-contents (contents display)
   (:method (contents (display display))
-    (let ((scratch-matrix (display-scratch-matrix display)))
+    (let ((scratch-matrix (display-scratch-matrix display))
+          (action-manager (display-action-manager display)))
       (setf (display-runloop display)
             (runloop:make-runloop
              :name "runloop"
              :step (display-fps display)
              :function
              (lambda (dt)
-               (let ((matrix:*tmp-matrix* scratch-matrix))
+               (let ((matrix:*tmp-matrix* scratch-matrix)
+                     (action-manager:*action-manager* action-manager))
                  (render-buffer::with-writes-to-render-buffer
                      ((display-renderbuffer display))
+                   (action-manager:update-actions action-manager dt)
                    (step-contents contents dt))))
              :event-handler
              (lambda (event)
-               (handle-event contents event)))))))
+               (let ((matrix:*tmp-matrix* scratch-matrix)
+                     (action-manager:*action-manager* action-manager))
+                 (handle-event contents event))))))))
 
 (defgeneric unmount-contents (contents display)
   (:method (contents (display display))
@@ -110,8 +117,10 @@
 
 (defun cleanup-display (display)
   (remove-running-display display)
-  (contents-will-unmount (contents display) display)
-  (unmount-contents (contents display) display)
+  (let ((matrix:*tmp-matrix* (display-scratch-matrix display))
+        (action-manager:*action-manager* (display-action-manager display)))
+    (contents-will-unmount (contents display) display)
+    (unmount-contents (contents display) display))
   (setf (native-view display) nil
         (native-window display) nil))
 
@@ -234,8 +243,10 @@
               (native-window result) w
               (display w) result)
         (init-display result)
-        (contents-will-mount contents result)
-        (mount-contents contents result)
+        (let ((matrix:*tmp-matrix* (display-scratch-matrix result))
+              (action-manager:*action-manager* (display-action-manager result)))
+          (contents-will-mount contents result)
+          (mount-contents contents result))
         (#/setLevel: w 100)
         (#/orderFront: w nil)))
 

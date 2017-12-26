@@ -341,21 +341,20 @@
 (cl-user::display-contents (make-test7) :width 500 :height 500)
 
 
-(defstruct test8 node manager)
+(defstruct test8 node)
 
 (defmethod cl-user::contents-will-mount ((self test8) display)
   (setf (test8-node self)
         (make-instance 'node:node
                        :x (/ (cl-user::display-width display) 2)
-                       :y (/ (cl-user::display-height display) 2))
-        (test8-manager self) (action-manager:make-manager))
-  (action-manager:add-action (test8-manager self)
+                       :y (/ (cl-user::display-height display) 2)))
+  (action-manager:add-action action-manager:*action-manager*
                              (action:repeat-forever
                               (action:rotate-by 5.0 360.0))
                              (test8-node self)))
 
 (defmethod cl-user::step-contents ((self test8) dt)
-  (action-manager:update-actions (test8-manager self) dt)
+  (declare (ignorable dt))
   (visit (test8-node self)))
 
 (cl-user::display-contents (make-test8))

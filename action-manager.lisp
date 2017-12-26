@@ -6,7 +6,8 @@
    #:remove-all-actions-for-target
    #:update-actions
    #:pause-all-actions-for-target
-   #:resume-all-actions-for-target))
+   #:resume-all-actions-for-target
+   #:*action-manager*))
 (in-package :action-manager)
 
 (defstruct manager
@@ -17,6 +18,8 @@
   target
   paused
   started)
+
+(defvar *action-manager* nil)
 
 (defun maybe-start-action (act)
   (unless (act-started act)

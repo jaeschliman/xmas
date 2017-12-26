@@ -17,10 +17,10 @@
   (load "./runloop.lisp")
   (load "./render-buffer.lisp")
   (load "./matrix.lisp")
-  (load "./scratch-ccl.lisp")
-  (load "./texture.lisp")
   (load "./node.lisp")
   (load "./action.lisp")
   (load "./action-manager.lisp")
+  (load "./scratch-ccl.lisp")
+  (load "./texture.lisp")
   )
 
