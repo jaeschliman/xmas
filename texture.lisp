@@ -4,11 +4,20 @@
              #:texture-width
              #:texture-height
              #:texture-path
-             #:load-texture-on-display))
+             #:*texture-manager*
+             #:make-texture-manager
+             #:get-texture))
+
 (in-package :texture)
 
 (defstruct texture
   id width height path)
+
+(defstruct texture-manager
+  (table (make-hash-table :test 'equal))
+  display)
+
+(defvar *texture-manager* nil)
 
 (defun gl-load-texture (texture)
  (let* ((p (truename (texture-path texture)))
@@ -37,3 +46,12 @@
        display
        (lambda () (gl-load-texture texture)))
       texture)))
+
+(defun get-or-load-texture (texture-manager path)
+  (ensure-gethash
+   path (texture-manager-table texture-manager)
+   (load-texture-on-display (texture-manager-display texture-manager) path)))
+
+(defun get-texture (path)
+  (when-let (mgr *texture-manager*)
+    (get-or-load-texture mgr path)))

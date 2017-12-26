@@ -9,6 +9,7 @@
 (defgeneric mount-contents (contents display)
   (:method (contents (display display:display))
     (let ((scratch-matrix (display:display-scratch-matrix display))
+          (texture-manager (display:display-texture-manager display))
           (action-manager (display:display-action-manager display)))
       (setf (display:display-runloop display)
             (runloop:make-runloop
@@ -17,6 +18,7 @@
              :function
              (lambda (dt)
                (let ((matrix:*tmp-matrix* scratch-matrix)
+                     (texture:*texture-manager* texture-manager)
                      (action-manager:*action-manager* action-manager))
                  (render-buffer::with-writes-to-render-buffer
                      ((display:display-renderbuffer display))
@@ -25,6 +27,7 @@
              :event-handler
              (lambda (event)
                (let ((matrix:*tmp-matrix* scratch-matrix)
+                     (texture:*texture-manager* texture-manager)
                      (action-manager:*action-manager* action-manager))
                  (handle-event contents event))))))))
 
@@ -92,6 +95,7 @@
 (defun cleanup-display (display)
   (remove-running-display display)
   (let ((matrix:*tmp-matrix* (display:display-scratch-matrix display))
+        (texture:*texture-manager* (display:display-texture-manager display))
         (action-manager:*action-manager* (display:display-action-manager display)))
     (contents-will-unmount (display:contents display) display)
     (unmount-contents (display:contents display) display))
@@ -193,11 +197,14 @@
                                     (title "untitled")
                                     (expandable nil)
                                     (fps (/ 1.0 60.0)))
-  (let ((result (make-instance 'display:display
-                               :fps fps
-                               :contents contents
-                               :width width
-                               :height height)))
+  (let* ((result (make-instance 'display:display
+                                :fps fps
+                                :contents contents
+                                :width width
+                                :height height))
+        (texture-manager (texture:make-texture-manager :display result)))
+    (setf (display:display-texture-manager result)
+          texture-manager)
     (progmain ()
       (let* ((w (gui::new-cocoa-window :class (find-class 'my-window)
                                        :title title
@@ -218,6 +225,7 @@
               (display w) result)
         (init-display result)
         (let ((matrix:*tmp-matrix* (display:display-scratch-matrix result))
+              (texture:*texture-manager* (display:display-texture-manager result))
               (action-manager:*action-manager* (display:display-action-manager result)))
           (contents-will-mount contents result)
           (mount-contents contents result))

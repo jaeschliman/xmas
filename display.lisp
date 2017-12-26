@@ -13,7 +13,8 @@
              #:display-scratch-matrix
              #:display-action-manager
              #:display-drain-gl-queue
-             #:display-enqueue-for-gl))
+             #:display-enqueue-for-gl
+             #:display-texture-manager))
 
 (in-package :display)
 
@@ -31,7 +32,8 @@
    (scratch-matrix :accessor display-scratch-matrix
                    :initform (matrix:make-matrix))
    (action-manager :accessor display-action-manager
-                   :initform (action-manager:make-manager))))
+                   :initform (action-manager:make-manager))
+   (texture-manager :accessor display-texture-manager)))
 
 (defun display-drain-gl-queue (display)
   (loop

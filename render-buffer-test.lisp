@@ -128,7 +128,8 @@
   alien)
 
 (defmethod cl-user::contents-will-mount ((self test4) display)
-  (setf (test4-alien self) (texture:load-texture-on-display display #P"./alien.png"))
+  (declare (ignorable display))
+  (setf (test4-alien self) (texture:get-texture #P"./alien.png"))
   (unless (test4-alien self)
     (format t "missing texture!")))
 
@@ -181,7 +182,7 @@
 (defmethod cl-user::contents-will-mount ((self test5) display)
   (let ((width (display:display-width display))
         (height (display:display-height display))
-        (texture (texture:load-texture-on-display display #P"./alien.png")))
+        (texture (texture:get-texture #P"./alien.png")))
     (unless texture
       (format t "missing texture!"))
     (setf (test5-width self) width)
