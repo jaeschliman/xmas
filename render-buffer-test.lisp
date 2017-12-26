@@ -350,7 +350,8 @@
                        :y (/ (cl-user::display-height display) 2))
         (test8-manager self) (action:make-manager))
   (action:start-action (test8-manager self)
-                       (action:rotate-by 5.0 360.0)
+                       (action:repeat-forever
+                        (action:rotate-by 5.0 360.0))
                        (test8-node self)))
 
 (defmethod cl-user::step-contents ((self test8) dt)

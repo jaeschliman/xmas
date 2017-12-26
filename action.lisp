@@ -9,7 +9,7 @@
    #:start-action
    #:update-actions
    #:rotate-by
-   ))
+   #:repeat-forever))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -31,6 +31,9 @@
   (setf (action-target self) target
         (action-running self) t))
 
+(defmethod reset ((self action))
+  (setf (action-running self) t))
+
 (defmethod update ((self action) dt)
   (declare (ignorable self dt))
   (error "subclasses must override action:update"))
@@ -48,9 +51,9 @@
 (defun update-actions (manager dt)
   (let (stopped)
     (loop for action across (manager-actions manager) do
-         (update action dt)
-         (when (stopped-p action)
-           (setf stopped t)))
+         (if (stopped-p action)
+             (setf stopped t)
+             (update action dt)))
     (when stopped
       (setf (manager-actions manager)
             (delete-if #'stopped-p (manager-actions manager))))))
@@ -65,6 +68,10 @@
             (finite-time-action-duration self))
     (stop self)))
 
+(defmethod reset ((self finite-time-action))
+  (call-next-method)
+  (setf (finite-time-action-elapsed self) 0.0))
+
 (defstruct (rotate-by (:include finite-time-action))
   delta
   initial-rotation)
@@ -73,6 +80,11 @@
   (call-next-method)
   (setf (rotate-by-initial-rotation self)
         (node:rotation target)))
+
+(defmethod reset ((self rotate-by))
+  (call-next-method)
+  (setf (rotate-by-initial-rotation self)
+        (node:rotation (rotate-by-target self))))
 
 (defmethod update ((self rotate-by) dt)
   (declare (ignorable dt))
@@ -84,3 +96,24 @@
 
 (defun rotate-by (duration delta)
   (make-rotate-by :duration duration :delta delta))
+
+
+(defstruct (repeat-forever (:include action))
+  action)
+
+(defmethod start-with-target ((self repeat-forever) node)
+  (call-next-method)
+  (start-with-target (repeat-forever-action self) node))
+
+(defmethod update ((self repeat-forever) dt)
+  (with-struct (repeat-forever- action) self
+    (when (stopped-p action)
+      (reset action))
+    (update action dt)))
+
+(defmethod reset ((self repeat-forever))
+  (call-next-method)
+  (reset (repeat-forever-action self)))
+
+(defun repeat-forever (action)
+  (make-repeat-forever :action action))
