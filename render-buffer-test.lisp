@@ -37,6 +37,16 @@
         (incf i))
       (%gl:mult-matrix-f matrix))))
 
+;; test method for node transforms
+;; (definstr-vec mult-matrix-noop (vec)
+;;   (cffi:with-foreign-object (matrix '%gl:float 16)
+;;     (let ((i 0))
+;;       (do-vec! (val)
+;;         (setf (cffi:mem-aref matrix '%gl:float i) val)
+;;         (incf i))
+;;       ;;(%gl:mult-matrix-f matrix)
+;;       )))
+
 (definstr translate-scale-rotate (x y sx sy r)
   (gl:translate x y 0.0)
   (gl:scale sx sy 1.0)
@@ -258,8 +268,20 @@
 ;;   (draw self)
 ;;   (pop-matrix))
 
-;; the slow as sin method. seems to indicate that the mult-matrix
-;; method is to blame for perf trouble.
+;; this method also performs fairly well (some minor stuttering),
+;; seeming to indicate that the bottleneck is actually in
+;; %gl:mult-matrix-f
+;; (defmethod visit ((self node:node))
+;;   (push-matrix)
+;;   (translate-scale-rotate (node:x self) (node:y self)
+;;                           (node:scale-x self) (node:scale-y self)
+;;                           (node:rotation self))
+;;   (mult-matrix-noop (matrix:unwrap-matrix (node:node-transform self)))
+;;   (draw self)
+;;   ;;visit children here.
+;;   (pop-matrix))
+
+;; the slow as sin method.
 (defmethod visit ((self node:node))
   (push-matrix)
   (mult-matrix (matrix:unwrap-matrix (node:node-transform self)))
