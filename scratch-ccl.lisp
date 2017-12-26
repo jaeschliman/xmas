@@ -50,7 +50,8 @@
 (defgeneric unmount-contents (contents display)
   (:method (contents (display display))
     (declare (ignorable contents))
-    (runloop:kill-runloop (display-runloop display))))
+    (when (display-runloop display)
+      (runloop:kill-runloop (display-runloop display)))))
 
 (defgeneric draw (contents display)
   (:method (contents (display display))
