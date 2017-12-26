@@ -1,13 +1,10 @@
 (defpackage :action
   (:use :cl :alexandria)
   (:export
-   #:make-manager
    #:start-with-target
    #:update
    #:stop
    #:stopped-p
-   #:start-action
-   #:update-actions
    #:rotate-by
    #:repeat-forever))
 (in-package :action)
@@ -22,10 +19,6 @@
 (defstruct action
   target
   running)
-
-(defstruct manager
-  (actions (make-array 128 :element-type t :adjustable t :fill-pointer 0)))
-
 
 (defmethod start-with-target ((self action) target)
   (setf (action-target self) target
@@ -43,20 +36,6 @@
 
 (defmethod stopped-p ((self action))
   (not (action-running self)))
-
-(defun start-action (manager action target)
-  (vector-push-extend action (manager-actions manager))
-  (start-with-target action target))
-
-(defun update-actions (manager dt)
-  (let (stopped)
-    (loop for action across (manager-actions manager) do
-         (if (stopped-p action)
-             (setf stopped t)
-             (update action dt)))
-    (when stopped
-      (setf (manager-actions manager)
-            (delete-if #'stopped-p (manager-actions manager))))))
 
 (defstruct (finite-time-action (:include action))
   (duration 0.0)

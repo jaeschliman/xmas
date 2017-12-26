@@ -348,14 +348,14 @@
         (make-instance 'node:node
                        :x (/ (cl-user::display-width display) 2)
                        :y (/ (cl-user::display-height display) 2))
-        (test8-manager self) (action:make-manager))
-  (action:start-action (test8-manager self)
-                       (action:repeat-forever
-                        (action:rotate-by 5.0 360.0))
-                       (test8-node self)))
+        (test8-manager self) (action-manager:make-manager))
+  (action-manager:add-action (test8-manager self)
+                             (action:repeat-forever
+                              (action:rotate-by 5.0 360.0))
+                             (test8-node self)))
 
 (defmethod cl-user::step-contents ((self test8) dt)
-  (action:update-actions (test8-manager self) dt)
+  (action-manager:update-actions (test8-manager self) dt)
   (visit (test8-node self)))
 
 (cl-user::display-contents (make-test8))

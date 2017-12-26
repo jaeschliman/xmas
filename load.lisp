@@ -21,4 +21,6 @@
   (load "./texture.lisp")
   (load "./node.lisp")
   (load "./action.lisp")
+  (load "./action-manager.lisp")
   )
+
