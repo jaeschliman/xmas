@@ -1,31 +1,5 @@
 (in-package :cl-user)
 
-(defclass display ()
-  ((native-view :accessor native-view :initform nil)
-   (native-window :accessor native-window :initform nil)
-   (contents :accessor contents :initarg :contents)
-   (width :accessor display-width :initarg :width)
-   (height :accessor display-height :initarg :height)
-   (fps :reader display-fps :initarg :fps)
-   (runloop :accessor display-runloop :initform nil)
-   (gl-queue :accessor display-gl-queue :initform (queues:make-queue :simple-cqueue))
-   (renderbuffer :accessor display-renderbuffer
-                 :initform (render-buffer::make-render-buffer))
-   (scratch-matrix :accessor display-scratch-matrix
-                   :initform (matrix:make-matrix))
-   (action-manager :accessor display-action-manager
-                   :initform (action-manager:make-manager))))
-
-(defun display-drain-gl-queue (display)
-  (loop
-     with queue = (display-gl-queue display)
-     for thunk = (queues:qpop queue)
-     while thunk
-     do (funcall thunk)))
-
-(defun display-enqueue-for-gl (display thunk)
-  (queues:qpush (display-gl-queue display) thunk))
-
 (defgeneric handle-event (contents event)
   (:method (contents event) (declare (ignorable contents event))))
 
@@ -33,19 +7,19 @@
   (:method (contents dt) (declare (ignorable contents dt))))
 
 (defgeneric mount-contents (contents display)
-  (:method (contents (display display))
-    (let ((scratch-matrix (display-scratch-matrix display))
-          (action-manager (display-action-manager display)))
-      (setf (display-runloop display)
+  (:method (contents (display display:display))
+    (let ((scratch-matrix (display:display-scratch-matrix display))
+          (action-manager (display:display-action-manager display)))
+      (setf (display:display-runloop display)
             (runloop:make-runloop
              :name "runloop"
-             :step (display-fps display)
+             :step (display:display-fps display)
              :function
              (lambda (dt)
                (let ((matrix:*tmp-matrix* scratch-matrix)
                      (action-manager:*action-manager* action-manager))
                  (render-buffer::with-writes-to-render-buffer
-                     ((display-renderbuffer display))
+                     ((display:display-renderbuffer display))
                    (action-manager:update-actions action-manager dt)
                    (step-contents contents dt))))
              :event-handler
@@ -55,20 +29,20 @@
                  (handle-event contents event))))))))
 
 (defgeneric unmount-contents (contents display)
-  (:method (contents (display display))
+  (:method (contents (display display:display))
     (declare (ignorable contents))
-    (when (display-runloop display)
-      (runloop:kill-runloop (display-runloop display)))))
+    (when (display:display-runloop display)
+      (runloop:kill-runloop (display:display-runloop display)))))
 
 (defgeneric draw (contents display)
-  (:method (contents (display display))
+  (:method (contents (display display:display))
     (declare (ignorable contents))
     (gl:clear-color 0.0 0.0 0.0 1.0)
     (gl:clear :color-buffer)
     (gl:enable :texture-2d)
     (gl:enable :blend)
     (gl:blend-func :src-alpha :one-minus-src-alpha)
-    (render-buffer::with-reads-from-render-buffer ((display-renderbuffer display))
+    (render-buffer::with-reads-from-render-buffer ((display:display-renderbuffer display))
       (render-buffer::run!))))
 
 (defvar *running-displays* nil)
@@ -84,7 +58,7 @@
                   (sleep (/ 1.0 60.0))
                   (progmain ()
                     (dolist (display *running-displays*)
-                      (alexandria:when-let (view (native-view display))
+                      (alexandria:when-let (view (display:native-view display))
                         (#/setNeedsDisplay: view #$YES))))))))))
 
 (defun stop-update-loop ()
@@ -117,12 +91,12 @@
 
 (defun cleanup-display (display)
   (remove-running-display display)
-  (let ((matrix:*tmp-matrix* (display-scratch-matrix display))
-        (action-manager:*action-manager* (display-action-manager display)))
-    (contents-will-unmount (contents display) display)
-    (unmount-contents (contents display) display))
-  (setf (native-view display) nil
-        (native-window display) nil))
+  (let ((matrix:*tmp-matrix* (display:display-scratch-matrix display))
+        (action-manager:*action-manager* (display:display-action-manager display)))
+    (contents-will-unmount (display:contents display) display)
+    (unmount-contents (display:contents display) display))
+  (setf (display:native-view display) nil
+        (display:native-window display) nil))
 
 (defclass my-window (ns:ns-window)
   ((display :accessor display))
@@ -154,7 +128,7 @@
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
   (#_glClearColor 0.05 0.05 0.05 0.0)
   (reshape-window self)
-  (display-drain-gl-queue (my-view-display self)))
+  (display:display-drain-gl-queue (my-view-display self)))
 
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
@@ -165,14 +139,14 @@
   (let ((view (#/contentView self)))
     (setf (my-view-requires-resize? view) t)
     (multiple-value-bind (w h) (nsview-size view)
-      (runloop:enqueue-runloop-event (display-runloop (display self))
+      (runloop:enqueue-runloop-event (display:display-runloop (display self))
                                      (cons :resize (cons w h))))))
 
 (objc:defmethod (#/drawRect: :void) ((self my-view) (a-rect :ns-rect))
   (declare (ignorable a-rect))
   (when (my-view-requires-resize? self)
     (reshape-window self))
-  (display-drain-gl-queue (my-view-display self))
+  (display:display-drain-gl-queue (my-view-display self))
   (with-slots (contents display) self
     (when contents (draw contents display)))
   (#_glFlush))
@@ -198,7 +172,7 @@
 
 (defun %enqueue-key-event (myview ns-event event)
   (let ((key (%translate-keycode ns-event))
-        (runloop (display-runloop (my-view-display myview))))
+        (runloop (display:display-runloop (my-view-display myview))))
     (runloop:enqueue-runloop-event runloop (cons event key))))
 
 (objc:defmethod (#/keyDown: :void) ((self my-view) event)
@@ -208,8 +182,8 @@
   (%enqueue-key-event self event :keyup)
   (%enqueue-key-event self event :keypress))
 
-(defmethod redisplay ((self display))
-  (alexandria:when-let ((view (native-view self)))
+(defmethod redisplay ((self display:display))
+  (alexandria:when-let ((view (display:native-view self)))
     (progmain ()
       (#/setNeedsDisplay: view #$YES))))
 
@@ -219,7 +193,7 @@
                                     (title "untitled")
                                     (expandable nil)
                                     (fps (/ 1.0 60.0)))
-  (let ((result (make-instance 'display
+  (let ((result (make-instance 'display:display
                                :fps fps
                                :contents contents
                                :width width
@@ -239,12 +213,12 @@
                                     :pixel-format (#/defaultPixelFormat ns:ns-opengl-view))))
         (#/setContentView: w glview)
         (#/setDelegate: w w)
-        (setf (native-view result) glview
-              (native-window result) w
+        (setf (display:native-view result) glview
+              (display:native-window result) w
               (display w) result)
         (init-display result)
-        (let ((matrix:*tmp-matrix* (display-scratch-matrix result))
-              (action-manager:*action-manager* (display-action-manager result)))
+        (let ((matrix:*tmp-matrix* (display:display-scratch-matrix result))
+              (action-manager:*action-manager* (display:display-action-manager result)))
           (contents-will-mount contents result)
           (mount-contents contents result))
         (#/setLevel: w 100)

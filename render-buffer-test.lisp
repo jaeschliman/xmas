@@ -90,8 +90,8 @@
 
 (defmethod cl-user::contents-will-mount ((self test3) display)
   (with-slots (boxes width height) self
-    (setf width (cl-user::display-width display)
-          height (cl-user::display-height display))
+    (setf width  (display:display-width display)
+          height (display:display-height display))
     (dolist (box boxes)
       (setf (bouncy-box-x box) (random (- width 20))
             (bouncy-box-y box) (random (- height 20))))))
@@ -179,8 +179,8 @@
   sprites)
 
 (defmethod cl-user::contents-will-mount ((self test5) display)
-  (let ((width (cl-user::display-width display))
-        (height (cl-user::display-height display))
+  (let ((width (display:display-width display))
+        (height (display:display-height display))
         (texture (cl-user::load-texture display #P"./alien.png")))
     (unless texture
       (format t "missing texture!"))
@@ -302,8 +302,8 @@
 
 (defmethod cl-user::contents-will-mount ((self test7) display)
   (with-slots (nodes width height root-node) self
-    (let* ((w (cl-user::display-width display))
-           (h (cl-user::display-height display))
+    (let* ((w (display:display-width display))
+           (h (display:display-height display))
            (w/2 (/ w 2))
            (h/2 (/ h 2))
            (diagonal (sqrt (+ (* w w) (* h h))))
@@ -347,8 +347,8 @@
 
 (defmethod cl-user::contents-will-mount ((self test8) display)
   (let ((node (make-instance 'node:node
-                             :x (/ (cl-user::display-width display) 2)
-                             :y (/ (cl-user::display-height display) 2)))
+                             :x (/ (display:display-width display) 2)
+                             :y (/ (display:display-height display) 2)))
         (node2 (make-instance 'node:node
                               :x 20.0
                               :y 20.0)))

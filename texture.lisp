@@ -26,7 +26,7 @@
 (defun load-texture (display pathname)
   (when (probe-file (truename pathname))
     (let ((texture (make-texture :path pathname)))
-      (display-enqueue-for-gl
+      (display:display-enqueue-for-gl
        display
        (lambda () (gl-load-texture texture)))
       texture)))
