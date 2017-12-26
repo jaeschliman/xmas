@@ -146,7 +146,7 @@
 
 (defmethod remove-child ((parent node) (child node))
   (when (children parent)
-    (delete child (children parent)))
+    (setf (children parent) (delete child (children parent))))
   (setf (parent child) nil))
 
 (defmethod remove-from-parent ((child node))
