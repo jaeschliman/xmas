@@ -339,3 +339,22 @@
   (visit (test7-root-node self)))
 
 (cl-user::display-contents (make-test7) :width 500 :height 500)
+
+
+(defstruct test8 node manager)
+
+(defmethod cl-user::contents-will-mount ((self test8) display)
+  (setf (test8-node self)
+        (make-instance 'node:node
+                       :x (/ (cl-user::display-width display) 2)
+                       :y (/ (cl-user::display-height display) 2))
+        (test8-manager self) (action:make-manager))
+  (action:start-action (test8-manager self)
+                       (action:rotate-by 5.0 360.0)
+                       (test8-node self)))
+
+(defmethod cl-user::step-contents ((self test8) dt)
+  (action:update-actions (test8-manager self) dt)
+  (visit (test8-node self)))
+
+(cl-user::display-contents (make-test8))

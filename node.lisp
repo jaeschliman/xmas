@@ -27,6 +27,7 @@
    ))
 (in-package :node)
 
+;;; honestly, this should probably be a struct...
 (defclass node ()
   ((x                    :reader   x                    :initarg  :x)
    (y                    :reader   y                    :initarg  :y)
