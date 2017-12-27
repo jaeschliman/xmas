@@ -230,6 +230,7 @@
           (contents-will-mount contents result)
           (mount-contents contents result))
         (#/setLevel: w 100)
-        (#/orderFront: w nil)))
+        (#/makeFirstResponder: w glview)
+        (#/makeKeyAndOrderFront: w nil)))
 
     result))
