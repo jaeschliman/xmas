@@ -374,22 +374,22 @@
                       (action:rotate-by 2.5 -360.0)))
     (node:run-action node3
                      (action:repeat-forever
-                      (action:do-sequence
-                          (action:rotate-by 0.25 -60.0)
-                        (action:rotate-by 0.25 60.0))))
+                      (action:run-sequence
+                       (action:rotate-by 0.25 -60.0)
+                       (action:rotate-by 0.25 60.0))))
     (node:run-action node4
                      (action:repeat-forever
-                      (action:do-sequence
-                          (action:rotate-by 0.5 -60.0)
-                        (action:rotate-by 0.25 -60.0)
-                        (action:rotate-by 0.25 60.0))))
+                      (action:run-sequence
+                       (action:rotate-by 0.5 -60.0)
+                       (action:rotate-by 0.25 -60.0)
+                       (action:rotate-by 0.25 60.0))))
     (node:run-action node5
                      (action:repeat-forever
-                      (action:do-sequence
-                          (action:rotate-by 0.5 -60.0)
-                        (action:rotate-by 0.5 60.0)
-                        (action:rotate-by 0.5 -360.0)
-                        (action:rotate-by 0.5 360.0))))
+                      (action:run-sequence
+                       (action:rotate-by 0.5 -60.0)
+                       (action:rotate-by 0.5 60.0)
+                       (action:rotate-by 0.5 -360.0)
+                       (action:rotate-by 0.5 360.0))))
     (node:add-child node node2)
     (node:add-child node node3)
     (node:add-child node node4)

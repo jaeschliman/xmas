@@ -7,7 +7,7 @@
    #:stopped-p
    #:rotate-by
    #:repeat-forever
-   #:do-sequence
+   #:run-sequence
    #:call-next-method))
 (in-package :action)
 
@@ -101,33 +101,33 @@
 (defun repeat-forever (action)
   (make-repeat-forever :action action))
 
-(defstruct (do-sequence (:include finite-time-action))
+(defstruct (run-sequence (:include finite-time-action))
   item0 item1 (prev -1)  split)
 
-(defmethod reset ((self do-sequence))
+(defmethod reset ((self run-sequence))
   (call-next-method)
-  (with-struct (do-sequence- item0 item1 prev) self
+  (with-struct (run-sequence- item0 item1 prev) self
     (setf prev -1)
     (reset item0)
     (reset item1)))
 
-(defmethod stop ((self do-sequence))
+(defmethod stop ((self run-sequence))
   (call-next-method)
-  (with-struct (do-sequence- item0 item1 prev) self
+  (with-struct (run-sequence- item0 item1 prev) self
     (when (not (= prev -1))
       (if (= prev 0)
           (stop item0)
           (stop item1)))))
 
-(defmethod start-with-target ((self do-sequence) node)
+(defmethod start-with-target ((self run-sequence) node)
   (declare (ignorable node))
   (call-next-method)
-  (with-struct (do-sequence- item0 duration split prev) self
+  (with-struct (run-sequence- item0 duration split prev) self
     (setf split (/ (finite-time-action-duration item0) duration)
           prev -1))) 
 
-(defmethod update ((self do-sequence) time)
-  (with-struct (do-sequence- item0 item1 target split prev) self
+(defmethod update ((self run-sequence) time)
+  (with-struct (run-sequence- item0 item1 target split prev) self
     (let (found new-time action)
       (if (< time split)
           (setf found 0
@@ -159,16 +159,16 @@
 (defun sequence-2 (item0 item1)
   (assert item0)
   (assert item1)
-  (make-do-sequence :item0 item0
+  (make-run-sequence :item0 item0
                     :item1 item1
                     :duration (+ (finite-time-action-duration item0)
                                  (finite-time-action-duration item1))))
 
-(defun do-sequence (&rest items)
+(defun run-sequence (&rest items)
   (declare (dynamic-extent items))
   (assert items)
   (when (null (cdr items))
-    (return-from do-sequence (first items)))
+    (return-from run-sequence (first items)))
   (let ((prev (first items)))
     (dolist (item (rest items))
       (setf prev (sequence-2 prev item)))
