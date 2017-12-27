@@ -8,7 +8,8 @@
    #:rotate-by
    #:repeat-forever
    #:run-sequence
-   #:call-next-method))
+   #:call-next-method
+   #:delay))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -173,3 +174,12 @@
     (dolist (item (rest items))
       (setf prev (sequence-2 prev item)))
     prev))
+
+
+(defstruct (delay (:include finite-time-action)))
+
+(defmethod update ((self delay) time)
+  (declare (ignore time)))
+
+(defun delay (seconds)
+  (make-delay :duration seconds))

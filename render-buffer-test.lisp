@@ -368,7 +368,11 @@
                               :y  20.0)))
     (node:run-action node
                      (action:repeat-forever
-                      (action:rotate-by 5.0 360.0)))
+                      (action:run-sequence
+                       (action:delay 1.0)
+                       (action:rotate-by 2.5 180.0)
+                       (action:delay 1.0)
+                       (action:rotate-by 1.25 -90.0))))
     (node:run-action node2
                      (action:repeat-forever
                       (action:rotate-by 2.5 -360.0)))
