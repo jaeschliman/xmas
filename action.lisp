@@ -20,7 +20,9 @@
    #:ease-in-quart
    #:ease-in-quint
    #:ease-in-quadratic
-   #:callfunc))
+   #:callfunc
+   #:find-easing-function
+   #:move-by))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -70,28 +72,8 @@
   (call-next-method)
   (setf (finite-time-action-elapsed self) 0.0))
 
-(defstruct (rotate-by (:include finite-time-action))
-  delta
-  initial-rotation)
-
-(defmethod start-with-target ((self rotate-by) target)
-  (call-next-method)
-  (setf (rotate-by-initial-rotation self)
-        (node:rotation target)))
-
-(defmethod reset ((self rotate-by))
-  (call-next-method)
-  (setf (rotate-by-initial-rotation self)
-        (node:rotation (rotate-by-target self))))
-
-(defmethod update ((self rotate-by) time)
-  (with-struct (rotate-by- delta initial-rotation target) self
-    (let* ((rotation (mod (+ initial-rotation (* time delta)) 360.0)))
-      (setf (node:rotation target) rotation))))
-
-(defun rotate-by (duration delta)
-  (make-rotate-by :duration duration :delta delta))
-
+;; ======================================================================
+;; repeat forever and sequence
 
 (defstruct (repeat-forever (:include action))
   action)
@@ -192,19 +174,12 @@
     prev))
 
 
-(defstruct (delay (:include finite-time-action)))
-
-(defmethod update ((self delay) time)
-  (declare (ignore time)))
-
-(defun delay (seconds)
-  (make-delay :duration seconds))
-
+;; ======================================================================
+;; easing actions
 
 (defstruct (ease (:include finite-time-action))
   inner
   function)
-
 
 (defmethod start-with-target ((self ease) node)
   (call-next-method)
@@ -222,41 +197,116 @@
   (update (ease-inner self)
           (funcall (ease-function self) time)))
 
+(defvar *easing-functions* (make-hash-table :test 'eq))
+
+(defun find-easing-function (keyword)
+  (gethash keyword *easing-functions*))
+
 (macrolet ((defease (name (var) &body body)
-             (let ((easefn (symbolicate '%ease- name)))
+             (let ((easefn (symbolicate '%ease- name))
+                   (fname  (symbolicate 'ease- name))
+                   (lookup-name (intern (symbol-name name) :keyword)))
                `(progn
-                 (defun ,easefn (,var) ,@body)
-                 (defun ,name (action)
-                   (make-ease :duration (finite-time-action-duration action)
-                              :function (function ,easefn)
-                              :inner action))))))
+                  (setf (gethash ,lookup-name *easing-functions*) ',fname)
+                  (defun ,easefn (,var) ,@body)
+                  (defun ,fname (action)
+                    (make-ease :duration (finite-time-action-duration action)
+                               :function (function ,easefn)
+                               :inner action))))))
   (defease linear (time) time)
-  (defease ease-in-sine (time)
+  (defease in-sine (time)
     (1+ (* -1 (cos (* time (/ pi 2.0))))))
-  (defease ease-out-sine (time)
+  (defease out-sine (time)
     (sin (* time (/ pi 2.0))))
-  (defease ease-in-out-sine (time)
+  (defease in-out-sine (time)
     (* -0.5 (1- (cos (* pi time)))))
-  (defease ease-in-quad (time)
+  (defease in-quad (time)
     (* time time))
-  (defease ease-out-quad (time)
+  (defease out-quad (time)
     (* -1 time (- time 2.0)))
-  (defease ease-in-out-quad (time)
+  (defease in-out-quad (time)
     (setf time (* 2.0 time))
     (if (< time 1.0)
         (* 0.5 time time)
         (progn
           (decf time)
           (* -0.5 (1- (* time (- time 2.0)))))))
-  (defease ease-in-cubic (time)
+  (defease in-cubic (time)
     (* time time time))
-  (defease ease-in-quart (time)
+  (defease in-quart (time)
     (* time time time time))
-  (defease ease-in-quint (time)
+  (defease in-quint (time)
     (* time time time time time))
-  (defease ease-in-quadratic (time)
+  (defease in-quadratic (time)
     (expt time 2.0)))
 
+(defmacro defact (name (&rest args) &body body)
+  (with-gensyms (action)
+    `(defun ,name (,@args &key ease)
+       (let ((,action (progn ,@body)))
+         (when ease
+           (if-let (fn (find-easing-function ease))
+             (setf ,action (funcall fn ,action))
+             (error "unknown easing function ~S" ease)))
+         ,action))))
+
+;; ======================================================================
+;; finite time actions
+
+(defstruct (delay (:include finite-time-action)))
+
+(defmethod update ((self delay) time)
+  (declare (ignore time)))
+
+(defun delay (seconds)
+  (make-delay :duration seconds))
+
+(defstruct (rotate-by (:include finite-time-action))
+  delta
+  initial-rotation)
+
+(defmethod start-with-target ((self rotate-by) target)
+  (call-next-method)
+  (setf (rotate-by-initial-rotation self)
+        (node:rotation target)))
+
+(defmethod reset ((self rotate-by))
+  (call-next-method)
+  (setf (rotate-by-initial-rotation self)
+        (node:rotation (rotate-by-target self))))
+
+(defmethod update ((self rotate-by) time)
+  (with-struct (rotate-by- delta initial-rotation target) self
+    (let* ((rotation (mod (+ initial-rotation (* time delta)) 360.0)))
+      (setf (node:rotation target) rotation))))
+
+(defact rotate-by (duration delta)
+  (make-rotate-by :duration duration :delta delta))
+
+(defstruct (move-by (:include finite-time-action))
+  delta-x delta-y
+  initial-x initial-y)
+
+(defmethod start-with-target ((self move-by) target)
+  (call-next-method)
+  (setf (move-by-initial-x self) (node:x target))
+  (setf (move-by-initial-y self) (node:y target)))
+
+(defmethod reset ((self move-by))
+  (call-next-method)
+  (setf (move-by-initial-x self) (node:x (move-by-target self)))
+  (setf (move-by-initial-y self) (node:y (move-by-target self))))
+
+(defmethod update ((self move-by) time)
+  (with-struct (move-by- initial-x delta-x initial-y delta-y target) self
+    (setf (node:x target) (+ initial-x (* time delta-x)))
+    (setf (node:y target) (+ initial-y (* time delta-y))))))
+
+(defact move-by (duration x y)
+  (make-move-by :duration duration :delta-x x :delta-y y))
+
+;; ======================================================================
+;; instant actions
 
 (defstruct (instant-action (:include finite-time-action)))
 

@@ -1,6 +1,16 @@
 (in-package :node)
 
-(defmethod run-action ((self node) action)
+(defmethod run-action ((self node) action &key repeat ease)
+  (when (listp action)
+    (setf action (apply 'action:run-sequence action)))
+  (when ease
+    (if-let (fn (action:find-easing-function ease))
+      (setf action (funcall fn action))
+      (error "unknown easing function: ~S" ease)))
+  (when repeat
+    (if (eq repeat :forever)
+        (setf action (action:repeat-forever action))
+        (error "unknown repeat method: ~S" repeat)))
   (if (running self)
       (action-manager:add-action action-manager:*action-manager* action self nil)
       (push action (pending-actions self))))
