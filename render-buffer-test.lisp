@@ -370,9 +370,11 @@
                      (action:repeat-forever
                       (action:run-sequence
                        (action:delay 1.0)
-                       (action:rotate-by 2.5 180.0)
+                       (action:ease-in-out-quad
+                        (action:rotate-by 1.5 180.0))
                        (action:delay 1.0)
-                       (action:rotate-by 1.25 -90.0))))
+                       (action:ease-in-out-sine
+                        (action:rotate-by 1.25 -90.0)))))
     (node:run-action node2
                      (action:repeat-forever
                       (action:rotate-by 2.5 -360.0)))

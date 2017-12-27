@@ -9,7 +9,17 @@
    #:repeat-forever
    #:run-sequence
    #:call-next-method
-   #:delay))
+   #:delay
+   #:ease-in-sine
+   #:ease-out-sine
+   #:ease-in-out-sine
+   #:ease-in-quad
+   #:ease-out-quad
+   #:ease-in-out-quad
+   #:ease-in-cubic
+   #:ease-in-quart
+   #:ease-in-quint
+   #:ease-in-quadratic))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -183,3 +193,60 @@
 
 (defun delay (seconds)
   (make-delay :duration seconds))
+
+
+(defstruct (ease (:include finite-time-action))
+  inner
+  function)
+
+
+(defmethod start-with-target ((self ease) node)
+  (call-next-method)
+  (start-with-target (ease-inner self) node))
+
+(defmethod reset ((self ease))
+  (call-next-method self)
+  (reset (ease-inner self)))
+
+(defmethod stop ((self ease))
+  (call-next-method)
+  (stop (ease-inner self)))
+
+(defmethod update ((self ease) time)
+  (update (ease-inner self)
+          (funcall (ease-function self) time)))
+
+(macrolet ((defease (name (var) &body body)
+             (let ((easefn (symbolicate '%ease- name)))
+               `(progn
+                 (defun ,easefn (,var) ,@body)
+                 (defun ,name (action)
+                   (make-ease :duration (finite-time-action-duration action)
+                              :function (function ,easefn)
+                              :inner action))))))
+  (defease linear (time) time)
+  (defease ease-in-sine (time)
+    (1+ (* -1 (cos (* time (/ pi 2.0))))))
+  (defease ease-out-sine (time)
+    (sin (* time (/ pi 2.0))))
+  (defease ease-in-out-sine (time)
+    (* -0.5 (1- (cos (* pi time)))))
+  (defease ease-in-quad (time)
+    (* time time))
+  (defease ease-out-quad (time)
+    (* -1 time (- time 2.0)))
+  (defease ease-in-out-quad (time)
+    (setf time (* 2.0 time))
+    (if (< time 1.0)
+        (* 0.5 time time)
+        (progn
+          (decf time)
+          (* -0.5 (1- (* time (- time 2.0)))))))
+  (defease ease-in-cubic (time)
+    (* time time time))
+  (defease ease-in-quart (time)
+    (* time time time time))
+  (defease ease-in-quint (time)
+    (* time time time time time))
+  (defease ease-in-quadratic (time)
+    (expt time 2.0)))
