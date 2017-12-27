@@ -11,7 +11,9 @@
 (in-package :action-manager)
 
 (defstruct manager
-  (actions (make-array 128 :element-type t :adjustable t :fill-pointer 0)))
+  (actions (make-array 128 :element-type t :adjustable t :fill-pointer 0))
+  running
+  pending-deletions)
 
 (defstruct act
   action
@@ -34,9 +36,11 @@
     (maybe-start-action act)))
 
 (defun remove-all-actions-for-target (manager target)
-  (setf (manager-actions manager)
-        (delete target (manager-actions manager)
-                :key #'act-target)))
+  (if (manager-running manager)
+      (push target (manager-pending-deletions manager))
+      (setf (manager-actions manager)
+            (delete target (manager-actions manager)
+                    :key #'act-target))))
 
 (defun pause-all-actions-for-target (manager target)
   (loop for act across (manager-actions manager)
@@ -51,14 +55,21 @@
 
 (defun update-actions (manager dt)
   (let (stopped)
-    (loop for act across (manager-actions manager)
-       for paused = (act-paused act)
-       for action = (act-action act)
-       do
-         (unless paused
-           (if (action:stopped-p action)
-               (setf stopped t)
-               (action:step-action action dt))))
+    (setf (manager-running manager) t)
+    (unwind-protect
+         (loop for act across (manager-actions manager)
+            for paused = (act-paused act)
+            for action = (act-action act)
+            do
+              (unless paused
+                (if (action:stopped-p action)
+                    (setf stopped t)
+                    (action:step-action action dt))))
+      (setf (manager-running manager) nil))
+    (when-let (deletions (manager-pending-deletions manager))
+      (dolist (target deletions)
+        (remove-all-actions-for-target manager target))
+      (setf (manager-pending-deletions manager) nil))
     (when stopped
       (setf (manager-actions manager)
             (delete-if #'action:stopped-p (manager-actions manager) :key #'act-action)))))

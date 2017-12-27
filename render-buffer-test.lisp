@@ -413,6 +413,11 @@
        (action:delay 1.0)
        (action:callfunc (lambda () (format t " tock! ")))
        (action:delay 1.0))))
+    (node:run-action
+     node
+     (action:run-sequence
+      (action:delay 3.0)
+      (action:callfunc (lambda () (node:remove-from-parent node2)))))
     (setf (test8-node self) node)))
 
 (defmethod cl-user::step-contents ((self test8) dt)
