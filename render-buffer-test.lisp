@@ -23,6 +23,23 @@
       (gl:tex-coord 0  0)
       (gl:vertex    x  y2 0))))
 
+(definstr simple-draw-gl-texture-no-color (id w h)
+  (gl:bind-texture :texture-2d id)
+  (let* ((x (- (/ w 2)))
+         (y (- (/ h 2)))
+         (x2 (+ x w))
+         (y2 (+ y h)))
+    (gl:with-primitive :quads
+      (gl:tex-coord 0  1)
+      (gl:vertex    x  y  0)
+      (gl:tex-coord 1  1)
+      (gl:vertex    x2 y  0)
+      (gl:tex-coord 1  0)
+      (gl:vertex    x2 y2 0)
+      (gl:tex-coord 0  0)
+      (gl:vertex    x  y2 0))))
+
+
 (definstr push-matrix ()
   (gl:push-matrix))
 
@@ -54,9 +71,10 @@
 
 (defun draw-texture (texture)
   (when (texture:texture-id texture)
-    (simple-draw-gl-texture (texture:texture-id texture)
-                            (texture:texture-width texture)
-                            (texture:texture-height texture))))
+    (simple-draw-gl-texture-no-color
+     (texture:texture-id texture)
+     (texture:texture-width texture)
+     (texture:texture-height texture))))
 
 
 (defstruct bouncy-box
@@ -170,6 +188,7 @@
   (translate-scale-rotate (sprite-x sprite) (sprite-y sprite)
                           (sprite-sx sprite) (sprite-sy sprite)
                           (sprite-r sprite))
+  (set-color 1.0 1.0 1.0 1.0)
   (draw-texture (sprite-texture sprite))
   (pop-matrix))
 
