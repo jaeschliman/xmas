@@ -352,14 +352,24 @@
                              :y (/ (display:display-height display) 2)))
         (node2 (make-instance 'node:node
                               :x 20.0
-                              :y 20.0)))
+                              :y 20.0))
+        (node3 (make-instance 'node:node
+                              :x -20.0
+                              :y -20.0)))
     (node:run-action node
                      (action:repeat-forever
                       (action:rotate-by 5.0 360.0)))
     (node:run-action node2
                      (action:repeat-forever
                       (action:rotate-by 2.5 -360.0)))
+    (node:run-action node3
+                     (action:repeat-forever
+                      (action:do-sequence
+                          (action:rotate-by 0.25 -60.0)
+                          (action:rotate-by 0.25 60.0))))
+    (setf (node:color node3) '(1.0 0.0 0.0 0.4))
     (node:add-child node node2)
+    (node:add-child node node3)
     (setf (test8-node self) node)))
 
 (defmethod cl-user::step-contents ((self test8) dt)

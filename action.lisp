@@ -6,7 +6,9 @@
    #:stop
    #:stopped-p
    #:rotate-by
-   #:repeat-forever))
+   #:repeat-forever
+   #:do-sequence
+   #:call-next-method))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -96,3 +98,49 @@
 
 (defun repeat-forever (action)
   (make-repeat-forever :action action))
+
+(defstruct (do-sequence (:include finite-time-action))
+  items
+  (index 0))
+
+(defmethod reset ((self do-sequence))
+  (call-next-method)
+  (setf (do-sequence-index self) 0)
+  (loop for action across (do-sequence-items self) do
+       (reset action)))
+
+(defmethod stop ((self do-sequence))
+  (call-next-method)
+  (loop for action across (do-sequence-items self) do
+       (stop action)))
+
+(defmethod start-with-target ((self do-sequence) node)
+  (call-next-method)
+  (with-struct (do-sequence- index items) self
+    (when (< index (length items))
+      (start-with-target (aref items index) node))))
+
+(defmethod update ((self do-sequence) dt)
+  (call-next-method)
+  (with-struct (do-sequence- index items target) self
+    (if (< index (length items))
+        (let ((item (aref items index)))
+          (update item dt)
+          (loop
+             while item
+             while (stopped-p item) do
+               (incf index)
+               (cond ((= index (length items))
+                      (setf item nil)
+                      (stop self))
+                     (t
+                      (setf item (aref items index))
+                      (start-with-target item target)
+                      (update item dt)))))
+        (stop self))))
+
+(defun do-sequence (&rest items)
+  (let ((duration (loop for item in items
+                     sum (finite-time-action-duration item))))
+    (make-do-sequence :items (coerce items 'vector)
+                      :duration duration)))
