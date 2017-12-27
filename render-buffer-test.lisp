@@ -351,11 +351,21 @@
                              :x (/ (display:display-width display) 2)
                              :y (/ (display:display-height display) 2)))
         (node2 (make-instance 'node:node
+                              :color '(0.0 1.0 1.0 0.4)
                               :x 20.0
                               :y 20.0))
         (node3 (make-instance 'node:node
+                              :color '(1.0 0.0 0.0 0.4)
                               :x -20.0
-                              :y -20.0)))
+                              :y -20.0))
+        (node4 (make-instance 'node:node
+                              :color '(0.0 1.0 0.0 0.4)
+                              :x  20.0
+                              :y -20.0))
+        (node5 (make-instance 'node:node
+                              :color '(1.0 1.0 0.0 0.4)
+                              :x -20.0
+                              :y  20.0)))
     (node:run-action node
                      (action:repeat-forever
                       (action:rotate-by 5.0 360.0)))
@@ -366,10 +376,24 @@
                      (action:repeat-forever
                       (action:do-sequence
                           (action:rotate-by 0.25 -60.0)
-                          (action:rotate-by 0.25 60.0))))
-    (setf (node:color node3) '(1.0 0.0 0.0 0.4))
+                        (action:rotate-by 0.25 60.0))))
+    (node:run-action node4
+                     (action:repeat-forever
+                      (action:do-sequence
+                          (action:rotate-by 0.5 -60.0)
+                        (action:rotate-by 0.25 -60.0)
+                        (action:rotate-by 0.25 60.0))))
+    (node:run-action node5
+                     (action:repeat-forever
+                      (action:do-sequence
+                          (action:rotate-by 0.5 -60.0)
+                        (action:rotate-by 0.5 60.0)
+                        (action:rotate-by 0.5 -360.0)
+                        (action:rotate-by 0.5 360.0))))
     (node:add-child node node2)
     (node:add-child node node3)
+    (node:add-child node node4)
+    (node:add-child node node5)
     (setf (test8-node self) node)))
 
 (defmethod cl-user::step-contents ((self test8) dt)
