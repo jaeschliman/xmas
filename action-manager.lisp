@@ -58,7 +58,7 @@
          (unless paused
            (if (action:stopped-p action)
                (setf stopped t)
-               (action:update action dt))))
+               (action:step-action action dt))))
     (when stopped
       (setf (manager-actions manager)
             (delete-if #'action:stopped-p (manager-actions manager) :key #'act-action)))))

@@ -2,7 +2,7 @@
   (:use :cl :alexandria)
   (:export
    #:start-with-target
-   #:update
+   #:step-action
    #:stop
    #:stopped-p
    #:rotate-by
@@ -29,9 +29,9 @@
 (defmethod reset ((self action))
   (setf (action-running self) t))
 
-(defmethod update ((self action) dt)
+(defmethod step-action ((self action) dt)
   (declare (ignorable self dt))
-  (error "subclasses must override action:update"))
+  (error "subclasses must override action:step-action"))
 
 (defmethod stop ((self action))
   (setf (action-running self) nil))
@@ -43,11 +43,16 @@
   (duration 0.0)
   (elapsed 0.0))
 
-(defmethod update ((self finite-time-action) dt)
-  (incf (finite-time-action-elapsed self) dt)
-  (when (>= (finite-time-action-elapsed self)
-            (finite-time-action-duration self))
-    (stop self)))
+(defmethod update ((self finite-time-action) time)
+  (declare (ignorable time))
+  (error "finite-time-action subclasses must override action:update"))
+
+(defmethod step-action ((self finite-time-action) dt)
+  (with-struct (finite-time-action- elapsed duration) self
+    (incf elapsed dt)
+    (update self (clamp (/ elapsed duration) 0.0 1.0))
+    (when (>= elapsed duration)
+      (stop self))))
 
 (defmethod reset ((self finite-time-action))
   (call-next-method)
@@ -67,12 +72,9 @@
   (setf (rotate-by-initial-rotation self)
         (node:rotation (rotate-by-target self))))
 
-(defmethod update ((self rotate-by) dt)
-  (declare (ignorable dt))
-  (call-next-method)
-  (with-struct (rotate-by- elapsed duration delta initial-rotation target) self
-    (let* ((pct (/ elapsed duration))
-           (rotation (mod (+ initial-rotation (* pct delta)) 360.0)))
+(defmethod update ((self rotate-by) time)
+  (with-struct (rotate-by- delta initial-rotation target) self
+    (let* ((rotation (mod (+ initial-rotation (* time delta)) 360.0)))
       (setf (node:rotation target) rotation))))
 
 (defun rotate-by (duration delta)
@@ -86,11 +88,11 @@
   (call-next-method)
   (start-with-target (repeat-forever-action self) node))
 
-(defmethod update ((self repeat-forever) dt)
+(defmethod step-action ((self repeat-forever) dt)
   (with-struct (repeat-forever- action) self
     (when (stopped-p action)
       (reset action))
-    (update action dt)))
+    (step-action action dt)))
 
 (defmethod reset ((self repeat-forever))
   (call-next-method)
@@ -120,12 +122,16 @@
     (when (< index (length items))
       (start-with-target (aref items index) node))))
 
-(defmethod update ((self do-sequence) dt)
+;; TODO: rework sequence to handle time correctly
+(defmethod update ((self do-sequence) time)
+  (declare (ignorable time)))
+
+(defmethod step-action ((self do-sequence) dt)
   (call-next-method)
   (with-struct (do-sequence- index items target) self
     (if (< index (length items))
         (let ((item (aref items index)))
-          (update item dt)
+          (step-action item dt)
           (loop
              while item
              while (stopped-p item) do
@@ -136,7 +142,7 @@
                      (t
                       (setf item (aref items index))
                       (start-with-target item target)
-                      (update item dt)))))
+                      (step-action item dt)))))
         (stop self))))
 
 (defun do-sequence (&rest items)
