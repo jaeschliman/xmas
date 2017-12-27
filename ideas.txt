@@ -1,0 +1,27 @@
+auto reload textures.
+this could be done by having a queue on the texture manager that
+accepts texture updates, and running a dedicated thread that montiors
+the FS for image changes.
+----------------------------------------
+behavior trees (at some point)
+----------------------------------------
+have a dedicated sketch-like macro, where re-evaluating
+'re-loads' the sketch, something like
+(defscene my-scene
+  :vars
+  player (sprite-from-file "./foo.png")
+  enemy (sprite-from-file "./bar.png)
+  bullets (make-array 0 :adjustable t :fill-pointer 0)
+  :on-enter
+  (set-music "./scary.mp3")
+  (add-child self player) ; implicit var self
+  (add-child self enemy)
+  :update
+  ;; etc etc
+  (move-bullets bullets dt) ; implicit vars bullets and dt
+  (when (key-down #\Space) (shoot-bullet player bullets)))
+
+(run-scene 'my-scene)
+;; and hereafter when re-evaluating the defscene,
+;; the runtime will restart the scene in its window
+;; if it is running
