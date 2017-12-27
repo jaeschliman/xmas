@@ -400,6 +400,19 @@
     (node:add-child node node3)
     (node:add-child node node4)
     (node:add-child node node5)
+    (node:run-action
+     node
+     (action:repeat-forever
+      (action:run-sequence
+       (action:callfunc (lambda () (format t " tick! ")))
+       (action:delay 2.0))))
+    (node:run-action
+     node
+     (action:repeat-forever
+      (action:run-sequence
+       (action:delay 1.0)
+       (action:callfunc (lambda () (format t " tock! ")))
+       (action:delay 1.0))))
     (setf (test8-node self) node)))
 
 (defmethod cl-user::step-contents ((self test8) dt)

@@ -19,7 +19,8 @@
    #:ease-in-cubic
    #:ease-in-quart
    #:ease-in-quint
-   #:ease-in-quadratic))
+   #:ease-in-quadratic
+   #:callfunc))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -134,8 +135,11 @@
   (declare (ignorable node))
   (call-next-method)
   (with-struct (run-sequence- item0 duration split prev) self
-    (setf split (/ (finite-time-action-duration item0) duration)
-          prev -1))) 
+    (setf
+     split (/ (finite-time-action-duration item0) duration)
+     prev -1)
+    (when (= split 0.0) (setf split single-float-epsilon))
+    (when (= split 1.0) (setf split (- 1.0 single-float-epsilon))))) 
 
 (defmethod update ((self run-sequence) time)
   (with-struct (run-sequence- item0 item1 target split prev) self
@@ -170,10 +174,12 @@
 (defun sequence-2 (item0 item1)
   (assert item0)
   (assert item1)
-  (make-run-sequence :item0 item0
-                    :item1 item1
-                    :duration (+ (finite-time-action-duration item0)
-                                 (finite-time-action-duration item1))))
+  (let ((duration (+ (finite-time-action-duration item0)
+                     (finite-time-action-duration item1))))
+    (setf duration (if (= duration 0.0) (* 2.0 single-float-epsilon) duration))
+    (make-run-sequence :item0 item0
+                       :item1 item1
+                       :duration duration)))
 
 (defun run-sequence (&rest items)
   (declare (dynamic-extent items))
@@ -250,3 +256,26 @@
     (* time time time time time))
   (defease ease-in-quadratic (time)
     (expt time 2.0)))
+
+
+(defstruct (instant-action (:include finite-time-action)))
+
+(defmethod step-action ((self instant-action) dt)
+  (declare (ignorable dt))
+  (update self 1.0))
+
+(defmethod update ((self instant-action) time)
+  (declare (ignorable time))
+  (stop self))
+
+(defstruct (callfunc (:include instant-action))
+  function
+  args)
+
+(defmethod update ((self callfunc) time)
+  (declare (ignorable time))
+  (call-next-method)
+  (apply (callfunc-function self) (callfunc-args self)))
+
+(defun callfunc (fn &rest args)
+  (make-callfunc :function fn :args args))
