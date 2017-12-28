@@ -29,7 +29,8 @@
    #:stop-all-actions
    #:on-enter
    #:on-exit
-   #:visible))
+   #:visible
+   #:opacity))
 (in-package :node)
 
 ;;; honestly, this should probably be a struct...
@@ -44,7 +45,7 @@
    (skew-y               :reader   skew-y               :initarg  :skew-y)
    (rotation             :reader   rotation             :initarg  :rotation)
    (color                :accessor color                :initarg  :color)
-
+   (opacity              :accessor opacity              :initarg  :opacity)
    (visible              :accessor visible              :initarg  :visible)
 
    (parent               :accessor parent               :initform nil)
@@ -61,7 +62,7 @@
    :flip-x   nil :flip-y  nil
    :skew-x   0.0 :skew-y  0.0
    :rotation 0.0
-   :color    '(1.0 1.0 1.0 1.0)
+   :color    (vector 1.0 1.0 1.0) :opacity 1.0
    :visible  t))
 
 (defun mark-as-dirty (node)

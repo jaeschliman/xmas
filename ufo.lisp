@@ -8,6 +8,10 @@
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
 
+(defun draw-node-color (node)
+  (let ((c (color node)) (a (opacity node)))
+    (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
+
 (defclass sprite (node)
   ((texture :accessor texture :initarg :texture)))
 
@@ -25,11 +29,11 @@
 (defmethod draw ((self node)))
 
 (defmethod draw ((self sprite))
-  (apply 'render-buffer::set-color (color self))
+  (draw-node-color self)
   (render-buffer::draw-texture (texture self)))
 
 (defmethod draw ((self rect))
-  (apply 'render-buffer::set-color (color self))
+  (draw-node-color self)
   (when-let (id (texture-id (texture self)))
     (render-buffer::simple-draw-gl-texture-no-color
      id (rect-width self) (rect-height self))))
@@ -69,7 +73,7 @@
          (sky (make-instance 'rect
                              :texture (get-texture "./pixel.png")
                              :width width :height height
-                             :color '(0.0 1.0 1.0 1.0)))
+                             :color (vector 0.0 1.0 1.0)))
          (cows (loop repeat 5 collect
                     (make-instance 'sprite
                                    :x (random (+ width 100))
@@ -88,11 +92,13 @@
 
           (y beam) (- (/ -700.0 2.0) 60.0)
           (x beam) (- 10.0)
-          (color beam) '(0.0 1.0 0.0 1.0)
+          (color beam) (vector 0.0 1.0 0.0)
           (visible beam) nil
 
           (x doom) center-x
           (y doom) center-y
+          (color doom) (vector 1.0 0.0 0.0)
+          (opacity doom) 0.8
 
           (x buildings1) center-x
           (y buildings1) 125
@@ -104,7 +110,7 @@
           (ufo-game-cows self) cows
           (ufo-game-beam self) beam)
 
-    (setf (color doom) '(1.0 0.0 0.0 0.8))
+
     (add-child root doom)
 
     ;; -- leave the sky out for now. it looks good dark
@@ -164,8 +170,8 @@
                    (< (dsq cow) r))
               (progn
                 (setf (visible beam) t)
-                (setf (color cow) '(0.0 1.0 0.0 1.0)))
-              (setf (color cow) '(1.0 1.0 1.0 1.0))))))))
+                (setf (color cow) (vector 0.0 1.0 0.0)))
+              (setf (color cow) (vector 1.0 1.0 1.0))))))))
 
 (defmethod cl-user::step-contents ((self ufo-game) dt)
   (declare (ignorable dt))

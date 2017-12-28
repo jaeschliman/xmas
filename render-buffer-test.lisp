@@ -265,8 +265,12 @@
 
 (cl-user::display-contents (make-test6))
 
+(defun draw-node-color (node)
+  (let ((c (node:color node)) (a (node:opacity node)))
+    (set-color (svref c 0) (svref c 1) (svref c 2) a)))
+
 (defmethod draw ((self node:node))
-  (apply 'set-color (node:color self))
+  (draw-node-color self)
   (draw-rect -20.0 -20.0 40.0 40.0))
 
 ;; the fast method:
@@ -340,11 +344,11 @@
                                 :x (coerce (- (random diagonal) d/2) 'float)
                                 :y (coerce (- (random diagonal) d/2)'float)
                                 :rotation (coerce (random 360) 'float)
-                                :color (list
+                                :color (vector
                                         (/ (random 100) 100.0)
                                         (/ (random 100) 100.0)
-                                        (/ (random 100) 100.0)
-                                        (/ (random 100) 100.0))))))
+                                        (/ (random 100) 100.0))
+                                :opacity (/ (random 100) 100.0)))))
     (dolist (child nodes)
       (node:add-child root-node child))))
 
@@ -370,19 +374,23 @@
                              :x (/ (display:display-width display) 2)
                              :y (/ (display:display-height display) 2)))
         (node2 (make-instance 'node:node
-                              :color '(0.0 1.0 1.0 0.4)
+                              :color (vector 0.0 1.0 1.0)
+                              :opacity 0.4
                               :x 20.0
                               :y 20.0))
         (node3 (make-instance 'node:node
-                              :color '(1.0 0.0 0.0 0.4)
+                              :color (vector 1.0 0.0 0.0)
+                              :opacity 0.4
                               :x -20.0
                               :y -20.0))
         (node4 (make-instance 'node:node
-                              :color '(0.0 1.0 0.0 0.4)
+                              :color (vector 0.0 1.0 0.0)
+                              :opacity 0.4
                               :x  20.0
                               :y -20.0))
         (node5 (make-instance 'node:node
-                              :color '(1.0 1.0 0.0 0.4)
+                              :color (vector 1.0 1.0 0.0)
+                              :opacity 0.4
                               :x -20.0
                               :y  20.0)))
     (node:run-action node
