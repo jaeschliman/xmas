@@ -25,3 +25,8 @@ have a dedicated sketch-like macro, where re-evaluating
 ;; and hereafter when re-evaluating the defscene,
 ;; the runtime will restart the scene in its window
 ;; if it is running
+----------------------------------------
+handle errors in the drawing code better.
+currently if a drawing instruction throws an exception
+we'll usually wind up with a stack overflow as gl matrices
+will not be popped.
