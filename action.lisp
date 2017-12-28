@@ -22,7 +22,9 @@
    #:ease-in-quadratic
    #:callfunc
    #:find-easing-function
-   #:move-by))
+   #:move-by
+   #:fade-in
+   #:fade-out))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -304,6 +306,23 @@
 
 (defact move-by (duration x y)
   (make-move-by :duration duration :delta-x x :delta-y y))
+
+(defstruct (fade-in (:include finite-time-action)))
+
+(defmethod update ((self fade-in) time)
+  (setf (node:opacity (fade-in-target self)) (clamp time 0.0 1.0)))
+
+(defact fade-in (duration)
+  (make-fade-in :duration duration))
+
+(defstruct (fade-out (:include finite-time-action)))
+
+(defmethod update ((self fade-out) time)
+  (setf (node:opacity (fade-out-target self)) (clamp (- 1.0 time) 0.0 1.0)))
+
+(defact fade-out (duration)
+  (make-fade-out :duration duration))
+
 
 ;; ======================================================================
 ;; instant actions
