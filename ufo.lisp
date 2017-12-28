@@ -128,11 +128,22 @@
     (add-child root ufo)
     (add-child ufo beam)
 
+    (run-action beam
+                (list (fade-in 0.6)
+                      (fade-out 0.6))
+                :repeat :forever)
+
     (run-action
      ufo
      (list (rotate-by 0.6 20.0 :ease :in-out-sine)
            (rotate-by 0.6 -20.0 :ease :in-out-sine))
      :repeat :forever)))
+
+(defun adjust-beam-opacity (ufo-game dt)
+  (declare (ignorable dt))
+  (with-struct (ufo-game- beam) ufo-game
+    (when (visible beam)
+      (setf (opacity beam) (+ 0.3 (* 0.4 (opacity beam)))))))
 
 (defun move-buildings (ufo-game dt)
   (let* ((speed 50)
@@ -181,6 +192,7 @@
   (move-buildings self dt)
   (move-cows self dt)
   (hover-over-cows self dt)
+  (adjust-beam-opacity self dt)
   (visit (ufo-game-root-node self)))
 
 (defmethod cl-user::handle-event ((self ufo-game) event)
