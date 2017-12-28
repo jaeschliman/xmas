@@ -8,6 +8,13 @@
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
 
+(defmacro move-towards! (place dest speed dt)
+  (once-only (dest speed dt)
+    `(let* ((curr ,place)
+            (delta (* ,speed ,dt (if (< ,dest curr) -1 1)))
+            (new-val (incf curr delta)))
+       (setf ,place new-val))))
+
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
     (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
@@ -165,6 +172,9 @@
     (dolist (cow (ufo-game-cows ufo-game))
       (decf (x cow) delx)
       (when (< (x cow) min-x)
+        (setf (y cow) (+ 30.0 (random 7))
+              (scale-y cow) 1.0
+              (scale-x cow) 1.0)
         (incf (x cow) (+ width 100.0))))))
 
 (defun hover-over-cows (ufo-game dt)
@@ -177,12 +187,18 @@
                (+ (expt (- x (x cow)) 2) (expt (- y (y cow)) 2))))
         (setf (visible beam) nil)
         (dolist (cow cows)
-          (if (and (< (abs (- x (x cow))) 100)
+          (if (and (< (abs (- x (x cow))) 60)
                    (< (dsq cow) r))
               (progn
                 (setf (visible beam) t)
-                (setf (color cow) (vector 0.0 1.0 0.0)))
-              (setf (color cow) (vector 1.0 1.0 1.0))))))))
+                (setf (color cow) (vector 0.0 1.0 0.0))
+                (move-towards! (scale-x cow) 0.3 0.25 dt)
+                (move-towards! (scale-y cow) 0.3 0.25 dt)
+                (move-towards! (y cow) y 20 dt)
+                (move-towards! (x cow) x 10 dt))
+              (progn
+                (setf (color cow) (vector 1.0 1.0 1.0))
+                (move-towards! (y cow) 30.0 40 dt)))))))))
 
 (defmethod cl-user::step-contents ((self ufo-game) dt)
   (declare (ignorable dt))
