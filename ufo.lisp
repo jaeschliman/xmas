@@ -8,6 +8,7 @@
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
 
+;; would be cool to have a version of this that uses acceleration as well
 (defmacro move-towards! (place dest speed dt)
   (once-only (dest speed dt)
     `(let* ((curr ,place)
@@ -21,6 +22,21 @@
 
 (defclass sprite (node)
   ((texture :accessor texture :initarg :texture)))
+
+(defclass physics-sprite (sprite)
+  ((velocity-x :accessor velocity-x :initarg :velocity-x)
+   (velocity-y :accessor velocity-y :initarg :velocity-y)
+   (acceleration-x :accessor acceleration-x :initarg :acceleration-x)
+   (acceleration-y :accessor acceleration-y :initarg :acceleration-y))
+  (:default-initargs
+   :velocity-x 0.0 :velocity-y 0.0
+   :acceleration-x 0.0 :acceleration-y 0.0))
+
+(defun update-physics-sprite (sprite dt)
+  (incf (x sprite) (* dt (velocity-x sprite)))
+  (incf (y sprite) (* dt (velocity-y sprite)))
+  (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
+  (incf (velocity-y sprite) (* dt (acceleration-y sprite))))
 
 (defclass rect (node)
   ((width :accessor rect-width :initarg :width)
@@ -82,9 +98,10 @@
                              :width width :height height
                              :color (vector 0.0 1.0 1.0)))
          (cows (loop repeat 5 collect
-                    (make-instance 'sprite
+                    (make-instance 'physics-sprite
                                    :x (random (+ width 100))
                                    :y (+ 30.0 (random 7))
+                                   :velocity-x -100.0
                                    :texture (get-texture "./cow.png")))))
     (setf (ufo-game-player self) ufo
           (ufo-game-root-node self) root
@@ -165,17 +182,19 @@
           (x b2) (+ new-x width))))
 
 (defun move-cows (ufo-game dt)
-  (let* ((speed 100)
-         (width 500)
-         (delx (* dt speed))
-         (min-x -50.0))
+  (let* ((width 500)
+         (min-y 30.0))
     (dolist (cow (ufo-game-cows ufo-game))
-      (decf (x cow) delx)
+      (update-physics-sprite cow dt)
       (when (< (x cow) min-x)
         (setf (y cow) (+ 30.0 (random 7))
               (scale-y cow) 1.0
               (scale-x cow) 1.0)
-        (incf (x cow) (+ width 100.0))))))
+        (incf (x cow) (+ width 100.0)))
+      (when (< (y cow) min-y)
+        (setf (acceleration-y cow) 0
+              (velocity-y cow) 0
+              (y cow) min-y)))))
 
 (defun hover-over-cows (ufo-game dt)
   (declare (ignorable dt))
@@ -198,7 +217,7 @@
                 (move-towards! (x cow) x 10 dt))
               (progn
                 (setf (color cow) (vector 1.0 1.0 1.0))
-                (move-towards! (y cow) 30.0 40 dt)))))))))
+                (setf (acceleration-y cow) -500.0))))))))
 
 (defmethod cl-user::step-contents ((self ufo-game) dt)
   (declare (ignorable dt))
