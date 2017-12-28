@@ -300,7 +300,7 @@
 (defmethod update ((self move-by) time)
   (with-struct (move-by- initial-x delta-x initial-y delta-y target) self
     (setf (node:x target) (+ initial-x (* time delta-x)))
-    (setf (node:y target) (+ initial-y (* time delta-y))))))
+    (setf (node:y target) (+ initial-y (* time delta-y)))))
 
 (defact move-by (duration x y)
   (make-move-by :duration duration :delta-x x :delta-y y))
