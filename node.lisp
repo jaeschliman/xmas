@@ -28,7 +28,8 @@
    #:run-action
    #:stop-all-actions
    #:on-enter
-   #:on-exit))
+   #:on-exit
+   #:visible))
 (in-package :node)
 
 ;;; honestly, this should probably be a struct...
@@ -44,6 +45,8 @@
    (rotation             :reader   rotation             :initarg  :rotation)
    (color                :accessor color                :initarg  :color)
 
+   (visible              :accessor visible              :initarg  :visible)
+
    (parent               :accessor parent               :initform nil)
    (children             :accessor children             :initform nil)
    (xform                :accessor xform                :initform (matrix:make-matrix))
@@ -58,7 +61,8 @@
    :flip-x   nil :flip-y  nil
    :skew-x   0.0 :skew-y  0.0
    :rotation 0.0
-   :color    '(1.0 1.0 1.0 1.0)))
+   :color    '(1.0 1.0 1.0 1.0)
+   :visible  t))
 
 (defun mark-as-dirty (node)
   (setf (xform-dirty-p node) t
