@@ -35,6 +35,8 @@
      id (rect-width self) (rect-height self))))
 
 (defmethod visit ((self node))
+  (when (not (visible self))
+    (return-from visit))
   (render-buffer::push-matrix)
   (render-buffer::translate-scale-rotate
    (x self) (y self)
@@ -51,7 +53,7 @@
   started
   root-node
   player-moving
-  building1 building2 cows)
+  building1 building2 cows beam)
 
 (defmethod cl-user::contents-will-mount ((self ufo-game) display)
   (let* ((width (display-width display))
@@ -59,11 +61,12 @@
          (center-x (/ width 2.0))
          (center-y (/ height 2.0))
          (ufo (sprite-with-file "./ufo.png"))
+         (beam (sprite-with-file "./beam.png"))
          (root (make-instance 'node))
          (doom (sprite-with-file "./ufo.png"))
          (buildings1 (sprite-with-file "./buildings.png"))
          (buildings2 (sprite-with-file "./buildings.png"))
-         (sky (make-instance 'rect 
+         (sky (make-instance 'rect
                              :texture (get-texture "./pixel.png")
                              :width width :height height
                              :color '(0.0 1.0 1.0 1.0)))
@@ -79,8 +82,15 @@
           (rotation ufo) -10.0
           (x sky) center-x
           (y sky) center-y
+
           (x ufo) center-x
           (y ufo) center-y
+
+          (y beam) (- (/ -700.0 2.0) 60.0)
+          (x beam) (- 10.0)
+          (color beam) '(0.0 1.0 0.0 1.0)
+          (visible beam) nil
+
           (x doom) center-x
           (y doom) center-y
 
@@ -91,7 +101,8 @@
 
           (ufo-game-building1 self) buildings1
           (ufo-game-building2 self) buildings2
-          (ufo-game-cows self) cows)
+          (ufo-game-cows self) cows
+          (ufo-game-beam self) beam)
 
     (setf (color doom) '(1.0 0.0 0.0 0.8))
     (add-child root doom)
@@ -109,7 +120,8 @@
                   :repeat :forever))
 
     (add-child root ufo)
-    
+    (add-child ufo beam)
+
     (run-action
      ufo
      (list (rotate-by 0.6 20.0 :ease :in-out-sine)
@@ -138,6 +150,23 @@
       (when (< (x cow) min-x)
         (incf (x cow) (+ width 100.0))))))
 
+(defun hover-over-cows (ufo-game dt)
+  (declare (ignorable dt))
+  (with-struct (ufo-game- player cows beam) ufo-game
+    (let ((x (x player))
+          (y (y player))
+          (r (expt 150.0 2)))
+      (flet ((dsq (cow)
+               (+ (expt (- x (x cow)) 2) (expt (- y (y cow)) 2))))
+        (setf (visible beam) nil)
+        (dolist (cow cows)
+          (if (and (< (abs (- x (x cow))) 100)
+                   (< (dsq cow) r))
+              (progn
+                (setf (visible beam) t)
+                (setf (color cow) '(0.0 1.0 0.0 1.0)))
+              (setf (color cow) '(1.0 1.0 1.0 1.0))))))))
+
 (defmethod cl-user::step-contents ((self ufo-game) dt)
   (declare (ignorable dt))
   (unless (ufo-game-started self)
@@ -145,26 +174,27 @@
     (on-enter (ufo-game-root-node self)))
   (move-buildings self dt)
   (move-cows self dt)
+  (hover-over-cows self dt)
   (visit (ufo-game-root-node self)))
 
 (defmethod cl-user::handle-event ((self ufo-game) event)
   (when (eq (car event) :keydown)
     (with-struct (ufo-game- player player-moving) self
-        (when (not player-moving)
-          (let ((key (cdr event))
-                (amt 40.0))
-            (flet ((move (x y)
-                     (setf player-moving t)
-                     (run-action
-                      player
-                      (list
-                       (move-by 0.2 x y :ease :in-out-sine)
-                       (callfunc (lambda () (setf player-moving nil)))))))
-              (case key
-                (:left  (move (- amt) 0.0))
-                (:right (move amt 0.0))
-                (:up    (move 0.0 amt))
-                (:down  (move 0.0 (- amt))))))))))
+      (when (not player-moving)
+        (let ((key (cdr event))
+              (amt 40.0))
+          (flet ((move (x y)
+                   (setf player-moving t)
+                   (run-action
+                    player
+                    (list
+                     (move-by 0.2 x y :ease :in-out-sine)
+                     (callfunc (lambda () (setf player-moving nil)))))))
+            (case key
+              (:left  (move (- amt) 0.0))
+              (:right (move amt 0.0))
+              (:up    (move 0.0 amt))
+              (:down  (move 0.0 (- amt))))))))))
 
 
 (cl-user::display-contents (make-ufo-game) :width 500 :height 500)
