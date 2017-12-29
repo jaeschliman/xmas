@@ -19,33 +19,70 @@
 
 (defvar *texture-manager* nil)
 
+(defun load-image-rep (path)
+  (let* ((p (truename path))
+         (rep (ccl::with-autoreleased-nsstring (s (princ-to-string p))
+                (#/imageRepWithContentsOfFile: ns:ns-bitmap-image-rep s)))
+         (has-alpha (if (#/hasAlpha rep) #$YES #$NO))
+         (size (#/size rep))
+         (width (ns:ns-size-width size))
+         (height (ns:ns-size-height size)) 
+         (format (if has-alpha :rgba :rgb)))
+    (values rep width height format)))
+
 (defun gl-load-texture (texture)
- (let* ((p (truename (texture-path texture)))
-           (rep (ccl::with-autoreleased-nsstring (s (princ-to-string p))
-                  (#/imageRepWithContentsOfFile: ns:ns-bitmap-image-rep s)))
-           (has-alpha (if (#/hasAlpha rep) #$YES #$NO))
-           (size (#/size rep))
-           (w (ns:ns-size-width size))
-           (h (ns:ns-size-height size))
-           (dat (#/bitmapData rep))
-           (fmt (if has-alpha :rgba :rgb)))
-      (let ((id (car (gl:gen-textures 1))))
-        (gl:bind-texture :texture-2d id)
-        (gl:tex-parameter :texture-2d :texture-min-filter :linear)
-        (gl:tex-image-2d :texture-2d 0 :rgba
-                         w h 0 fmt
-                         :unsigned-byte dat)
-        (setf (texture-width texture) w
-              (texture-height texture) h
-              (texture-id texture) id))))
+  (let* ((p (truename (texture-path texture)))
+         (rep (ccl::with-autoreleased-nsstring (s (princ-to-string p))
+                (#/imageRepWithContentsOfFile: ns:ns-bitmap-image-rep s)))
+         (has-alpha (if (#/hasAlpha rep) #$YES #$NO))
+         (size (#/size rep))
+         (w (ns:ns-size-width size))
+         (h (ns:ns-size-height size))
+         (dat (#/bitmapData rep))
+         (fmt (if has-alpha :rgba :rgb)))
+    (let ((id (car (gl:gen-textures 1))))
+      (gl:bind-texture :texture-2d id)
+      (gl:tex-parameter :texture-2d :texture-min-filter :linear)
+      (gl:tex-image-2d :texture-2d 0 :rgba
+                       w h 0 fmt
+                       :unsigned-byte dat)
+      (setf (texture-width texture) w
+            (texture-height texture) h
+            (texture-id texture) id))))
+
+(defun gl-load-texture-image-rep (texture rep format)
+  (let ((w (texture-width texture))
+        (h (texture-height texture))
+        (dat (#/bitmapData rep)))
+    (let ((id (car (gl:gen-textures 1))))
+      (gl:bind-texture :texture-2d id)
+      (gl:tex-parameter :texture-2d :texture-min-filter :linear)
+      (gl:tex-image-2d :texture-2d 0 :rgba
+                       w h 0 format
+                       :unsigned-byte dat)
+      (setf (texture-id texture) id))))
 
 (defun load-texture-on-display (display pathname)
   (when (probe-file (truename pathname))
-    (let ((texture (make-texture :path pathname)))
-      (display:display-enqueue-for-gl
-       display
-       (lambda () (gl-load-texture texture)))
-      texture)))
+    (let ((load-across-threads t))
+      (if load-across-threads
+          (multiple-value-bind (rep width height format)
+              (load-image-rep pathname)
+            (let ((texture (make-texture :path pathname
+                                         :width width
+                                         :height height)))
+              (#/retain rep)
+              (display:display-enqueue-for-gl
+               display
+               (lambda ()
+                 (gl-load-texture-image-rep texture rep format)
+                 (#/release rep)))
+              texture))
+          (let ((texture (make-texture :path pathname)))
+            (display:display-enqueue-for-gl
+             display
+             (lambda () (gl-load-texture texture)))
+            texture)))))
 
 (defun get-or-load-texture (texture-manager path)
   (ensure-gethash

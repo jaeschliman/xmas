@@ -147,7 +147,10 @@
 
 (defmethod cl-user::contents-will-mount ((self test4) display)
   (declare (ignorable display))
-  (setf (test4-alien self) (texture:get-texture #P"./alien.png"))
+  (let ((texture (texture:get-texture #P"./alien.png")))
+    (assert (texture:texture-width texture))
+    (assert (texture:texture-height texture))
+    (setf (test4-alien self) texture))
   (unless (test4-alien self)
     (format t "missing texture!")))
 
