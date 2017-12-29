@@ -33,6 +33,9 @@
    :velocity-x 0.0 :velocity-y 0.0
    :acceleration-x 0.0 :acceleration-y 0.0))
 
+(defclass abductable (physics-sprite)
+  ((is-being-abducted :accessor is-being-abducted :initform nil)))
+
 (defun update-physics-sprite (sprite dt)
   (incf (x sprite) (* dt (velocity-x sprite)))
   (incf (y sprite) (* dt (velocity-y sprite)))
@@ -86,8 +89,8 @@
 
 (defun add-cow (ufo-game)
   (let* ((width 500)
-         (cow (make-instance 'physics-sprite
-                             :x (+ width 100) ;;(random (+ width 100))
+         (cow (make-instance 'abductable
+                             :x (+ width 100)
                              :y (+ 30.0 (random 7))
                              :velocity-x -100.0
                              :texture (get-texture "./cow.png"))))
@@ -216,6 +219,23 @@
               (velocity-y cow) 0
               (y cow) min-y)))))
 
+(defun start-abducting-cow (cow)
+  (setf (is-being-abducted cow) t
+        (velocity-y cow) 0.0
+        (acceleration-y cow) 0.0
+        (color cow) (vector 0.0 1.0 0.0))
+  (stop-all-actions cow)
+  (run-action cow
+              (list (delay 1.0)
+                    (rotate-by 5.0 -180.0 :ease :in-sine))))
+
+(defun stop-abducting-cow (cow)
+  (setf (is-being-abducted cow) nil
+        (velocity-x cow) -100.0
+        (acceleration-y cow) -500.0
+        (color cow) (vector 1.0 1.0 1.0))
+  (stop-all-actions cow))
+
 (defun hover-over-cows (ufo-game dt)
   (declare (ignorable dt))
   (with-struct (ufo-game- player cows beam) ufo-game
@@ -235,18 +255,15 @@
                     (< (abs (- x (x cow))) 60)
                     (< dsq beam-radius))
                (setf (visible beam) t)
-               (setf (color cow) (vector 0.0 1.0 0.0))
+               (unless (is-being-abducted cow)
+                 (start-abducting-cow cow))
                (move-towards! (velocity-x cow) 0.0 20 dt)
                (move-towards! (scale-x cow) 0.3 0.25 dt)
                (move-towards! (scale-y cow) 0.3 0.25 dt)
                (move-towards! (y cow) y 40 dt)
-               (move-towards! (x cow) x 100 dt)
-               (setf (velocity-y cow) 0.0)
-               (setf (acceleration-y cow) 0.0))
-              (t
-               (setf (color cow) (vector 1.0 1.0 1.0))
-               (setf (velocity-x cow) -100.0)
-               (setf (acceleration-y cow) -500.0)))))))))
+               (move-towards! (x cow) x 100 dt))
+              ((is-being-abducted cow)
+               (stop-abducting-cow cow)))))))))
 
 (defun move-ufo (ufo-game dt)
   (with-struct (ufo-game- player keys) ufo-game
