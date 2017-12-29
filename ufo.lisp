@@ -16,6 +16,8 @@
             (new-val (incf curr delta)))
        (setf ,place new-val))))
 
+(define-modify-macro clampf (min max) clamp)
+
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
     (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
@@ -87,7 +89,8 @@
          (height (display-height display))
          (center-x (/ width 2.0))
          (center-y (/ height 2.0))
-         (ufo (sprite-with-file "./ufo.png"))
+         (ufo (make-instance 'physics-sprite
+                             :texture (get-texture "./ufo.png")))
          (beam (sprite-with-file "./beam.png"))
          (root (make-instance 'node))
          (doom (sprite-with-file "./ufo.png"))
@@ -206,18 +209,40 @@
                (+ (expt (- x (x cow)) 2) (expt (- y (y cow)) 2))))
         (setf (visible beam) nil)
         (dolist (cow cows)
-          (if (and (< (abs (- x (x cow))) 60)
+          (if (and (<= (y cow) y)
+                   (< (abs (- x (x cow))) 60)
                    (< (dsq cow) r))
               (progn
                 (setf (visible beam) t)
                 (setf (color cow) (vector 0.0 1.0 0.0))
+                (move-towards! (velocity-x cow) 0.0 20 dt)
                 (move-towards! (scale-x cow) 0.3 0.25 dt)
                 (move-towards! (scale-y cow) 0.3 0.25 dt)
-                (move-towards! (y cow) y 20 dt)
-                (move-towards! (x cow) x 10 dt))
+                (move-towards! (y cow) y 40 dt)
+                (move-towards! (x cow) x 100 dt)
+                (setf (velocity-y cow) 0.0)
+                (setf (acceleration-y cow) 0.0) )
               (progn
                 (setf (color cow) (vector 1.0 1.0 1.0))
+                (setf (velocity-x cow) -100.0)
                 (setf (acceleration-y cow) -500.0))))))))
+
+(defun move-ufo (ufo-game dt)
+  (with-struct (ufo-game- player) ufo-game
+    (let* ((max-vel 150.0)
+           (min-vel (- max-vel)))
+      (update-physics-sprite player dt)
+      (clampf (velocity-x player) min-vel max-vel)
+      (clampf (velocity-y player) min-vel max-vel)
+      (let ((x (x player)) (y (y player)))
+        (when (or (< x 50.0) (> x 450.0))
+          (setf (velocity-x player) 0.0
+                (acceleration-x player) 0.0))
+        (when (or (< y 100.0) (> y 450.0))
+          (setf (velocity-y player) 0.0
+                (acceleration-y player) 0.0)))
+      (clampf (x player) 50.0 450.0)
+      (clampf (y player) 100.0 450.0))))
 
 (defmethod cl-user::step-contents ((self ufo-game) dt)
   (declare (ignorable dt))
@@ -228,6 +253,7 @@
   (move-cows self dt)
   (hover-over-cows self dt)
   (adjust-beam-opacity self dt)
+  (move-ufo self dt)
   (visit (ufo-game-root-node self)))
 
 (defmethod cl-user::handle-event ((self ufo-game) event)
@@ -235,14 +261,20 @@
     (with-struct (ufo-game- player player-moving) self
       (when (not player-moving)
         (let ((key (cdr event))
+              (move-with-physics nil)
               (amt 40.0))
           (flet ((move (x y)
-                   (setf player-moving t)
-                   (run-action
-                    player
-                    (list
-                     (move-by 0.2 x y :ease :in-out-sine)
-                     (callfunc (lambda () (setf player-moving nil)))))))
+                   (cond
+                     (move-with-physics
+                      (incf (acceleration-x player) (* x 0.3))
+                      (incf (acceleration-y player) (* y 0.3)))
+                     (t
+                      (setf player-moving t)
+                      (run-action
+                       player
+                       (list
+                        (move-by 0.2 x y :ease :in-out-sine)
+                        (callfunc (lambda () (setf player-moving nil)))))))))
             (case key
               (:left  (move (- amt) 0.0))
               (:right (move amt 0.0))
