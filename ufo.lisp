@@ -8,7 +8,6 @@
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
 
-;; would be cool to have a version of this that uses acceleration as well
 (defmacro move-towards! (place dest speed dt)
   (once-only (dest speed dt)
     `(let* ((curr ,place)
@@ -82,7 +81,8 @@
   started
   root-node
   player-moving
-  building1 building2 cows beam)
+  building1 building2 cows beam
+  (keys (make-hash-table :test 'eql)))
 
 (defun add-cow (ufo-game)
   (let* ((width 500)
@@ -107,11 +107,11 @@
 (defun add-cow-after-random-delay (ufo-game)
   (with-struct (ufo-game- root-node) ufo-game
     (let ((action (run-sequence
-                (callfunc (lambda ()
-                            (add-cow ufo-game)))
-                (delay (+ 2.0 (random 3)))
-                (callfunc (lambda ()
-                            (add-cow-after-random-delay ufo-game) )))))
+                   (callfunc (lambda ()
+                               (add-cow ufo-game)))
+                   (delay (+ 2.0 (random 3)))
+                   (callfunc (lambda ()
+                               (add-cow-after-random-delay ufo-game) )))))
       (run-action root-node action))))
 
 (defmethod cl-user::contents-will-mount ((self ufo-game) display)
@@ -249,21 +249,41 @@
                (setf (acceleration-y cow) -500.0)))))))))
 
 (defun move-ufo (ufo-game dt)
-  (with-struct (ufo-game- player) ufo-game
-    (let* ((max-vel 150.0)
-           (min-vel (- max-vel)))
-      (update-physics-sprite player dt)
-      (clampf (velocity-x player) min-vel max-vel)
-      (clampf (velocity-y player) min-vel max-vel)
-      (let ((x (x player)) (y (y player)))
-        (when (or (< x 50.0) (> x 450.0))
-          (setf (velocity-x player) 0.0
-                (acceleration-x player) 0.0))
-        (when (or (< y 100.0) (> y 450.0))
-          (setf (velocity-y player) 0.0
-                (acceleration-y player) 0.0)))
-      (clampf (x player) 50.0 450.0)
-      (clampf (y player) 100.0 450.0))))
+  (with-struct (ufo-game- player keys) ufo-game
+    (flet ((key-down (k) (gethash k keys))
+           (key-up   (k) (null (gethash k keys))))
+      (let* ((max-vel 250.0)
+             (min-vel (- max-vel))
+             (accel-rate 350.0)
+             (decel-rate 80.0))
+        (if (key-down :left)
+            (move-towards! (velocity-x player) min-vel accel-rate dt)
+            (when (key-up :right)
+              (move-towards! (velocity-x player) 0.0 decel-rate dt)))
+        (if (key-down :right)
+            (move-towards! (velocity-x player) max-vel accel-rate dt)
+            (when (key-up :left)
+              (move-towards! (velocity-x player) 0.0 decel-rate dt)))
+        (if (key-down :down)
+            (move-towards! (velocity-y player) min-vel accel-rate dt)
+            (when (key-up :up)
+              (move-towards! (velocity-y player) 0.0 decel-rate dt)))
+        (if (key-down :up)
+            (move-towards! (velocity-y player) max-vel accel-rate dt)
+            (when (key-up :down)
+              (move-towards! (velocity-y player) 0.0 decel-rate dt)))
+        (clampf (velocity-x player) min-vel max-vel)
+        (clampf (velocity-y player) min-vel max-vel)
+        (update-physics-sprite player dt)
+        (let ((x (x player)) (y (y player)))
+          (when (or (< x 50.0) (> x 450.0))
+            (setf (velocity-x player) 0.0
+                  (acceleration-x player) 0.0))
+          (when (or (< y 100.0) (> y 450.0))
+            (setf (velocity-y player) 0.0
+                  (acceleration-y player) 0.0)))
+        (clampf (x player) 50.0 450.0)
+        (clampf (y player) 100.0 450.0)))))
 
 (defmethod cl-user::step-contents ((self ufo-game) dt)
   (declare (ignorable dt))
@@ -278,29 +298,10 @@
   (visit (ufo-game-root-node self)))
 
 (defmethod cl-user::handle-event ((self ufo-game) event)
-  (when (eq (car event) :keydown)
-    (with-struct (ufo-game- player player-moving) self
-      (when (not player-moving)
-        (let ((key (cdr event))
-              (move-with-physics nil)
-              (amt 40.0))
-          (flet ((move (x y)
-                   (cond
-                     (move-with-physics
-                      (incf (acceleration-x player) (* x 0.3))
-                      (incf (acceleration-y player) (* y 0.3)))
-                     (t
-                      (setf player-moving t)
-                      (run-action
-                       player
-                       (list
-                        (move-by 0.2 x y :ease :in-out-sine)
-                        (callfunc (lambda () (setf player-moving nil)))))))))
-            (case key
-              (:left  (move (- amt) 0.0))
-              (:right (move amt 0.0))
-              (:up    (move 0.0 amt))
-              (:down  (move 0.0 (- amt))))))))))
+  (let ((info (cdr event)) (keys (ufo-game-keys self)))
+    (case (car event)
+      (:keydown (setf (gethash info keys) t))
+      (:keyup   (setf (gethash info keys) nil)))))
 
 
 (cl-user::display-contents (make-ufo-game) :width 500 :height 500)
