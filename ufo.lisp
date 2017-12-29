@@ -84,12 +84,43 @@
   player-moving
   building1 building2 cows beam)
 
+(defun add-cow (ufo-game)
+  (let* ((width 500)
+         (cow (make-instance 'physics-sprite
+                             :x (+ width 100) ;;(random (+ width 100))
+                             :y (+ 30.0 (random 7))
+                             :velocity-x -100.0
+                             :texture (get-texture "./cow.png"))))
+    (with-struct (ufo-game- root-node cows) ufo-game
+      (setf (rotation cow) -0.5)
+      (run-action cow (list (rotate-by 0.1 5.0)
+                            (rotate-by 0.1 -5.0))
+                  :repeat :forever)
+      (add-child root-node cow)
+      (push cow cows))))
+
+(defun remove-cow (ufo-game cow)
+  (with-struct (ufo-game- cows) ufo-game
+    (remove-from-parent cow)
+    (setf cows (remove cow cows))))
+
+(defun add-cow-after-random-delay (ufo-game)
+  (with-struct (ufo-game- root-node) ufo-game
+    (let ((action (run-sequence
+                (callfunc (lambda ()
+                            (add-cow ufo-game)))
+                (delay (+ 2.0 (random 3)))
+                (callfunc (lambda ()
+                            (add-cow-after-random-delay ufo-game) )))))
+      (run-action root-node action))))
+
 (defmethod cl-user::contents-will-mount ((self ufo-game) display)
   (let* ((width (display-width display))
          (height (display-height display))
          (center-x (/ width 2.0))
          (center-y (/ height 2.0))
          (ufo (make-instance 'physics-sprite
+                             :z-order 1
                              :texture (get-texture "./ufo.png")))
          (beam (sprite-with-file "./beam.png"))
          (root (make-instance 'node))
@@ -100,12 +131,7 @@
                              :texture (get-texture "./pixel.png")
                              :width width :height height
                              :color (vector 0.0 1.0 1.0)))
-         (cows (loop repeat 5 collect
-                    (make-instance 'physics-sprite
-                                   :x (random (+ width 100))
-                                   :y (+ 30.0 (random 7))
-                                   :velocity-x -100.0
-                                   :texture (get-texture "./cow.png")))))
+         (cows nil))
     (setf (ufo-game-player self) ufo
           (ufo-game-root-node self) root
           (scale-x ufo) 0.2
@@ -137,6 +163,7 @@
           (ufo-game-cows self) cows
           (ufo-game-beam self) beam)
 
+    (add-cow-after-random-delay self)
 
     (add-child root doom)
 
@@ -144,13 +171,6 @@
     ;; (add-child root sky)
     (add-child root buildings1)
     (add-child root buildings2)
-
-    (dolist (cow cows)
-      (add-child root cow)
-      (setf (rotation cow) -0.5)
-      (run-action cow (list (rotate-by 0.1 5.0)
-                            (rotate-by 0.1 -5.0))
-                  :repeat :forever))
 
     (add-child root ufo)
     (add-child ufo beam)
@@ -185,15 +205,12 @@
           (x b2) (+ new-x width))))
 
 (defun move-cows (ufo-game dt)
-  (let* ((width 500)
-         (min-y 30.0))
+  (let* ((min-y 30.0)
+         (min-x -50.0))
     (dolist (cow (ufo-game-cows ufo-game))
       (update-physics-sprite cow dt)
       (when (< (x cow) min-x)
-        (setf (y cow) (+ 30.0 (random 7))
-              (scale-y cow) 1.0
-              (scale-x cow) 1.0)
-        (incf (x cow) (+ width 100.0)))
+        (remove-cow ufo-game cow))
       (when (< (y cow) min-y)
         (setf (acceleration-y cow) 0
               (velocity-y cow) 0
@@ -204,28 +221,32 @@
   (with-struct (ufo-game- player cows beam) ufo-game
     (let ((x (x player))
           (y (y player))
-          (r (expt 150.0 2)))
+          (beam-radius (expt 150.0 2))
+          (got-em-radius (expt 10.0 2)))
       (flet ((dsq (cow)
                (+ (expt (- x (x cow)) 2) (expt (- y (y cow)) 2))))
         (setf (visible beam) nil)
         (dolist (cow cows)
-          (if (and (<= (y cow) y)
-                   (< (abs (- x (x cow))) 60)
-                   (< (dsq cow) r))
-              (progn
-                (setf (visible beam) t)
-                (setf (color cow) (vector 0.0 1.0 0.0))
-                (move-towards! (velocity-x cow) 0.0 20 dt)
-                (move-towards! (scale-x cow) 0.3 0.25 dt)
-                (move-towards! (scale-y cow) 0.3 0.25 dt)
-                (move-towards! (y cow) y 40 dt)
-                (move-towards! (x cow) x 100 dt)
-                (setf (velocity-y cow) 0.0)
-                (setf (acceleration-y cow) 0.0) )
-              (progn
-                (setf (color cow) (vector 1.0 1.0 1.0))
-                (setf (velocity-x cow) -100.0)
-                (setf (acceleration-y cow) -500.0))))))))
+          (let ((dsq (dsq cow)))
+            (cond
+              ((< dsq got-em-radius)
+               (remove-cow ufo-game cow))
+              ((and (<= (y cow) y)
+                    (< (abs (- x (x cow))) 60)
+                    (< dsq beam-radius))
+               (setf (visible beam) t)
+               (setf (color cow) (vector 0.0 1.0 0.0))
+               (move-towards! (velocity-x cow) 0.0 20 dt)
+               (move-towards! (scale-x cow) 0.3 0.25 dt)
+               (move-towards! (scale-y cow) 0.3 0.25 dt)
+               (move-towards! (y cow) y 40 dt)
+               (move-towards! (x cow) x 100 dt)
+               (setf (velocity-y cow) 0.0)
+               (setf (acceleration-y cow) 0.0))
+              (t
+               (setf (color cow) (vector 1.0 1.0 1.0))
+               (setf (velocity-x cow) -100.0)
+               (setf (acceleration-y cow) -500.0)))))))))
 
 (defun move-ufo (ufo-game dt)
   (with-struct (ufo-game- player) ufo-game
