@@ -13,7 +13,8 @@
 (defstruct manager
   (actions (make-array 128 :element-type t :adjustable t :fill-pointer 0))
   running
-  pending-deletions)
+  pending-deletions
+  pending-additions)
 
 (defstruct act
   action
@@ -28,12 +29,17 @@
     (setf (act-started act) t)
     (action:start-with-target (act-action act) (act-target act))))
 
+(defun add-act (manager act)
+  (vector-push-extend act (manager-actions manager))
+  (maybe-start-action act))
+
 (defun add-action (manager action target &optional (paused nil))
   (let ((act (make-act :action action
                        :target target
                        :paused paused)))
-    (vector-push-extend act (manager-actions manager))
-    (maybe-start-action act)))
+    (if (manager-running manager)
+        (push act (manager-pending-additions manager))
+        (add-act manager act))))
 
 (defun remove-all-actions-for-target (manager target)
   (if (manager-running manager)
@@ -72,6 +78,10 @@
       (setf (manager-pending-deletions manager) nil))
     (when stopped
       (setf (manager-actions manager)
-            (delete-if #'action:stopped-p (manager-actions manager) :key #'act-action)))))
+            (delete-if #'action:stopped-p (manager-actions manager) :key #'act-action)))
+    (when-let (additions (manager-pending-additions manager))
+      (dolist (act additions)
+        (add-act manager act))
+      (setf (manager-pending-additions manager) nil)) ))
 
 
