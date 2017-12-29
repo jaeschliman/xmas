@@ -30,13 +30,15 @@
    #:on-enter
    #:on-exit
    #:visible
-   #:opacity))
+   #:opacity
+   #:z-order))
 (in-package :node)
 
 ;;; honestly, this should probably be a struct...
 (defclass node ()
   ((x                    :reader   x                    :initarg  :x)
    (y                    :reader   y                    :initarg  :y)
+   (z-order              :reader   z-order              :initarg  :z-order)
    (scale-x              :reader   scale-x              :initarg  :scale-x)
    (scale-y              :reader   scale-y              :initarg  :scale-y)
    (flip-x               :reader   flip-x               :initarg  :flip-x)
@@ -58,6 +60,7 @@
    (pending-actions      :accessor pending-actions      :initform nil))
   (:default-initargs
    :x        0.0 :y       0.0
+   :z-order  0
    :scale-x  1.0 :scale-y 1.0
    :flip-x   nil :flip-y  nil
    :skew-x   0.0 :skew-y  0.0
