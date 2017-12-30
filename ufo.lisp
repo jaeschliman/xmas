@@ -85,14 +85,14 @@
   root-node
   player-moving
   building1 building2 cows beam
-  (keys (make-hash-table :test 'eql)))
+  (keys (make-hash-table :test 'eql))
+  (speed 50))
 
 (defun add-cow (ufo-game)
   (let* ((width 500)
          (cow (make-instance 'abductable
                              :x (+ width 100)
                              :y (+ 30.0 (random 7))
-                             :velocity-x -100.0
                              :texture (get-texture "./cow.png"))))
     (with-struct (ufo-game- root-node cows) ufo-game
       (setf (rotation cow) -0.5)
@@ -189,6 +189,9 @@
            (rotate-by 0.6 -20.0 :ease :in-out-sine))
      :repeat :forever)))
 
+(defun adjust-game-speed (ufo-game dt)
+  (move-towards! (ufo-game-speed ufo-game) 150 5 dt))
+
 (defun adjust-beam-opacity (ufo-game dt)
   (declare (ignorable dt))
   (with-struct (ufo-game- beam) ufo-game
@@ -196,7 +199,7 @@
       (setf (opacity beam) (+ 0.3 (* 0.4 (opacity beam)))))))
 
 (defun move-buildings (ufo-game dt)
-  (let* ((speed 50)
+  (let* ((speed (* 0.5 (ufo-game-speed ufo-game)))
          (width 500)
          (b1 (ufo-game-building1 ufo-game))
          (b2 (ufo-game-building2 ufo-game))
@@ -208,9 +211,12 @@
           (x b2) (+ new-x width))))
 
 (defun move-cows (ufo-game dt)
-  (let* ((min-y 30.0)
+  (let* ((speed (- (ufo-game-speed ufo-game)))
+         (min-y 30.0)
          (min-x -50.0))
     (dolist (cow (ufo-game-cows ufo-game))
+      (unless (is-being-abducted cow)
+        (setf (velocity-x cow) speed))
       (update-physics-sprite cow dt)
       (when (< (x cow) min-x)
         (remove-cow ufo-game cow))
@@ -222,6 +228,7 @@
 (defun start-abducting-cow (cow)
   (setf (is-being-abducted cow) t
         (velocity-y cow) 0.0
+        (acceleration-x cow) 0.0
         (acceleration-y cow) 0.0
         (color cow) (vector 0.0 1.0 0.0))
   (stop-all-actions cow)
@@ -257,7 +264,7 @@
                (setf (visible beam) t)
                (unless (is-being-abducted cow)
                  (start-abducting-cow cow))
-               (move-towards! (velocity-x cow) 0.0 20 dt)
+               (move-towards! (velocity-x cow) 0.0 40.0 dt)
                (move-towards! (scale-x cow) 0.3 0.25 dt)
                (move-towards! (scale-y cow) 0.3 0.25 dt)
                (move-towards! (y cow) y 40 dt)
@@ -272,7 +279,7 @@
       (let* ((max-vel 250.0)
              (min-vel (- max-vel))
              (accel-rate 350.0)
-             (decel-rate 80.0))
+             (decel-rate 40.0))
         (if (key-down :left)
             (move-towards! (velocity-x player) min-vel accel-rate dt)
             (when (key-up :right)
@@ -307,11 +314,12 @@
   (unless (ufo-game-started self)
     (setf (ufo-game-started self) t)
     (on-enter (ufo-game-root-node self)))
+  (adjust-game-speed self dt)
+  (move-ufo self dt)
   (move-buildings self dt)
   (move-cows self dt)
   (hover-over-cows self dt)
   (adjust-beam-opacity self dt)
-  (move-ufo self dt)
   (visit (ufo-game-root-node self)))
 
 (defmethod cl-user::handle-event ((self ufo-game) event)
