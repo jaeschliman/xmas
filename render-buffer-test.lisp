@@ -39,6 +39,21 @@
       (gl:tex-coord 0  0)
       (gl:vertex    x  y2 0))))
 
+(definstr simple-draw-gl-with-tex-coords (id x y w h tx1 ty1 tx2 ty2)
+  (gl:bind-texture :texture-2d id)
+  (let* ((x (+ x (- (/ w 2))))
+         (y (+ y (- (/ h 2))))
+         (x2 (+ x w))
+         (y2 (+ y h)))
+    (gl:with-primitive :quads
+      (gl:tex-coord tx1  ty2)
+      (gl:vertex    x  y  0)
+      (gl:tex-coord tx2  ty2)
+      (gl:vertex    x2 y  0)
+      (gl:tex-coord tx2  ty1)
+      (gl:vertex    x2 y2 0)
+      (gl:tex-coord tx1  ty1)
+      (gl:vertex    x  y2 0))))
 
 (definstr push-matrix ()
   (gl:push-matrix))
@@ -496,3 +511,36 @@
   (visit (test9-node self)))
 
 (cl-user::display-contents (make-test9))
+
+
+
+(defun draw-texture-frame (frame x y w h)
+  (when-let (id (texture:texture-id (texture:texture-frame-texture frame)))
+    (simple-draw-gl-with-tex-coords id x y w h
+                                    (texture:texture-frame-tx1 frame)
+                                    (texture:texture-frame-ty1 frame)
+                                    (texture:texture-frame-tx2 frame)
+                                    (texture:texture-frame-ty2 frame))))
+
+(defstruct test10
+  a b c d)
+
+(defmethod cl-user::contents-will-mount ((self test10) display)
+  (declare (ignore display))
+  (let ((tex (texture:get-texture "./bayarea.png")))
+    (setf (test10-a self) (texture:texture-frame tex 0.0 0.0 250.0 250.0))
+    (setf (test10-b self) (texture:texture-frame tex 0.0 250.0 250.0 250.0))
+    (setf (test10-c self) (texture:texture-frame tex 250.0 0.0 250.0 250.0))
+    (setf (test10-d self) (texture:texture-frame tex 250.0 250.0 250.0 250.0)) ))
+
+
+(defmethod cl-user::step-contents ((self test10) dt)
+  (declare (ignore dt))
+  (push-matrix)
+  (draw-texture-frame (test10-a self) 125.0 125.0 250.0 250.0)
+  (draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0) 250.0 250.0)
+  (draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0 250.0 250.0)
+  (draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0) 250.0 250.0)
+  (pop-matrix))
+
+(cl-user::display-contents (make-test10) :width 500 :height 500)

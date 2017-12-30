@@ -6,12 +6,36 @@
              #:texture-path
              #:*texture-manager*
              #:make-texture-manager
-             #:get-texture))
+             #:get-texture
+             #:texture-frame
+             #:make-texture-frame
+             #:texture-frame-texture
+             #:texture-frame-tx1
+             #:texture-frame-ty1
+             #:texture-frame-tx2
+             #:texture-frame-ty2))
 
 (in-package :texture)
 
 (defstruct texture
   id width height path)
+
+(defstruct texture-frame
+  texture tx1 ty1 tx2 ty2)
+
+(defun texture-frame (texture x y w h)
+  (let* ((width (texture-width texture))
+         (height (texture-height texture))
+         (y (- h y)) ;; flip y coord
+         (x2 (+ x w))
+         (y2 (+ y h))
+         (tx1 (/ x  width))
+         (ty1 (/ y  height))
+         (tx2 (/ x2 width))
+         (ty2 (/ y2 height)))
+    (make-texture-frame :texture texture
+                        :tx1 tx1 :ty1 ty1
+                        :tx2 tx2 :ty2 ty2)))
 
 (defstruct texture-manager
   (table (make-hash-table :test 'equal))
