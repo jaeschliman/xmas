@@ -10,6 +10,7 @@
 (ql:quickload :alexandria)
 (ql:quickload :queues.simple-cqueue)
 (ql:quickload :bordeaux-threads)
+(ql:quickload :cl-json)
 (progmain ()
   (ql:quickload :cl-opengl)
   (ql:quickload :cl-glu)
@@ -23,6 +24,7 @@
   (load "./node-lifecycle.lisp")
   (load "./display.lisp")
   (load "./texture.lisp")
+  (load "./texture-packer.lisp")
   (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
   )
 

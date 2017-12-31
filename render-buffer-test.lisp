@@ -514,13 +514,15 @@
 
 
 
-(defun draw-texture-frame (frame x y w h)
+(defun draw-texture-frame (frame x y)
   (when-let (id (texture:texture-id (texture:texture-frame-texture frame)))
-    (simple-draw-gl-with-tex-coords id x y w h
-                                    (texture:texture-frame-tx1 frame)
-                                    (texture:texture-frame-ty1 frame)
-                                    (texture:texture-frame-tx2 frame)
-                                    (texture:texture-frame-ty2 frame))))
+    (let ((w (texture:texture-frame-width frame))
+          (h (texture:texture-frame-height frame)))
+      (simple-draw-gl-with-tex-coords id x y w h
+                                      (texture:texture-frame-tx1 frame)
+                                      (texture:texture-frame-ty1 frame)
+                                      (texture:texture-frame-tx2 frame)
+                                      (texture:texture-frame-ty2 frame)))))
 
 (defstruct test10
   a b c d)
@@ -537,10 +539,30 @@
 (defmethod cl-user::step-contents ((self test10) dt)
   (declare (ignore dt))
   (push-matrix)
-  (draw-texture-frame (test10-a self) 125.0 125.0 250.0 250.0)
-  (draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0) 250.0 250.0)
-  (draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0 250.0 250.0)
-  (draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0) 250.0 250.0)
+  (draw-texture-frame (test10-a self) 125.0 125.0)
+  (draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
+  (draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
+  (draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
   (pop-matrix))
 
 (cl-user::display-contents (make-test10) :width 500 :height 500)
+
+(defstruct test11
+  packer normal-frame blink-frame)
+
+(defmethod cl-user::contents-will-mount ((self test11) display)
+  (declare (ignore display))
+  (let ((packed (texture-packer:texture-packer-from-file "./res/test.json")))
+    (assert (texture-packer::texture-packer-file-texture packed))
+    (setf (test11-packer self) packed
+          (test11-normal-frame self) (texture-packer:texture-packer-get-frame
+                                      packed "pickle.png")
+          (test11-blink-frame self) (texture-packer:texture-packer-get-frame
+                                     packed "pickle blink.png"))))
+
+(defmethod cl-user::step-contents ((self test11) dt)
+  (declare (ignore dt))
+  (draw-texture-frame (test11-normal-frame self) 125.0 250.0)
+  (draw-texture-frame (test11-blink-frame self) 375.0 250.0) )
+
+(cl-user::display-contents (make-test11) :width 500 :height 500)

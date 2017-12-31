@@ -13,7 +13,9 @@
              #:texture-frame-tx1
              #:texture-frame-ty1
              #:texture-frame-tx2
-             #:texture-frame-ty2))
+             #:texture-frame-ty2
+             #:texture-frame-width
+             #:texture-frame-height))
 
 (in-package :texture)
 
@@ -21,12 +23,12 @@
   id width height path)
 
 (defstruct texture-frame
-  texture tx1 ty1 tx2 ty2)
+  texture tx1 ty1 tx2 ty2 width height)
 
-(defun texture-frame (texture x y w h)
+(defun texture-frame (texture x y w h &key (flipped t))
   (let* ((width (texture-width texture))
          (height (texture-height texture))
-         (y (- h y)) ;; flip y coord
+         (y (if flipped (- h y) y)) ;; flip y coord
          (x2 (+ x w))
          (y2 (+ y h))
          (tx1 (/ x  width))
@@ -35,7 +37,8 @@
          (ty2 (/ y2 height)))
     (make-texture-frame :texture texture
                         :tx1 tx1 :ty1 ty1
-                        :tx2 tx2 :ty2 ty2)))
+                        :tx2 tx2 :ty2 ty2
+                        :width w :height h)))
 
 (defstruct texture-manager
   (table (make-hash-table :test 'equal))
