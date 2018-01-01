@@ -11,6 +11,9 @@
 (ql:quickload :queues.simple-cqueue)
 (ql:quickload :bordeaux-threads)
 (ql:quickload :cl-json)
+(ql:quickload :xmls)
+(ql:quickload :chipz)
+(ql:quickload :cl-base64)
 (progmain ()
   (ql:quickload :cl-opengl)
   (ql:quickload :cl-glu)
@@ -26,5 +29,6 @@
   (load "./texture.lisp")
   (load "./texture-packer.lisp")
   (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
+  (load "./tmx-reader.lisp")
   )
 

@@ -594,3 +594,103 @@
   (draw-texture-frame (test11-jewel self) 250.0 250.0))
 
 (cl-user::display-contents (make-test11) :width 500 :height 500)
+
+;; -----------------------------------------------------------------------------
+;; tmx reader proto/test
+
+(defun make-tileset-texture-frames (tileset)
+  (let* ((texture (texture:get-texture (tmx-reader:tileset-source tileset)))
+         (tile-width (coerce (tmx-reader:tileset-tile-width tileset) 'float))
+         (tile-height (coerce (tmx-reader:tileset-tile-height tileset) 'float))
+         (texture-width (texture:texture-width texture))
+         (texture-height (texture:texture-height texture))
+         (cols (floor texture-width tile-width))
+         (rows (floor texture-height tile-height))
+         ;;TODO: read this from input
+         (first-gid 1)
+         (vec (make-array (1+ (* rows cols)) :element-type t :initial-element nil))
+         (idx first-gid))
+    ;; (format t "got ~S elements ~%" (length vec))
+    ;; (format t "texture width = ~S ~%" texture-width)
+    ;; (format t "texture height = ~S ~%" texture-height)
+    ;; (format t "tile-width = ~S ~%" tile-width)
+    ;; (format t "tile-height = ~S ~%" tile-height)
+    (prog1 vec
+      (dotimes (row rows)
+        (dotimes (col cols)
+          (setf (aref vec idx)
+                (texture:texture-frame texture
+                                       (* col tile-width)
+                                       (* (- rows row) tile-height)
+                                       tile-width tile-height
+                                       :flipped nil))
+          (incf idx))))))
+
+(defstruct test12
+  tmx-map
+  frames)
+
+(defmethod cl-user::contents-will-mount ((self test12) display)
+  (declare (ignore display))
+  (let* ((map (tmx-reader:read-tilemap "./res/test-tilemap.tmx"))
+         (tileset (first (tmx-reader:map-tilesets map)))
+         (frames (make-tileset-texture-frames tileset)))
+    (setf (test12-tmx-map self) map
+          (test12-frames self) frames)))
+
+(defmethod cl-user::step-contents ((self test12) dt)
+  (declare (ignore dt))
+  (let ((x 100)
+        (y 250)
+        (frames (test12-frames self)))
+    (loop for frame across frames
+       for i upfrom 0
+       when frame
+       do (draw-texture-frame frame (+ x (* i 50)) y))))
+
+
+(cl-user::display-contents (make-test12) :width 500 :height 500)
+
+(defstruct test13
+  tmx-map
+  tileset
+  frames
+  layer)
+
+(defmethod cl-user::contents-will-mount ((self test13) display)
+  (declare (ignore display))
+  (let* ((map (tmx-reader:read-tilemap "./res/test-tilemap.tmx"))
+         (tileset (first (tmx-reader:map-tilesets map)))
+         (frames (make-tileset-texture-frames tileset))
+         (layer (first (tmx-reader:map-layers map))))
+    (setf (test13-tmx-map self) map
+          (test13-tileset self) tileset
+          (test13-frames self) frames
+          (test13-layer self) layer)))
+
+(defun draw-tmx-layer (at-x at-y tile-width tile-height layer frames)
+  (let* ((cols (tmx-reader:layer-width layer))
+         (rows (tmx-reader:layer-height layer))
+         (start-x (+ (- at-x (/ (* tile-width cols) 2.0)) (/ tile-width 2.0)))
+         (start-y (- (+ at-y (/ (* tile-height rows) 2.0)) (/ tile-width 2.0))))
+    (dotimes (row rows)
+      (dotimes (col cols)
+        (when-let (frame (aref frames (tmx-reader:layer-gid-at layer col row)))
+          (let ((x (+ start-x (* col tile-width)))
+                (y (- start-y (* row tile-height))))
+            (draw-texture-frame frame x y)))))))
+
+(defmethod cl-user::step-contents ((self test13) dt)
+  (declare (ignore dt))
+  (let ((x 250)
+        (y 250)
+        (tileset (test13-tileset self))
+        (frames (test13-frames self))
+        (layer (test13-layer self)))
+    (draw-tmx-layer x y
+                    (tmx-reader:tileset-tile-width tileset)
+                    (tmx-reader:tileset-tile-height tileset)
+                    layer
+                    frames)))
+
+(cl-user::display-contents (make-test13) :width 500 :height 500)
