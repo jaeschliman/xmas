@@ -42,7 +42,8 @@
                    texture
                    (r f :x) (r f :y)
                    (r f :w) (r f :h)
-                   :flipped nil))))))))
+                   :flipped nil
+                   :rotated (r frame :rotated)))))))))
 
 (defun texture-packer-get-frame (texture-packer-file path)
   (gethash path (texture-packer-file-table texture-packer-file)))

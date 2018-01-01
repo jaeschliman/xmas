@@ -55,6 +55,23 @@
       (gl:tex-coord tx1  ty1)
       (gl:vertex    x  y2 0))))
 
+(definstr simple-draw-gl-with-tex-coords-rotated (id x y w h tx1 ty1 tx2 ty2)
+  (gl:bind-texture :texture-2d id)
+  (rotatef w h)
+  (let* ((x (+ x (- (/ w 2))))
+         (y (+ y (- (/ h 2))))
+         (x2 (+ x w))
+         (y2 (+ y h)))
+    (gl:with-primitive :quads
+      (gl:tex-coord tx1  ty2)
+      (gl:vertex    x2 y  0)
+      (gl:tex-coord tx2  ty2)
+      (gl:vertex    x2 y2 0)
+      (gl:tex-coord tx2  ty1)
+      (gl:vertex    x  y2 0)
+      (gl:tex-coord tx1  ty1)
+      (gl:vertex    x  y  0))))
+
 (definstr push-matrix ()
   (gl:push-matrix))
 
@@ -518,11 +535,19 @@
   (when-let (id (texture:texture-id (texture:texture-frame-texture frame)))
     (let ((w (texture:texture-frame-width frame))
           (h (texture:texture-frame-height frame)))
-      (simple-draw-gl-with-tex-coords id x y w h
-                                      (texture:texture-frame-tx1 frame)
-                                      (texture:texture-frame-ty1 frame)
-                                      (texture:texture-frame-tx2 frame)
-                                      (texture:texture-frame-ty2 frame)))))
+      (if (texture:texture-frame-rotated frame)
+          (simple-draw-gl-with-tex-coords-rotated
+           id x y w h
+           (texture:texture-frame-tx1 frame)
+           (texture:texture-frame-ty1 frame)
+           (texture:texture-frame-tx2 frame)
+           (texture:texture-frame-ty2 frame))
+          (simple-draw-gl-with-tex-coords
+           id x y w h
+           (texture:texture-frame-tx1 frame)
+           (texture:texture-frame-ty1 frame)
+           (texture:texture-frame-tx2 frame)
+           (texture:texture-frame-ty2 frame))))))
 
 (defstruct test10
   a b c d)
@@ -548,7 +573,7 @@
 (cl-user::display-contents (make-test10) :width 500 :height 500)
 
 (defstruct test11
-  packer normal-frame blink-frame)
+  packer normal-frame blink-frame jewel)
 
 (defmethod cl-user::contents-will-mount ((self test11) display)
   (declare (ignore display))
@@ -558,11 +583,14 @@
           (test11-normal-frame self) (texture-packer:texture-packer-get-frame
                                       packed "pickle.png")
           (test11-blink-frame self) (texture-packer:texture-packer-get-frame
-                                     packed "pickle blink.png"))))
+                                     packed "pickle blink.png")
+          (test11-jewel self) (texture-packer:texture-packer-get-frame
+                                     packed "jewel.png"))))
 
 (defmethod cl-user::step-contents ((self test11) dt)
   (declare (ignore dt))
   (draw-texture-frame (test11-normal-frame self) 125.0 250.0)
-  (draw-texture-frame (test11-blink-frame self) 375.0 250.0) )
+  (draw-texture-frame (test11-blink-frame self) 375.0 250.0)
+  (draw-texture-frame (test11-jewel self) 250.0 250.0))
 
 (cl-user::display-contents (make-test11) :width 500 :height 500)

@@ -15,7 +15,8 @@
              #:texture-frame-tx2
              #:texture-frame-ty2
              #:texture-frame-width
-             #:texture-frame-height))
+             #:texture-frame-height
+             #:texture-frame-rotated))
 
 (in-package :texture)
 
@@ -23,9 +24,10 @@
   id width height path)
 
 (defstruct texture-frame
-  texture tx1 ty1 tx2 ty2 width height)
+  texture tx1 ty1 tx2 ty2 width height rotated)
 
-(defun texture-frame (texture x y w h &key (flipped t))
+(defun texture-frame (texture x y w h &key (flipped t) (rotated nil))
+  (when rotated (rotatef w h))
   (let* ((width (texture-width texture))
          (height (texture-height texture))
          (y (if flipped (- h y) y)) ;; flip y coord
@@ -36,6 +38,7 @@
          (tx2 (/ x2 width))
          (ty2 (/ y2 height)))
     (make-texture-frame :texture texture
+                        :rotated rotated
                         :tx1 tx1 :ty1 ty1
                         :tx2 tx2 :ty2 ty2
                         :width w :height h)))
