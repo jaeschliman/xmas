@@ -54,9 +54,8 @@
          (rep (ccl::with-autoreleased-nsstring (s (princ-to-string p))
                 (#/imageRepWithContentsOfFile: ns:ns-bitmap-image-rep s)))
          (has-alpha (if (#/hasAlpha rep) #$YES #$NO))
-         (size (#/size rep))
-         (width (ns:ns-size-width size))
-         (height (ns:ns-size-height size)) 
+         (width (#/pixelsWide rep))
+         (height (#/pixelsHigh rep))
          (format (if has-alpha :rgba :rgb)))
     (values rep width height format)))
 
