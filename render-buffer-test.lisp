@@ -694,3 +694,42 @@
                     frames)))
 
 (cl-user::display-contents (make-test13) :width 500 :height 500)
+
+(defstruct tmx-renderer
+  width height tile-width tile-height layer frames)
+
+(defun tmx-renderer-from-file (path)
+  (let* ((map (tmx-reader:read-tilemap path))
+         (tileset (first (tmx-reader:map-tilesets map)))
+         (frames (make-tileset-texture-frames tileset))
+         (layer (first (tmx-reader:map-layers map)))
+         (tile-width (tmx-reader:tileset-tile-width tileset))
+         (tile-height (tmx-reader:tileset-tile-height tileset))
+         (width (* tile-width (tmx-reader:layer-width layer)))
+         (height (* tile-height (tmx-reader:layer-height layer))))
+    (make-tmx-renderer :width width :height height
+                       :tile-width tile-width :tile-height tile-height
+                       :layer layer :frames frames)))
+
+(defun draw-tmx-renderer (x y renderer)
+  (draw-tmx-layer x y
+                  (tmx-renderer-tile-width renderer)
+                  (tmx-renderer-tile-height renderer)
+                  (tmx-renderer-layer renderer)
+                  (tmx-renderer-frames renderer)))
+
+(defstruct test14
+  renderer)
+
+(defmethod cl-user::contents-will-mount ((self test14) display)
+  (declare (ignore display))
+  (setf (test14-renderer self) (tmx-renderer-from-file "./res/test-tilemap.tmx")))
+
+(defmethod cl-user::step-contents ((self test14) dt)
+  (declare (ignore dt))
+  (let* ((r (test14-renderer self))
+         (x (/ (tmx-renderer-width r) 2.0))
+         (y (/ (tmx-renderer-height r) 2.0)))
+    (draw-tmx-renderer x y r)))
+
+(cl-user::display-contents (make-test14) :width 500 :height 500)
