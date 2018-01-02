@@ -127,6 +127,26 @@
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
 
+(defun top-for-tile (tile x y)
+  (case tile
+    (2 (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
+    (3 (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
+    (t (+ 1.0 (* 32.0 (+ 1.0 (floor y 32.0)))))))
+
+(defun bottom-for-tile (tile x y)
+  (case tile
+    (t (1- (* 32.0 (+ 0.0 (floor y 32.0)))))))
+
+(defun left-for-tile (tile x y)
+  (case tile
+    ((2 3) x)
+    (t (1- (* 32.0 (floor x 32.0))))))
+
+(defun right-for-tile (tile x y)
+  (case tile
+    ((2 3) x)
+    (t (1+ (* 32.0 (1+ (floor x 32.0)))))))
+
 (defun move-sprite-up-if-hitting-tiles-on-bottom  (pf dt)
   (declare (ignore dt))
   (with-struct (pf- player tmx) pf
@@ -134,14 +154,14 @@
       (flet ((check (x)
                (let ((tile (tile-at-point tmx x y)))
                  (unless (zerop tile)
-                   (setf (bottom player) (* 32.0 (+ 1.0 (floor y 32.0)))
-                         (velocity-y player) 0.0)
+                   (maxf y (top-for-tile tile x y))
                    (unless hit
                      (setf hit t)
                      (collide-with-tile player 'bottom tile))))))
         (check (x player))
         (check (left player))
-        (check (right player))))))
+        (check (right player))
+        (setf (bottom player) y)))))
 
 (defun move-sprite-down-if-hitting-tiles-on-top (pf dt)
   (declare (ignore dt))
@@ -150,13 +170,14 @@
       (flet ((check (x)
                (let ((tile (tile-at-point tmx x y)))
                  (unless (zerop tile)
-                   (setf (top player) (+ -5.0 (* 32.0 (+ 0.0 (floor y 32.0)))))
+                   (minf y (bottom-for-tile tile x y))
                    (unless hit
                      (setf hit t)
                      (collide-with-tile player 'top tile))))))
         (check (x player))
         (check (left player))
-        (check (right player))))))
+        (check (right player))
+        (setf (top player) y)))))
 
 (defun move-sprite-left-if-hitting-tiles-on-right (pf dt)
   (declare (ignore dt))
@@ -165,7 +186,7 @@
       (flet ((check (y)
                (let ((tile (tile-at-point tmx x y)))
                  (unless (zerop tile)
-                   (setf (right player) (1- (* 32.0 (floor x 32.0))))
+                   (minf x (left-for-tile tile x y))
                    (unless hit
                      (setf hit t)
                      (collide-with-tile player 'right tile))))))
@@ -173,7 +194,8 @@
         (check (+ (y player) 10))
         (check (- (y player) 10))
         (check (top player))
-        (check (bottom player))))))
+        (check (bottom player))
+        (setf (right player) x)))))
 
 (defun move-sprite-right-if-hitting-tiles-on-left (pf dt)
   (declare (ignore dt))
@@ -182,7 +204,7 @@
       (flet ((check (y)
                (let ((tile (tile-at-point tmx x y)))
                  (unless (zerop tile)
-                   (setf (left player) (1+ (* 32.0 (1+ (floor x 32.0)))))
+                   (maxf x (right-for-tile tile x y))
                    (unless hit
                      (setf hit t)
                      (collide-with-tile player 'left tile))))))
@@ -190,25 +212,32 @@
         (check (+ (y player) 10))
         (check (- (y player) 10))
         (check (top player))
-        (check (bottom player))))))
+        (check (bottom player))
+        (setf (left player) x)))))
 
 (defun update-player-physics (pf player dt)
   (incf (y player) (* dt (velocity-y player)))
-  (incf (velocity-y player) (* dt (acceleration-y player)))
   (move-sprite-up-if-hitting-tiles-on-bottom pf dt)
   (move-sprite-down-if-hitting-tiles-on-top pf dt)
   (incf (velocity-x player) (* dt (acceleration-x player)))
+
   (incf (x player) (* dt (velocity-x player)))
+  (incf (velocity-y player) (* dt (acceleration-y player)))
   (move-sprite-left-if-hitting-tiles-on-right pf dt)
-  (move-sprite-right-if-hitting-tiles-on-left pf dt))
+  (move-sprite-right-if-hitting-tiles-on-left pf dt)
+  )
 
 (defmethod collide-with-tile ((self player) side tile)
-  (declare (ignore tile))
+  (when (and (eql tile 1) (eq side 'left))
+    (format t "BANG~%"))
   (case side
     (bottom (setf (can-jump self) t
                   (velocity-y self) -100.0))
     ((left right)
-     (setf (velocity-x self) 0))
+     (case tile
+       ;;do nothing
+       ((2 3))
+       (t (setf (velocity-x self) 0))))
     (top
      (setf (velocity-y self) (* -0.5 (velocity-y self))
            (jump-power self) 0))))
