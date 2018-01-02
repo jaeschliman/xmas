@@ -711,6 +711,19 @@
                        :tile-width tile-width :tile-height tile-height
                        :layer layer :frames frames)))
 
+(defun tmx-renderer-tile-at-point (tmx x y &optional (default 0))
+  (let* ((w (tmx-renderer-width tmx))
+         (h (tmx-renderer-height tmx))
+         (tw (tmx-renderer-tile-width tmx))
+         (th (tmx-renderer-tile-height tmx))
+         (height-in-tiles (floor h th))
+         (layer (tmx-renderer-layer tmx)))
+    (cond ((or (<= x 0.0) (>= x w)) default)
+          ((or (<= y 0.0) (>= y h)) default)
+          (t (let ((tx (floor x tw))
+                   (ty (- height-in-tiles (floor y th) 1)))
+               (tmx-reader:layer-gid-at layer tx ty))))))
+
 (defun draw-tmx-renderer (x y renderer)
   (draw-tmx-layer x y
                   (tmx-renderer-tile-width renderer)
