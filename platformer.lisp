@@ -145,7 +145,7 @@
 (defun left-for-tile (tile x y)
   (declare (ignore y))
   (case tile
-    ((2 3) x)
+    ((2 3) x) ;;so we can get 'pushed up' to correct position
     (t (1- (* 32.0 (floor x 32.0))))))
 
 (defun right-for-tile (tile x y)
@@ -154,33 +154,32 @@
     ((2 3) x)
     (t (1+ (* 32.0 (1+ (floor x 32.0)))))))
 
-(defun move-sprite-up-if-hitting-tiles-on-bottom  (pf dt)
+(defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- player tmx) pf
-    (let ((y (bottom player)) (hit nil))
+  (with-struct (pf- tmx) pf
+    (let ((y (bottom sprite)) (hit nil))
       (labels
           ((check (x)
              (let ((tile (tile-at-point tmx x y)))
                (unless (zerop tile)
                  (maxf y (top-for-tile tile x y))
-                 (setf hit tile)
-                 )))
+                 (setf hit tile))))
            (run-checks ()
-             (check (x player))
-             (check (left player))
-             (check (right player))))
+             (check (x sprite))
+             (check (left sprite))
+             (check (right sprite))))
         (prog ()
          :loop (run-checks)
-         (unless (= (bottom player) y)
-           (setf (bottom player) y)
+         (unless (= (bottom sprite) y)
+           (setf (bottom sprite) y)
            (go :loop))
          (when hit
-           (collide-with-tile player 'bottom hit)))))))
+           (collide-with-tile sprite 'bottom hit)))))))
 
-(defun move-sprite-down-if-hitting-tiles-on-top (pf dt)
+(defun move-sprite-down-if-hitting-tiles-on-top (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- player tmx) pf
-    (let ((y (top player)) (hit nil))
+  (with-struct (pf- tmx) pf
+    (let ((y (top sprite)) (hit nil))
       (labels
           ((check (x)
              (let ((tile (tile-at-point tmx x y)))
@@ -188,21 +187,21 @@
                  (minf y (bottom-for-tile tile x y))
                  (setf hit tile))))
            (run-checks ()
-             (check (x player))
-             (check (left player))
-             (check (right player))))
+             (check (x sprite))
+             (check (left sprite))
+             (check (right sprite))))
         (prog ()
          :loop (run-checks)
-         (unless (= (top player) y)
-           (setf (top player) y)
+         (unless (= (top sprite) y)
+           (setf (top sprite) y)
            (go :loop))
          (when hit
-           (collide-with-tile player 'top hit)))))))
+           (collide-with-tile sprite 'top hit)))))))
 
-(defun move-sprite-left-if-hitting-tiles-on-right (pf dt)
+(defun move-sprite-left-if-hitting-tiles-on-right (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- player tmx) pf
-    (let ((x (right player)) (hit nil))
+  (with-struct (pf- tmx) pf
+    (let ((x (right sprite)) (hit nil))
       (labels
           ((check (y)
              (let ((tile (tile-at-point tmx x y)))
@@ -210,54 +209,56 @@
                  (minf x (left-for-tile tile x y))
                  (setf hit tile))))
            (run-checks ()
-             (check (y player))
-             (check (+ (y player) 10))
-             (check (- (y player) 10))
-             (check (top player))
-             (check (bottom player))))
+             (check (y sprite))
+             (check (+ (y sprite) 10))
+             (check (- (y sprite) 10))
+             (check (top sprite))
+             (check (bottom sprite))))
         (prog ()
          :loop
          (run-checks)
-         (unless (= (right player) x)
-           (setf (right player) x)
+         (unless (= (right sprite) x)
+           (setf (right sprite) x)
            (go :loop))
          (when hit
-           (collide-with-tile player 'right hit)))))))
+           (collide-with-tile sprite 'right hit)))))))
 
-(defun move-sprite-right-if-hitting-tiles-on-left (pf dt)
+(defun move-sprite-right-if-hitting-tiles-on-left (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- player tmx) pf
-    (let ((x (left player)) (hit nil))
+  (with-struct (pf- tmx) pf
+    (let ((x (left sprite)) (hit nil))
       (labels ((check (y)
                  (let ((tile (tile-at-point tmx x y)))
                    (unless (zerop tile)
                      (maxf x (right-for-tile tile x y))
                      (setf hit tile))))
                (run-checks ()
-                 (check (y player))
-                 (check (+ (y player) 10))
-                 (check (- (y player) 10))
-                 (check (top player))
-                 (check (bottom player))))
+                 (check (y sprite))
+                 (check (+ (y sprite) 10))
+                 (check (- (y sprite) 10))
+                 (check (top sprite))
+                 (check (bottom sprite))))
         (prog ()
          :loop
          (run-checks)
-         (unless (= (left player) x)
-           (setf (left player) x)
+         (unless (= (left sprite) x)
+           (setf (left sprite) x)
            (go :loop))
          (when hit
-           (collide-with-tile player 'left hit)))))))
+           (collide-with-tile sprite 'left hit)))))))
 
-(defun update-player-physics (pf player dt)
-  (incf (x player) (* dt (velocity-x player)))
-  (move-sprite-left-if-hitting-tiles-on-right pf dt)
-  (move-sprite-right-if-hitting-tiles-on-left pf dt)
-  (incf (velocity-x player) (* dt (acceleration-x player)))
+(defun update-sprite-physics (pf sprite dt)
+  (incf (x sprite) (* dt (velocity-x sprite)))
+  (move-sprite-left-if-hitting-tiles-on-right pf sprite dt)
+  (move-sprite-right-if-hitting-tiles-on-left pf sprite dt)
+  (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
+  (clampf (velocity-x sprite) -1000 1000)
 
-  (incf (y player) (* dt (velocity-y player)))
-  (move-sprite-up-if-hitting-tiles-on-bottom pf dt)
-  (move-sprite-down-if-hitting-tiles-on-top pf dt)
-  (incf (velocity-y player) (* dt (acceleration-y player))))
+  (incf (y sprite) (* dt (velocity-y sprite)))
+  (move-sprite-up-if-hitting-tiles-on-bottom pf sprite dt)
+  (move-sprite-down-if-hitting-tiles-on-top pf sprite dt)
+  (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
+  (clampf (velocity-y sprite) -1000 1000))
 
 (defmethod collide-with-tile ((self player) side tile)
   (case side
@@ -272,8 +273,10 @@
         ;;so the player will stick to the ground when walking
         (when (> (velocity-x self) 0)
           (setf (acceleration-y self) -1000)))
-       (t
-        (setf (velocity-y self) -100.0))))
+       (1
+        ;;keep the player on the ground, but allow running to
+        ;;to float off of slopes a bit
+        (setf (velocity-y self) -100))))
     ((left right)
      (case tile
        ;;do nothing
@@ -346,7 +349,7 @@
         (when (key-down :right)
           (setf (flip-x player) nil))
         (setf (can-jump player) nil)
-        (update-player-physics pf player dt)
+        (update-sprite-physics pf player dt)
         (when (< (y player) 0.0)
           (setf (y player) 0.0
                 (velocity-y player) 0.0))
