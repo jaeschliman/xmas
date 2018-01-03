@@ -21,7 +21,9 @@
              #:tileset-name
              #:tileset-source
              #:tileset-tile-width
-             #:tileset-tile-height))
+             #:tileset-tile-height
+             #:tileset-first-gid
+             #:tileset-tile-properties))
 (in-package :tmx-reader)
 
 (defun file-pathname-relative-to-file (path file)
@@ -69,7 +71,9 @@
   name
   source
   tile-width
-  tile-height)
+  tile-height
+  first-gid
+  tile-properties)
 
 (defstruct layer
   name
@@ -92,15 +96,33 @@
 (defun children (it)
   (nthcdr 2 it))
 
+(defun shared-parse-tileset (it path first-gid)
+ (let* ((name (get-attr it "name"))
+           (source (get-attr (first (children it)) "source"))
+           (tile-width (parse-integer (get-attr it "tilewidth")))
+           (tile-height (parse-integer (get-attr it "tileheight")))
+           (first-gid (or first-gid (parse-integer (get-attr it "firstgid"))))
+           (tilecount (parse-integer (get-attr it "tilecount")))
+           (tile-properties (make-array tilecount :initial-element nil)))
+      (make-tileset :name name
+                    :source (file-pathname-relative-to-file path source)
+                    :tile-width tile-width
+                    :tile-height tile-height
+                    :first-gid first-gid
+                    :tile-properties tile-properties)) )
+
+(defun parse-tsx-file (first-gid path)
+  (let* ((it (with-input-from-file (s path)
+               (xmls:parse s :compress-whitespace t)))
+         (tileset (shared-parse-tileset it path first-gid)))
+    tileset))
+
 (defun parse-tileset (it path)
-  (let* ((name (get-attr it "name"))
-         (source (get-attr (first (children it)) "source"))
-         (tile-width (parse-integer (get-attr it "tilewidth")))
-         (tile-height (parse-integer (get-attr it "tileheight"))))
-    (make-tileset :name name
-                  :source (file-pathname-relative-to-file path source)
-                  :tile-width tile-width
-                  :tile-height tile-height)))
+  (if-let (external-source (get-attr it "source"))
+    (let ((first-gid (parse-integer (get-attr it "firstgid")))
+          (file (file-pathname-relative-to-file path external-source)))
+      (parse-tsx-file first-gid file))
+    (shared-parse-tileset it path nil)))
 
 (defun parse-data (it)
   (let* ((compression (get-attr it "compression"))

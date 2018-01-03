@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.0" tiledversion="1.0.3" orientation="orthogonal" renderorder="right-down" width="150" height="20" tilewidth="32" tileheight="32" nextobjectid="1">
- <tileset firstgid="1" name="tiles" tilewidth="32" tileheight="32" tilecount="64" columns="8">
-  <image source="tiles.png" width="256" height="256"/>
- </tileset>
+ <tileset firstgid="1" source="dev.tsx"/>
  <layer name="Tile Layer 1" width="150" height="20">
   <data encoding="base64" compression="zlib">
-   eJztllEOgCAMQ0Hvf2d/DZEoY7i19CX8uhZewFKEEEzU6ACCEnklViCvxArkFQ61WZnJnk9geNSClldgIK/ECnb3CvGNQUB7moP2nxz9XNDzj8ByZgjstMfy6j+Y93im21Ge36Z2nZMZ30B9H1FyWrB2++qUl2MR7vQ6eH6fFUs3q1NR99koI9ln57Ay2s3bqUxuWbPPzGOl122VPxnd8shuncvKvVuES9FueWa3zGYl2qPdFysXTawBcQ==
+   eJzt0sEJACAMBEHTf9NWoI+TIOgM5Bm4x44BAAAAAAAAALm6PYAnpV3pkZ2kjwr/+Ieu6KArOuiKDnVwsDIB3XQAHw==
   </data>
  </layer>
 </map>
