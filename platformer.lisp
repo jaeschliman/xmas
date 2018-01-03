@@ -40,7 +40,8 @@
 
 (defclass player (physics-sprite)
   ((can-jump :accessor can-jump :initform nil)
-   (jump-power :accessor jump-power :initform 100.0)))
+   (jump-power :accessor jump-power :initform 100.0)
+   (jumping :accessor jumping :initform nil)))
 
 (defclass tmx-node (node)
   ((tmx :accessor tmx :initarg :tmx)))
@@ -52,9 +53,13 @@
 (defmethod height ((self sprite))
   (sprite-height self))
 (defmethod width ((self player))
-  (* 0.6 (sprite-width self)))
+  24.0
+  ;;(* 0.6 (sprite-width self))
+  )
 (defmethod height ((self player))
-  (* 0.9 (sprite-height self)))
+  64
+  ;;(* 0.8 (sprite-height self))
+  )
 
 (defun right (sprite)
   (+ (x sprite) (/ (width sprite) 2.0)))
@@ -255,11 +260,20 @@
   (incf (velocity-y player) (* dt (acceleration-y player))))
 
 (defmethod collide-with-tile ((self player) side tile)
-  (when (and (eql tile 1) (eq side 'left))
-    (format t "BANG~%"))
   (case side
-    (bottom (setf (can-jump self) t
-                  (velocity-y self) -100.0))
+    (bottom
+     (setf (can-jump self) t)
+     (case tile
+       (2
+        ;;so the player will stick to the ground when walking
+        (when (< (velocity-x self) 0)
+          (setf (acceleration-y self) -1000)))
+       (3
+        ;;so the player will stick to the ground when walking
+        (when (> (velocity-x self) 0)
+          (setf (acceleration-y self) -1000)))
+       (t
+        (setf (velocity-y self) -100.0))))
     ((left right)
      (case tile
        ;;do nothing
@@ -267,6 +281,7 @@
        (t (setf (velocity-x self) 0))))
     (top
      (setf (velocity-y self) (* -0.5 (velocity-y self))
+           (jumping self) nil
            (jump-power self) 0))))
 
 (defun move-player (pf dt)
@@ -274,7 +289,7 @@
          (jump-power 100.0)
          (jump-drain-speed 100.0)
          (rise-gravity -800.0)
-         (fall-gravity -1000.0)
+         (fall-gravity -1200.0)
          (hz-max-vel 200.0)
          (hz-accel-rate 300.0)
          (hz-decel-rate (* hz-accel-rate 2.25))
@@ -287,17 +302,20 @@
         (if (> (velocity-y player) 0.0)
             (setf (acceleration-y player) rise-gravity)
             (setf (acceleration-y player) fall-gravity
-                  (jump-power player) 0.0))
+                  (jump-power player) 0.0
+                  (jumping player) nil))
         ;;use jump-power to allow keypress to float player longer
         (when (and (key-down #\s)
                    (or (can-jump player) (> (jump-power player) 10.0)))
           (when (can-jump player)
-            (setf (jump-power player) jump-power))
+            (setf (jump-power player) jump-power
+                  (jumping player) t))
           (move-towards! (jump-power player) 0.0 jump-drain-speed dt)
           (setf (velocity-y player) (* jump-vel (/ (jump-power player) 80.0))
                 (can-jump player) nil))
         (when (key-up #\s)
-          (setf (jump-power player) 0.0))
+          (setf (jump-power player) 0.0
+                (jumping player) nil))
         (when (key-down #\a)
           (setf hz-max-vel (* 2.0 hz-max-vel)
                 hz-accel-rate (* 2.0 hz-accel-rate)))
@@ -327,6 +345,7 @@
           (setf (flip-x player) t))
         (when (key-down :right)
           (setf (flip-x player) nil))
+        (setf (can-jump player) nil)
         (update-player-physics pf player dt)
         (when (< (y player) 0.0)
           (setf (y player) 0.0
