@@ -17,4 +17,9 @@
    <property name="shape" value="slope-right"/>
   </properties>
  </tile>
+ <tile id="63">
+  <properties>
+   <property name="edge-case" type="int" value="23"/>
+  </properties>
+ </tile>
 </tileset>

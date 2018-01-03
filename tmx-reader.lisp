@@ -23,7 +23,8 @@
              #:tileset-tile-width
              #:tileset-tile-height
              #:tileset-first-gid
-             #:tileset-tile-properties))
+             #:tileset-tile-properties
+             #:map-tile-properties))
 (in-package :tmx-reader)
 
 (defun file-pathname-relative-to-file (path file)
@@ -75,6 +76,9 @@
   first-gid
   tile-properties)
 
+(defun tileset-tile-count (tileset)
+  (length (tileset-tile-properties tileset)))
+
 (defstruct layer
   name
   width
@@ -87,7 +91,8 @@
   width
   height
   tilesets
-  layers)
+  layers
+  tile-properties)
 
 (defun tag-name (it) (first it))
 (defun get-attr (it attr)
@@ -109,12 +114,27 @@
                     :tile-width tile-width
                     :tile-height tile-height
                     :first-gid first-gid
-                    :tile-properties tile-properties)) )
+                    :tile-properties tile-properties)))
+
+(defun parse-tileset-property (it)
+  ;;TODO: handle type attr
+  (let ((name (intern (string-upcase (get-attr it "name")) :keyword))
+        (value (get-attr it "value")))
+    (list name value)))
+
+(defun parse-tileset-tile (it)
+  (let ((id (parse-integer (get-attr it "id")))
+        (props (mapcan 'parse-tileset-property (children (first (children it))))))
+    (values id props)))
 
 (defun parse-tsx-file (first-gid path)
   (let* ((it (with-input-from-file (s path)
                (xmls:parse s :compress-whitespace t)))
-         (tileset (shared-parse-tileset it path first-gid)))
+         (tileset (shared-parse-tileset it path first-gid))
+         (table (tileset-tile-properties tileset)))
+    (dolist (tile (rest (children it)))
+      (multiple-value-bind (id props) (parse-tileset-tile tile)
+        (setf (aref table id) props)))
     tileset))
 
 (defun parse-tileset (it path)
@@ -151,19 +171,34 @@
          (width (parse-integer (get-attr it "width")))
          (height (parse-integer (get-attr it "height")))
          (tilesets nil)
-         (layers nil))
+         (layers nil)
+         (tileset-properties nil))
     (dolist (ch (children it))
       (cond ((string= "tileset" (tag-name ch))
              (push (parse-tileset ch path) tilesets))
             ((string= "layer" (tag-name ch))
              (push (parse-layer ch path) layers))
             (t (error "~S tag is unimplmented" (tag-name ch)))))
+    (let* ((total-tile-count
+            (reduce (lambda (count tileset)
+                      (+ count (tileset-tile-count tileset)))
+                    tilesets :initial-value 0)))
+      (setf tileset-properties
+            (make-array (1+ total-tile-count) :initial-element nil))
+      ;;assumes sequential GIDs starting at 1
+      (dolist (tileset tilesets)
+        (loop
+           with table = (tileset-tile-properties tileset)
+           for props across table
+           for idx upfrom (tileset-first-gid tileset)
+           do (setf (aref tileset-properties idx) props))))
     (make-map :tile-width tile-width
               :tile-height tile-height
               :width width
               :height height
               :tilesets tilesets
-              :layers layers)))
+              :layers layers
+              :tile-properties tileset-properties)))
 
 (defun read-tilemap (path)
   (with-input-from-file (s path)
