@@ -20,6 +20,25 @@
 
 (define-modify-macro clampf (min max) clamp)
 
+(defstruct tile
+  shape
+  gid)
+
+(defun tile-from-properties (gid plist)
+  (let ((result (make-tile :gid gid)))
+    (prog1 result
+      (when-let (string (getf plist :shape))
+        (let ((*read-eval* nil))
+          (setf (tile-shape result) (read-from-string string)))))))
+
+(defun tile-lookup-table-from-tmx-renderer (tmx)
+  (let* ((props (render-buffer::tmx-renderer-tile-properties tmx))
+         (result (make-array (length props))))
+    (prog1 result
+      (loop for plist across props
+         for idx upfrom 0 do
+           (setf (aref result idx) (tile-from-properties idx plist))))))
+
 (defclass sprite (node)
   ((sprite-frame :accessor sprite-frame :initarg :sprite-frame)))
 
@@ -124,6 +143,7 @@
   tmx
   player
   tmx-node
+  tile-table
   )
 
 (defun tile-at-point (tmx x y)
@@ -133,36 +153,37 @@
   (declare (ignore self side tile)))
 
 (defun top-for-tile (tile x y)
-  (case tile
-    (2 (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
-    (3 (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
-    (t (+ 1.0 (* 32.0 (+ 1.0 (floor y 32.0)))))))
+  (case (tile-shape tile)
+    (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
+    (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
+    (block       (+ 1.0 (* 32.0 (+ 1.0 (floor y 32.0)))))))
 
 (defun bottom-for-tile (tile x y)
-  (case tile
+  (declare (ignore x))
+  (case (tile-shape tile)
     (t (1- (* 32.0 (+ 0.0 (floor y 32.0)))))))
 
 (defun left-for-tile (tile x y)
   (declare (ignore y))
-  (case tile
-    ((2 3) x) ;;so we can get 'pushed up' to correct position
-    (t (1- (* 32.0 (floor x 32.0))))))
+  (ecase (tile-shape tile)
+    ((slope-left slope-right) x) ;;so we can get 'pushed up' to correct position
+    (block (1- (* 32.0 (floor x 32.0))))))
 
 (defun right-for-tile (tile x y)
   (declare (ignore y))
-  (case tile
-    ((2 3) x)
-    (t (1+ (* 32.0 (1+ (floor x 32.0)))))))
+  (ecase (tile-shape tile)
+    ((slope-left slope-right) x)
+    (block (1+ (* 32.0 (1+ (floor x 32.0)))))))
 
 (defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx) pf
+  (with-struct (pf- tmx tile-table) pf
     (let ((y (bottom sprite)) (hit nil))
       (labels
           ((check (x)
              (let ((tile (tile-at-point tmx x y)))
                (unless (zerop tile)
-                 (maxf y (top-for-tile tile x y))
+                 (maxf y (top-for-tile (aref tile-table tile) x y))
                  (setf hit tile))))
            (run-checks ()
              (check (x sprite))
@@ -174,17 +195,17 @@
            (setf (bottom sprite) y)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'bottom hit)))))))
+           (collide-with-tile sprite 'bottom (aref tile-table hit))))))))
 
 (defun move-sprite-down-if-hitting-tiles-on-top (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx) pf
+  (with-struct (pf- tmx tile-table) pf
     (let ((y (top sprite)) (hit nil))
       (labels
           ((check (x)
              (let ((tile (tile-at-point tmx x y)))
                (unless (zerop tile)
-                 (minf y (bottom-for-tile tile x y))
+                 (minf y (bottom-for-tile (aref tile-table tile) x y))
                  (setf hit tile))))
            (run-checks ()
              (check (x sprite))
@@ -196,17 +217,17 @@
            (setf (top sprite) y)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'top hit)))))))
+           (collide-with-tile sprite 'top (aref tile-table hit))))))))
 
 (defun move-sprite-left-if-hitting-tiles-on-right (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx) pf
+  (with-struct (pf- tmx tile-table) pf
     (let ((x (right sprite)) (hit nil))
       (labels
           ((check (y)
              (let ((tile (tile-at-point tmx x y)))
                (unless (zerop tile)
-                 (minf x (left-for-tile tile x y))
+                 (minf x (left-for-tile (aref tile-table tile) x y))
                  (setf hit tile))))
            (run-checks ()
              (check (y sprite))
@@ -221,16 +242,16 @@
            (setf (right sprite) x)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'right hit)))))))
+           (collide-with-tile sprite 'right (aref tile-table hit))))))))
 
 (defun move-sprite-right-if-hitting-tiles-on-left (pf sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx) pf
+  (with-struct (pf- tmx tile-table) pf
     (let ((x (left sprite)) (hit nil))
       (labels ((check (y)
                  (let ((tile (tile-at-point tmx x y)))
                    (unless (zerop tile)
-                     (maxf x (right-for-tile tile x y))
+                     (maxf x (right-for-tile (aref tile-table tile) x y))
                      (setf hit tile))))
                (run-checks ()
                  (check (y sprite))
@@ -245,7 +266,7 @@
            (setf (left sprite) x)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'left hit)))))))
+           (collide-with-tile sprite 'left (aref tile-table hit))))))))
 
 (defun update-sprite-physics (pf sprite dt)
   (incf (x sprite) (* dt (velocity-x sprite)))
@@ -264,24 +285,24 @@
   (case side
     (bottom
      (setf (can-jump self) t)
-     (case tile
-       (2
+     (case (tile-shape tile)
+       (slope-left
         ;;so the player will stick to the ground when walking
         (when (< (velocity-x self) 0)
           (setf (acceleration-y self) -1000)))
-       (3
+       (slope-right
         ;;so the player will stick to the ground when walking
         (when (> (velocity-x self) 0)
           (setf (acceleration-y self) -1000)))
-       (1
+       (block
         ;;keep the player on the ground, but allow running to
         ;;to float off of slopes a bit
         (setf (velocity-y self) -100))))
     ((left right)
-     (case tile
+     (case (tile-shape tile)
        ;;do nothing
-       ((2 3))
-       (t (setf (velocity-x self) 0))))
+       ((slope-left slope-right))
+       (block (setf (velocity-x self) 0))))
     (top
      (setf (velocity-y self) (* -0.5 (velocity-y self))
            (jumping self) nil
@@ -375,18 +396,19 @@
 
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
-  (with-struct (pf- root tmx tmx-node player) self
+  (with-struct (pf- root tmx tmx-node player tile-table) self
     (let* ((sprites (texture-packer-from-file "./res/test.json"))
            (frame  (get-frame sprites "pickle.png")))
       (setf root (make-instance 'node)
             tmx (render-buffer::tmx-renderer-from-file
-                                     "./res/platformer/dev.tmx")
+                 "./res/platformer/dev.tmx")
             tmx-node (make-instance 'tmx-node
-                               :tmx tmx)
+                                    :tmx tmx)
             player (make-instance 'player
                                   :x 80.0
                                   :acceleration-y -100.0
-                                  :sprite-frame frame))
+                                  :sprite-frame frame)
+            tile-table (tile-lookup-table-from-tmx-renderer tmx))
       (setf (bottom player) 32.0)
       (add-child root tmx-node)
       (add-child root player))))

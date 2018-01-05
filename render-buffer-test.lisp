@@ -696,7 +696,7 @@
 (cl-user::display-contents (make-test13) :width 500 :height 500)
 
 (defstruct tmx-renderer
-  width height tile-width tile-height layer frames)
+  width height tile-width tile-height layer frames map)
 
 (defun tmx-renderer-from-file (path)
   (let* ((map (tmx-reader:read-tilemap path))
@@ -709,7 +709,10 @@
          (height (* tile-height (tmx-reader:layer-height layer))))
     (make-tmx-renderer :width width :height height
                        :tile-width tile-width :tile-height tile-height
-                       :layer layer :frames frames)))
+                       :layer layer :frames frames :map map)))
+
+(defun tmx-renderer-tile-properties (tmx)
+  (tmx-reader:map-tile-properties (tmx-renderer-map tmx)))
 
 (defun tmx-renderer-tile-at-point (tmx x y &optional (default 0))
   (let* ((w (tmx-renderer-width tmx))
