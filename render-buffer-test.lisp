@@ -621,7 +621,7 @@
           (setf (aref vec idx)
                 (texture:texture-frame texture
                                        (* col tile-width)
-                                       (* (- rows row) tile-height)
+                                       (* row tile-height)
                                        tile-width tile-height
                                        :flipped nil))
           (incf idx))))))
