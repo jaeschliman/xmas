@@ -22,14 +22,17 @@
 
 (defstruct tile
   shape
-  gid)
+  gid
+  material)
 
 (defun tile-from-properties (gid plist)
   (let ((result (make-tile :gid gid)))
     (prog1 result
-      (when-let (string (getf plist :shape))
-        (let ((*read-eval* nil))
-          (setf (tile-shape result) (read-from-string string)))))))
+      (let ((*read-eval* nil))
+        (when-let (string (getf plist :shape))
+          (setf (tile-shape result) (read-from-string string)))
+        (when-let (string (getf plist :material))
+          (setf (tile-material result) (read-from-string string)))))))
 
 (defun tile-lookup-table-from-tmx-renderer (tmx)
   (let* ((props (render-buffer::tmx-renderer-tile-properties tmx))
@@ -60,7 +63,8 @@
 (defclass player (physics-sprite)
   ((can-jump :accessor can-jump :initform nil)
    (jump-power :accessor jump-power :initform 100.0)
-   (jumping :accessor jumping :initform nil)))
+   (jumping :accessor jumping :initform nil)
+   (standing-on :accessor standing-on :initform nil)))
 
 (defclass tmx-node (node)
   ((tmx :accessor tmx :initarg :tmx)))
@@ -195,7 +199,9 @@
            (setf (bottom sprite) y)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'bottom (aref tile-table hit))))))))
+           (let ((tile (aref tile-table hit)))
+             (collide-with-tile sprite 'bottom tile)
+             (return tile))))))))
 
 (defun move-sprite-down-if-hitting-tiles-on-top (pf sprite dt)
   (declare (ignore dt))
@@ -269,17 +275,19 @@
            (collide-with-tile sprite 'left (aref tile-table hit))))))))
 
 (defun update-sprite-physics (pf sprite dt)
-  (incf (x sprite) (* dt (velocity-x sprite)))
-  (move-sprite-left-if-hitting-tiles-on-right pf sprite dt)
-  (move-sprite-right-if-hitting-tiles-on-left pf sprite dt)
-  (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
-  (clampf (velocity-x sprite) -1000 1000)
+  (let (standing-on)
+    (incf (x sprite) (* dt (velocity-x sprite)))
+    (move-sprite-left-if-hitting-tiles-on-right pf sprite dt)
+    (move-sprite-right-if-hitting-tiles-on-left pf sprite dt)
+    (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
+    (clampf (velocity-x sprite) -1000 1000)
 
-  (incf (y sprite) (* dt (velocity-y sprite)))
-  (move-sprite-up-if-hitting-tiles-on-bottom pf sprite dt)
-  (move-sprite-down-if-hitting-tiles-on-top pf sprite dt)
-  (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
-  (clampf (velocity-y sprite) -1000 1000))
+    (incf (y sprite) (* dt (velocity-y sprite)))
+    (setf standing-on (move-sprite-up-if-hitting-tiles-on-bottom pf sprite dt))
+    (move-sprite-down-if-hitting-tiles-on-top pf sprite dt)
+    (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
+    (clampf (velocity-y sprite) -1000 1000)
+    standing-on))
 
 (defmethod collide-with-tile ((self player) side tile)
   (case side
@@ -308,26 +316,34 @@
            (jumping self) nil
            (jump-power self) 0))))
 
+(defun hz-accel-rate-for-tile (tile)
+  (case (tile-material tile)
+    (brick 300.0)
+    (ice   150.0)))
+
+(defun hz-decel-rate-for-tile (tile)
+  (case (tile-material tile)
+    (brick (* 300.0 2.25))
+    (ice   (* 300.0 0.05))))
+
 (defun move-player (pf dt)
   (let* ((jump-vel 225.0)
          (jump-power 100.0)
          (jump-drain-speed 100.0)
          (rise-gravity -800.0)
          (fall-gravity -1200.0)
-         (hz-max-vel 200.0)
-         (hz-accel-rate 300.0)
-         (hz-decel-rate (* hz-accel-rate 2.25))
-         (hz-floating-vel 200.0)
-         (hz-floating-decel-rate 50.0))
+         (hz-max-vel 200.0))
     (with-struct (pf- player tmx keys) pf
       (flet ((key-down (key) (gethash key keys))
              (key-up   (key) (null (gethash key keys))))
+
         ;;use faster gravity for falling
         (if (> (velocity-y player) 0.0)
             (setf (acceleration-y player) rise-gravity)
             (setf (acceleration-y player) fall-gravity
                   (jump-power player) 0.0
                   (jumping player) nil))
+
         ;;use jump-power to allow keypress to float player longer
         (when (and (key-down #\s)
                    (or (can-jump player) (> (jump-power player) 10.0)))
@@ -340,29 +356,37 @@
         (when (key-up #\s)
           (setf (jump-power player) 0.0
                 (jumping player) nil))
-        (when (key-down #\a)
-          (setf hz-max-vel (* 2.0 hz-max-vel)
-                hz-accel-rate (* 2.0 hz-accel-rate)))
-        (cond ((can-jump player) ;;on the ground
-               (when (key-down :left)
-                 (move-towards! (velocity-x player) (- hz-max-vel) hz-accel-rate dt))
-               (when (key-down :right)
-                 (move-towards! (velocity-x player) hz-max-vel hz-accel-rate dt))
-               (when (and (key-up :left) (key-up :right))
-                 (move-towards! (velocity-x player) 0.0 hz-decel-rate dt 5.0)))
-              (t ;;floating
-               (when (key-down :left)
-                 ;;only adjust speed if not already moving faster.
-                 (when (> (velocity-x player) (- hz-floating-vel))
-                   (move-towards! (velocity-x player)
-                                  (- hz-floating-vel) hz-accel-rate dt)))
-               (when (key-down :right)
-                 (when (< (velocity-x player) hz-floating-vel)
-                   (move-towards! (velocity-x player)
-                                  hz-floating-vel hz-accel-rate dt)))
-               (when (and (key-up :left) (key-up :right))
-                 (move-towards! (velocity-x player)
-                                0.0 hz-floating-decel-rate dt))))
+
+        ;;horizontal motion
+        (let ((tile (standing-on player)))
+          (cond (tile ;;on the ground
+                 (let* ((hz-accel-rate (hz-accel-rate-for-tile tile))
+                        (hz-decel-rate (hz-decel-rate-for-tile tile)))
+                   (when (key-down #\a)
+                     (setf hz-max-vel (* 2.0 hz-max-vel)
+                           hz-accel-rate (* 2.0 hz-accel-rate)))
+                   (when (key-down :left)
+                     (move-towards! (velocity-x player) (- hz-max-vel) hz-accel-rate dt))
+                   (when (key-down :right)
+                     (move-towards! (velocity-x player) hz-max-vel hz-accel-rate dt))
+                   (when (and (key-up :left) (key-up :right))
+                     (move-towards! (velocity-x player) 0.0 hz-decel-rate dt 5.0))))
+                (t ;;floating
+                 (let* ((hz-accel-rate 300.0)
+                        (hz-floating-vel 200.0)
+                        (hz-floating-decel-rate 50.0))
+                   (when (key-down :left)
+                     ;;only adjust speed if not already moving faster.
+                     (when (> (velocity-x player) (- hz-floating-vel))
+                       (move-towards! (velocity-x player)
+                                      (- hz-floating-vel) hz-accel-rate dt)))
+                   (when (key-down :right)
+                     (when (< (velocity-x player) hz-floating-vel)
+                       (move-towards! (velocity-x player)
+                                      hz-floating-vel hz-accel-rate dt)))
+                   (when (and (key-up :left) (key-up :right))
+                     (move-towards! (velocity-x player)
+                                    0.0 hz-floating-decel-rate dt))))))
         (when (< (abs (velocity-x player)) 2.0)
           (setf (velocity-x player) 0.0))
         (when (key-down :left)
@@ -370,7 +394,7 @@
         (when (key-down :right)
           (setf (flip-x player) nil))
         (setf (can-jump player) nil)
-        (update-sprite-physics pf player dt)
+        (setf (standing-on player) (update-sprite-physics pf player dt))
         (when (< (y player) 0.0)
           (setf (y player) 0.0
                 (velocity-y player) 0.0))

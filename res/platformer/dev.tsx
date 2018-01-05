@@ -4,17 +4,26 @@
  <tile id="0">
   <properties>
    <property name="anum" type="int" value="23"/>
+   <property name="material" value="brick"/>
    <property name="shape" value="block"/>
   </properties>
  </tile>
  <tile id="1">
   <properties>
+   <property name="material" value="brick"/>
    <property name="shape" value="slope-left"/>
   </properties>
  </tile>
  <tile id="2">
   <properties>
+   <property name="material" value="brick"/>
    <property name="shape" value="slope-right"/>
+  </properties>
+ </tile>
+ <tile id="8">
+  <properties>
+   <property name="material" value="ice"/>
+   <property name="shape" value="block"/>
   </properties>
  </tile>
  <tile id="63">
