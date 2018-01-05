@@ -202,11 +202,13 @@
                                 :contents contents
                                 :width width
                                 :height height))
-        (texture-manager (texture:make-texture-manager :display result)))
+         (texture-manager (texture:make-texture-manager :display result))
+         (package *package*))
     (setf (display:display-texture-manager result)
           texture-manager)
     (progmain ()
-      (let* ((w (gui::new-cocoa-window :class (find-class 'my-window)
+      (let* ((*package* package)
+             (w (gui::new-cocoa-window :class (find-class 'my-window)
                                        :title title
                                        :width width
                                        :height height
