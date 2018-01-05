@@ -531,10 +531,15 @@
 
 
 
-(defun draw-texture-frame (frame x y)
+(defun draw-texture-frame (frame x y &optional outset)
   (when-let (id (texture:texture-id (texture:texture-frame-texture frame)))
     (let ((w (texture:texture-frame-width frame))
           (h (texture:texture-frame-height frame)))
+      (when outset
+        (decf x 0.5)
+        (decf y 0.5)
+        (incf w 1.0)
+        (incf h 1.0))
       (if (texture:texture-frame-rotated frame)
           (simple-draw-gl-with-tex-coords-rotated
            id x y w h
@@ -678,7 +683,7 @@
         (when-let (frame (aref frames (tmx-reader:layer-gid-at layer col row)))
           (let ((x (+ start-x (* col tile-width)))
                 (y (- start-y (* row tile-height))))
-            (draw-texture-frame frame x y)))))))
+            (draw-texture-frame frame x y t)))))))
 
 (defmethod cl-user::step-contents ((self test13) dt)
   (declare (ignore dt))
