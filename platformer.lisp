@@ -23,7 +23,8 @@
 (defstruct tile
   shape
   gid
-  material)
+  material
+  type)
 
 (defun tile-from-properties (gid plist)
   (let ((result (make-tile :gid gid)))
@@ -32,7 +33,9 @@
         (when-let (string (getf plist :shape))
           (setf (tile-shape result) (read-from-string string)))
         (when-let (string (getf plist :material))
-          (setf (tile-material result) (read-from-string string)))))))
+          (setf (tile-material result) (read-from-string string)))
+       (when-let (string (getf plist :type))
+          (setf (tile-type result) (read-from-string string))) ))))
 
 (defun tile-lookup-table-from-tmx-renderer (tmx)
   (let* ((props (render-buffer::tmx-renderer-tile-properties tmx))
@@ -418,11 +421,18 @@
 (defun get-frame (sprites path)
   (texture-packer-get-frame sprites path))
 
+(defun make-node-from-object-info (sprites type initargs)
+  (when-let* ((path (case type
+                      (jewel "jewel.png")))
+              (frame (get-frame sprites path)))
+    (apply #'make-instance 'sprite :sprite-frame frame initargs)))
+
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
   (with-struct (pf- root tmx tmx-node player tile-table) self
     (let* ((sprites (texture-packer-from-file "./res/test.json"))
-           (frame  (get-frame sprites "pickle.png")))
+           (frame  (get-frame sprites "pickle.png"))
+           (objects nil))
       (setf root (make-instance 'node)
             tmx (render-buffer::tmx-renderer-from-file
                  "./res/platformer/dev.tmx")
@@ -433,8 +443,21 @@
                                   :acceleration-y -100.0
                                   :sprite-frame frame)
             tile-table (tile-lookup-table-from-tmx-renderer tmx))
+      (let* ((map (render-buffer::tmx-renderer-map tmx))
+             (layers (tmx-reader:map-layers map))
+             (objects-layer (find :objects layers :key 'tmx-reader:layer-type))
+             (data (tmx-reader:layer-data objects-layer)))
+        (dolist (plist data)
+          (let* ((tile (aref tile-table (getf plist :gid)))
+                 (type (tile-type tile))
+                 (initargs (rest (rest plist))))
+            (when-let (object (make-node-from-object-info sprites type initargs))
+              (format t "built object for type: ~S ~A ~A ~%" type object (getf initargs :y))
+              (push object objects)))))
       (setf (bottom player) 32.0)
       (add-child root tmx-node)
+      (dolist (sprite objects)
+        (add-child root sprite))
       (add-child root player))))
 
 
