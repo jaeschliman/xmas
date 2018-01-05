@@ -24,7 +24,8 @@
              #:tileset-tile-height
              #:tileset-first-gid
              #:tileset-tile-properties
-             #:map-tile-properties))
+             #:map-tile-properties
+             #:layer-type))
 (in-package :tmx-reader)
 
 (defun file-pathname-relative-to-file (path file)
@@ -83,7 +84,8 @@
   name
   width
   height
-  data)
+  data
+  type)
 
 (defstruct map
   tile-width
@@ -101,20 +103,42 @@
 (defun children (it)
   (nthcdr 2 it))
 
+(defun parse-tile-tileset (it path first-gid)
+  (let* ((name (get-attr it "name"))
+         (source (get-attr (first (children it)) "source"))
+         (tile-width (parse-integer (get-attr it "tilewidth")))
+         (tile-height (parse-integer (get-attr it "tileheight")))
+         (first-gid (or first-gid (parse-integer (get-attr it "firstgid"))))
+         (tilecount (parse-integer (get-attr it "tilecount")))
+         (tile-properties (make-array tilecount :initial-element nil)))
+    (make-tileset :name name
+                  :source (file-pathname-relative-to-file path source)
+                  :tile-width tile-width
+                  :tile-height tile-height
+                  :first-gid first-gid
+                  :tile-properties tile-properties)))
+
+(defun parse-image-tileset (it path first-gid)
+  (declare (ignore path))
+  (let* ((name (get-attr it "name"))
+         (tile-width (parse-integer (get-attr it "tilewidth")))
+         (tile-height (parse-integer (get-attr it "tileheight")))
+         (first-gid (or first-gid (parse-integer (get-attr it "firstgid"))))
+         (tilecount (parse-integer (get-attr it "tilecount")))
+         (tile-properties (make-array tilecount :initial-element nil)))
+    (make-tileset :name name
+                  :source nil
+                  :tile-width tile-width
+                  :tile-height tile-height
+                  :first-gid first-gid
+                  :tile-properties tile-properties)))
+
 (defun shared-parse-tileset (it path first-gid)
- (let* ((name (get-attr it "name"))
-           (source (get-attr (first (children it)) "source"))
-           (tile-width (parse-integer (get-attr it "tilewidth")))
-           (tile-height (parse-integer (get-attr it "tileheight")))
-           (first-gid (or first-gid (parse-integer (get-attr it "firstgid"))))
-           (tilecount (parse-integer (get-attr it "tilecount")))
-           (tile-properties (make-array tilecount :initial-element nil)))
-      (make-tileset :name name
-                    :source (file-pathname-relative-to-file path source)
-                    :tile-width tile-width
-                    :tile-height tile-height
-                    :first-gid first-gid
-                    :tile-properties tile-properties)))
+  (let ((name (tag-name (first (children it)))))
+    (cond
+      ((string= name "grid") (parse-image-tileset it path first-gid))
+      ((string= name "image") (parse-tile-tileset it path first-gid))
+      (t (assert nil)))))
 
 (defun parse-tileset-property (it)
   ;;TODO: handle type attr
@@ -123,9 +147,14 @@
     (list name value)))
 
 (defun parse-tileset-tile (it)
-  (let ((id (parse-integer (get-attr it "id")))
-        (props (mapcan 'parse-tileset-property (children (first (children it))))))
-    (values id props)))
+  (let* ((id (parse-integer (get-attr it "id")))
+         (type (get-attr it "type"))
+         (first-child (first (children it)))
+         (props (when (string= (tag-name first-child) "properties")
+                  (mapcan 'parse-tileset-property (children first-child)))))
+    (if type
+        (values id (list* :type type props))
+        (values id props))))
 
 (defun parse-tsx-file (first-gid path)
   (let* ((it (with-input-from-file (s path)
@@ -153,16 +182,33 @@
     (expand-tile-data string)))
 
 (defun parse-layer (it path)
+  (declare (ignore path))
   (let* ((name (get-attr it "name"))
          (width (parse-integer (get-attr it "width")))
          (height (parse-integer (get-attr it "height")))
          (data (parse-data (first (children it)))))
-    (make-layer :name name :width width :height height :data data)))
+    (make-layer :name name :width width :height height :data data :type :tiles)))
 
 (defun layer-gid-at (layer x y)
   (let ((gid (aref (layer-data layer) (+ x (* (layer-width layer) y)))))
     ;; TODO: handle flip masks
     (values gid nil nil)))
+
+(defun parse-object (it height-in-pixels)
+  (flet ((r (s) (let* ((*read-eval* nil)
+                       (val (read-from-string (get-attr it s))))
+                  (check-type val number)
+                  val)))
+    (let ((w (r "width"))
+          (h (r "height")))
+      (list :gid (r "gid")
+            :x (+ (/ w 2) (r "x"))
+            :y (+ (/ h 2) (- height-in-pixels (r "y")))))))
+
+(defun parse-object-group (it height-in-pixels)
+  (let ((name (get-attr it "name"))
+        (data (mapcar (lambda (ch) (parse-object ch height-in-pixels)) (children it))))
+    (make-layer :name name :width nil :height nil :data data :type :objects)))
 
 (defun parse-map (it path)
   (assert (string= "orthogonal" (get-attr it "orientation")))
@@ -172,12 +218,15 @@
          (height (parse-integer (get-attr it "height")))
          (tilesets nil)
          (layers nil)
-         (tileset-properties nil))
+         (tileset-properties nil)
+         (height-in-pixels (* height tile-height)))
     (dolist (ch (children it))
       (cond ((string= "tileset" (tag-name ch))
              (push (parse-tileset ch path) tilesets))
             ((string= "layer" (tag-name ch))
              (push (parse-layer ch path) layers))
+            ((string= "objectgroup" (tag-name ch))
+             (push (parse-object-group ch height-in-pixels) layers))
             (t (error "~S tag is unimplmented" (tag-name ch)))))
     (let* ((total-tile-count
             (reduce (lambda (count tileset)
@@ -192,6 +241,8 @@
            for props across table
            for idx upfrom (tileset-first-gid tileset)
            do (setf (aref tileset-properties idx) props))))
+    (setf tilesets (nreverse tilesets)
+          layers   (nreverse layers))
     (make-map :tile-width tile-width
               :tile-height tile-height
               :width width
