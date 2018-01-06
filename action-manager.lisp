@@ -20,7 +20,8 @@
   action
   target
   paused
-  started)
+  started
+  tag)
 
 (defvar *action-manager* nil)
 
@@ -33,20 +34,27 @@
   (vector-push-extend act (manager-actions manager))
   (maybe-start-action act))
 
-(defun add-action (manager action target &optional (paused nil))
+(defun add-action (manager action target &key paused tag)
   (let ((act (make-act :action action
                        :target target
-                       :paused paused)))
+                       :paused paused
+                       :tag tag)))
     (if (manager-running manager)
         (push act (manager-pending-additions manager))
         (add-act manager act))))
 
-(defun remove-all-actions-for-target (manager target)
+(defun remove-all-actions-for-target (manager target &key tag)
   (if (manager-running manager)
-      (push target (manager-pending-deletions manager))
-      (setf (manager-actions manager)
-            (delete target (manager-actions manager)
-                    :key #'act-target))))
+      (push (cons target tag) (manager-pending-deletions manager))
+      (if tag
+          (setf (manager-actions manager)
+                (delete-if (lambda (act)
+                             (and (eq target (act-target act))
+                                  (eq tag (act-tag act))))
+                           (manager-actions manager)))
+          (setf (manager-actions manager)
+                (delete target (manager-actions manager)
+                        :key #'act-target)))))
 
 (defun pause-all-actions-for-target (manager target)
   (loop for act across (manager-actions manager)
@@ -73,8 +81,8 @@
                     (action:step-action action dt))))
       (setf (manager-running manager) nil))
     (when-let (deletions (manager-pending-deletions manager))
-      (dolist (target deletions)
-        (remove-all-actions-for-target manager target))
+      (loop for (target . tag) in deletions do
+        (remove-all-actions-for-target manager target :tag tag))
       (setf (manager-pending-deletions manager) nil))
     (when stopped
       (setf (manager-actions manager)

@@ -652,3 +652,37 @@
     (draw-tmx-renderer x y r)))
 
 (cl-user::display-contents (make-test14) :width 500 :height 500)
+
+
+(defstruct test15
+  node started)
+
+(defmethod cl-user::contents-will-mount ((self test15) display)
+  (declare (ignore display))
+  (let ((n (make-instance 'node:node :x 250 :y 250)))
+    (setf (test15-node self) n)
+    (node:run-action
+     n
+     (list
+      (action:move-by 3.0 -100.0 0)
+      (action:move-by 3.0 100.0 0))
+     :repeat :forever :tag 'moving)
+    (node:run-action
+     n
+     (action:rotate-by 5.0 360.0)
+     :repeat :forever :tag 'rotating)
+    (node:run-action
+     n
+     (list
+      (action:delay 3.0)
+      (action:callfunc (lambda ()
+                         (node:stop-all-actions n :tag 'moving)))))))
+
+(defmethod cl-user::step-contents ((self test15) dt)
+  (declare (ignorable dt))
+  (unless (test15-started self)
+    (setf (test15-started self) t)
+    (node:on-enter (test15-node self)))
+  (visit (test15-node self)))
+
+(cl-user::display-contents (make-test15) :width 500 :height 500)

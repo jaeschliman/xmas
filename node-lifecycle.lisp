@@ -1,6 +1,6 @@
 (in-package :node)
 
-(defmethod run-action ((self node) action &key repeat ease)
+(defmethod run-action ((self node) action &key repeat ease tag)
   (when (listp action)
     (setf action (apply 'action:run-sequence action)))
   (when ease
@@ -12,19 +12,20 @@
         (setf action (action:repeat-forever action))
         (error "unknown repeat method: ~S" repeat)))
   (if (running self)
-      (action-manager:add-action action-manager:*action-manager* action self nil)
-      (push action (pending-actions self))))
+      (action-manager:add-action action-manager:*action-manager* action self :tag tag)
+      (push (cons action tag) (pending-actions self))))
 
-(defmethod stop-all-actions ((self node))
+(defmethod stop-all-actions ((self node) &key tag)
   (action-manager:remove-all-actions-for-target
-   action-manager:*action-manager* self)
-  (setf (pending-actions self) nil))
+   action-manager:*action-manager* self :tag tag)
+  (setf (pending-actions self)
+        (if tag (remove tag (pending-actions self) :key #'cdr) nil)))
 
 (defmethod on-enter ((self node))
   (setf (running self) t)
   (when-let (actions (pending-actions self))
-    (dolist (action actions)
-      (run-action self action))
+    (loop for (action . tag) in actions do
+      (run-action self action :tag tag))
     (setf (pending-actions self) nil))
   (when-let (children (children self))
     (loop for child across children do
