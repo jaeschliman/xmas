@@ -119,15 +119,42 @@
   (glu:ortho-2d 0 width 0 height)
   (gl:matrix-mode :modelview))
 
+(defun resize-gl-2d (viewport-x viewport-y viewport-width viewport-height width height)
+  (gl:viewport viewport-x viewport-y viewport-width viewport-height)
+  (gl:matrix-mode :projection)
+  (gl:load-identity)
+  (glu:ortho-2d 0 width 0 height)
+  (gl:matrix-mode :modelview))
+
 (defun nsview-size (self)
   (let* ((f (#/frame self))
          (w (pref f :<NSR>ect.size.width))
          (h (pref f :<NSR>ect.size.height)))
     (values w h)))
 
+(defun size-to-fit (screen-w screen-h content-w content-h)
+  ;;I'm tired so we'll just assume square screens for now
+  (declare (ignore content-w content-h))
+  (cond
+    ((> screen-w screen-h)
+     (values (/ (- screen-w screen-h) 2.0) 0.0 screen-h screen-h))
+    (t
+     (values 0.0 (/ (- screen-h screen-w) 2.0) screen-w screen-w))))
+
 (defun reshape-window (self)
   (multiple-value-bind (w h) (nsview-size self)
-    (prepare-gl-2d w h)))
+    (let* ((display (my-view-display self))
+           (width (display:display-width display))
+           (height (display:display-height display)))
+      (with-slots (display:size-to-fit display:preserve-aspect-ratio) display
+        (cond
+          (display:preserve-aspect-ratio
+           (multiple-value-bind (x y w h) (size-to-fit w h width height)
+             (resize-gl-2d x y w h width height)))
+          (display:size-to-fit
+           (resize-gl-2d 0 0 w h width height))
+          (t
+           (resize-gl-2d 0 0 w h w h)))))))
 
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
   (#_glClearColor 0.05 0.05 0.05 0.0)
@@ -196,12 +223,16 @@
                                     (height 250)
                                     (title "untitled")
                                     (expandable nil)
-                                    (fps (/ 1.0 60.0)))
+                                    (fps (/ 1.0 60.0))
+                                    (size-to-fit nil)
+                                    (preserve-aspect-ratio nil))
   (let* ((result (make-instance 'display:display
                                 :fps fps
                                 :contents contents
                                 :width width
-                                :height height))
+                                :height height
+                                :size-to-fit size-to-fit
+                                :preserve-aspect-ratio preserve-aspect-ratio))
          (texture-manager (texture:make-texture-manager :display result))
          (package *package*))
     (setf (display:display-texture-manager result)

@@ -14,7 +14,9 @@
              #:display-action-manager
              #:display-drain-gl-queue
              #:display-enqueue-for-gl
-             #:display-texture-manager))
+             #:display-texture-manager
+             #:size-to-fit
+             #:preserve-aspect-ratio))
 
 (in-package :display)
 
@@ -24,6 +26,8 @@
    (contents :accessor contents :initarg :contents)
    (width :accessor display-width :initarg :width)
    (height :accessor display-height :initarg :height)
+   (size-to-fit  :initarg :size-to-fit)
+   (preserve-aspect-ratio :initarg :preserve-aspect-ratio)
    (fps :reader display-fps :initarg :fps)
    (runloop :accessor display-runloop :initform nil)
    (gl-queue :accessor display-gl-queue :initform (queues:make-queue :simple-cqueue))
