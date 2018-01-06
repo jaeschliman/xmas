@@ -45,6 +45,9 @@
          for idx upfrom 0 do
            (setf (aref result idx) (tile-from-properties idx plist))))))
 
+(defclass image (node)
+  ((texture :accessor texture :initarg :texture)))
+
 (defclass sprite (node)
   ((sprite-frame :accessor sprite-frame :initarg :sprite-frame)))
 
@@ -118,6 +121,10 @@
   (let ((c (color node)) (a (opacity node)))
     (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
+(defmethod draw ((self image))
+  (draw-node-color self)
+  (render-buffer::draw-texture (texture self)))
+
 (defmethod draw ((self sprite))
   (draw-node-color self)
   (render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
@@ -151,6 +158,7 @@
   player
   tmx-node
   tile-table
+  background
   )
 
 (defun tile-at-point (tmx x y)
@@ -406,7 +414,7 @@
 
 (defun move-camera (pf dt)
   (declare (ignore dt))
-  (with-struct (pf- root player) pf
+  (with-struct (pf- root player background) pf
     (let* ((center (+ (- (x root)) 250))
            (right-edge (+ center 100))
            (left-edge (- center 100)))
@@ -416,24 +424,28 @@
         ((and t (< (x player) left-edge))
          (incf (x root) (- left-edge (x player)))))
       (when (> (x root) 0.0)
-        (setf (x root) 0.0)))))
+        (setf (x root) 0.0))
+      (setf (x background) (+ (- (x root)) 250)))))
 
 (defun get-frame (sprites path)
   (texture-packer-get-frame sprites path))
 
 (defun make-node-from-object-info (sprites type initargs)
   (when-let* ((path (case type
-                      (jewel "jewel.png")))
+                      (jewel "jewel.png")
+                      (cat "throwcat.png")))
               (frame (get-frame sprites path)))
     (apply #'make-instance 'sprite :sprite-frame frame initargs)))
 
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
-  (with-struct (pf- root tmx tmx-node player tile-table) self
+  (with-struct (pf- root tmx tmx-node player tile-table background) self
     (let* ((sprites (texture-packer-from-file "./res/test.json"))
            (frame  (get-frame sprites "pickle.png"))
            (objects nil))
       (setf root (make-instance 'node)
+            background (make-instance 'image :x 250 :y 250
+                                      :texture (get-texture "./res/platformer/sky.png"))
             tmx (render-buffer::tmx-renderer-from-file
                  "./res/platformer/dev.tmx")
             tmx-node (make-instance 'tmx-node
@@ -455,6 +467,7 @@
               (format t "built object for type: ~S ~A ~A ~%" type object (getf initargs :y))
               (push object objects)))))
       (setf (bottom player) 32.0)
+      (add-child root background)
       (add-child root tmx-node)
       (dolist (sprite objects)
         (add-child root sprite))
@@ -476,4 +489,6 @@
       (:keydown (setf (gethash info keys) t))
       (:keyup   (setf (gethash info keys) nil)))))
 
-(cl-user::display-contents (make-pf) :width 500 :height 500)
+(cl-user::display-contents (make-pf) :width 500 :height 500
+                           :expandable t
+                           :preserve-aspect-ratio t)
