@@ -20,6 +20,7 @@
   (ql:quickload :cl-glut) ;; am I even using this?
   (load "./runloop.lisp")
   (load "./render-buffer.lisp")
+  (load "./render-buffer-instrs.lisp")
   (load "./matrix.lisp")
   (load "./node.lisp")
   (load "./action.lisp")
