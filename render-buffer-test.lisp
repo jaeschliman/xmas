@@ -523,9 +523,10 @@
         (dotimes (col cols)
           (setf (aref vec idx)
                 (texture:texture-frame texture
-                                       (* col tile-width)
-                                       (* row tile-height)
-                                       tile-width tile-height
+                                       (+ (* col tile-width) 0.5)
+                                       (+ (* row tile-height) 0.5)
+                                       (- tile-width 1.0)
+                                       (- tile-height 1.0)
                                        :flipped nil))
           (incf idx))))))
 
