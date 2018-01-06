@@ -132,14 +132,19 @@
          (h (pref f :<NSR>ect.size.height)))
     (values w h)))
 
-(defun size-to-fit (screen-w screen-h content-w content-h)
-  ;;I'm tired so we'll just assume square screens for now
-  (declare (ignore content-w content-h))
-  (cond
-    ((> screen-w screen-h)
-     (values (/ (- screen-w screen-h) 2.0) 0.0 screen-h screen-h))
-    (t
-     (values 0.0 (/ (- screen-h screen-w) 2.0) screen-w screen-w))))
+
+(defun aspect-fit (screen-w screen-h content-w content-h)
+  (let* ((screen-ratio (/ screen-w screen-h))
+         (content-ratio (/ content-w content-h))
+         (new-w (if (> screen-ratio content-ratio)
+                    (* content-w (/ screen-h content-h))
+                    screen-w))
+         (new-h (if (> screen-ratio content-ratio)
+                    screen-h
+                    (* content-h (/ screen-w content-w))))
+         (offs-x (/ (- screen-w new-w) 2.0))
+         (offs-y (/ (- screen-h new-h) 2.0)))
+    (values offs-x offs-y new-w new-h)))
 
 (defun reshape-window (self)
   (multiple-value-bind (w h) (nsview-size self)
@@ -149,7 +154,7 @@
       (with-slots (display:size-to-fit display:preserve-aspect-ratio) display
         (cond
           (display:preserve-aspect-ratio
-           (multiple-value-bind (x y w h) (size-to-fit w h width height)
+           (multiple-value-bind (x y w h) (aspect-fit w h width height)
              (resize-gl-2d x y w h width height)))
           (display:size-to-fit
            (resize-gl-2d 0 0 w h width height))
