@@ -1,4 +1,6 @@
-(defpackage :pickle (:use :cl :alexandria :node :action :texture :texture-packer :display))
+(defpackage :pickle
+  (:use :cl :alexandria :node :action :texture :texture-packer :display)
+  (:shadow #:get-frame))
 (in-package :pickle)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
