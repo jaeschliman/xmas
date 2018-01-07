@@ -20,6 +20,12 @@
    <property name="shape" value="slope-right"/>
   </properties>
  </tile>
+ <tile id="3">
+  <properties>
+   <property name="material" value="rubber"/>
+   <property name="shape" value="block"/>
+  </properties>
+ </tile>
  <tile id="8">
   <properties>
    <property name="material" value="ice"/>

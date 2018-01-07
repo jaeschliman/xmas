@@ -273,31 +273,45 @@
     standing-on))
 
 (defmethod collide-with-tile ((self player) side tile)
-  (case side
-    (bottom
-     (setf (can-jump self) t)
-     (case (tile-shape tile)
-       (slope-left
-        ;;so the player will stick to the ground when walking
-        (when (< (velocity-x self) 0)
-          (setf (acceleration-y self) -1000)))
-       (slope-right
-        ;;so the player will stick to the ground when walking
-        (when (> (velocity-x self) 0)
-          (setf (acceleration-y self) -1000)))
-       (block
-        ;;keep the player on the ground, but allow running to
-        ;;to float off of slopes a bit
-        (setf (velocity-y self) -100))))
-    ((left right)
-     (case (tile-shape tile)
-       ;;do nothing
-       ((slope-left slope-right))
-       (block (setf (velocity-x self) 0))))
-    (top
-     (setf (velocity-y self) (* -0.5 (velocity-y self))
-           (jumping self) nil
-           (jump-power self) 0))))
+  (when (eq side 'bottom)
+    (setf (can-jump self) t))
+  (case (tile-material tile)
+    (rubber
+     (let ((bounce -1.1))
+       (case side
+         ;;bounce
+         ((left right) (setf (velocity-x self) (* bounce (velocity-x self))))
+         (top (setf (velocity-y self) (* bounce (velocity-y self))))
+         (bottom
+          (let* ((vel (velocity-y self))
+                 (new-vel (if (< (abs vel) 150.0) -100.0 (* bounce vel))))
+            (setf (velocity-y self) new-vel))))))
+    (t
+     (case side
+       (bottom
+        (case (tile-shape tile)
+          (slope-left
+           ;;so the player will stick to the ground when walking
+           (when (< (velocity-x self) 0)
+             (setf (acceleration-y self) -1000)))
+          (slope-right
+           ;;so the player will stick to the ground when walking
+           (when (> (velocity-x self) 0)
+             (setf (acceleration-y self) -1000)))
+          (block
+              ;;keep the player on the ground, but allow running to
+              ;;to float off of slopes a bit
+              (setf (velocity-y self) -100))))
+       ((left right)
+        (case (tile-shape tile)
+          ;;do nothing
+          ((slope-left slope-right))
+          (block (setf (velocity-x self) 0))))
+       (top
+        ;;richochet
+        (setf (velocity-y self) (* -0.5 (velocity-y self))
+              (jumping self) nil
+              (jump-power self) 0))))))
 
 (defmethod leave-state ((self player) state next-state)
   (declare (ignore state next-state))
@@ -330,12 +344,14 @@
 (defun hz-accel-rate-for-tile (tile)
   (case (tile-material tile)
     (brick 300.0)
-    (ice   150.0)))
+    (ice   150.0)
+    (t 300.0)))
 
 (defun hz-decel-rate-for-tile (tile)
   (case (tile-material tile)
     (brick (* 300.0 2.25))
-    (ice   (* 300.0 0.05))))
+    (ice   (* 300.0 0.05))
+    (t     (* 300.0 2.25))))
 
 (defun update-state (player pf dt)
   (declare (ignore dt))
