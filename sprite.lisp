@@ -1,7 +1,9 @@
 (defpackage :sprite (:use :cl :alexandria :texture :node)
             (:export
              #:sprite
-             #:sprite-frame))
+             #:sprite-frame
+             #:stop-animation
+             #:run-animation))
 (in-package :sprite)
 
 (defclass sprite (node)

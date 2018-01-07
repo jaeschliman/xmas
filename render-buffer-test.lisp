@@ -705,10 +705,7 @@
                                :scale-x 2.0
                                :scale-y 2.0
                                :sprite-frame (texture:get-frame "pickle.png"))))
-    (node:run-action sprite
-                     (xmas.animation-manager:get-animation 'cat)
-                     :repeat :forever)
-
+    (sprite:run-animation sprite 'cat :repeat :forever)
     (setf (node:rotation sprite) -15)
     (setf (test16-node self) sprite)))
 
