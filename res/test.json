@@ -2,7 +2,7 @@
 
 {
 	"filename": "catwalk0.png",
-	"frame": {"x":1,"y":493,"w":50,"h":50},
+	"frame": {"x":1,"y":821,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -11,7 +11,7 @@
 },
 {
 	"filename": "catwalk1.png",
-	"frame": {"x":1,"y":545,"w":50,"h":50},
+	"frame": {"x":1,"y":873,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -20,7 +20,7 @@
 },
 {
 	"filename": "jewel.png",
-	"frame": {"x":1,"y":649,"w":24,"h":38},
+	"frame": {"x":1,"y":977,"w":24,"h":38},
 	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":38},
@@ -37,7 +37,7 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
-	"filename": "pickle jump.png",
+	"filename": "pickle fall.png",
 	"frame": {"x":1,"y":83,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
@@ -46,7 +46,7 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
-	"filename": "pickle mad.png",
+	"filename": "pickle float.png",
 	"frame": {"x":1,"y":165,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
@@ -55,7 +55,7 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
-	"filename": "pickle.png",
+	"filename": "pickle jump.png",
 	"frame": {"x":1,"y":247,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
@@ -64,34 +64,7 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
-	"filename": "throwcat.png",
-	"frame": {"x":1,"y":597,"w":50,"h":50},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
-	"sourceSize": {"w":50,"h":50},
-	"pivot": {"x":0.5,"y":0.5}
-},
-{
-	"filename": "tomato chunk 1.png",
-	"frame": {"x":41,"y":649,"w":16,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
-	"sourceSize": {"w":16,"h":16},
-	"pivot": {"x":0.5,"y":0.5}
-},
-{
-	"filename": "tomato chunk 2.png",
-	"frame": {"x":41,"y":667,"w":13,"h":16},
-	"rotated": true,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":13,"h":16},
-	"sourceSize": {"w":13,"h":16},
-	"pivot": {"x":0.5,"y":0.5}
-},
-{
-	"filename": "tomato splat.png",
+	"filename": "pickle mad.png",
 	"frame": {"x":1,"y":329,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
@@ -100,8 +73,71 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
-	"filename": "tomato.png",
+	"filename": "pickle walk0.png",
 	"frame": {"x":1,"y":411,"w":60,"h":80},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
+	"sourceSize": {"w":60,"h":80},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "pickle walk1.png",
+	"frame": {"x":1,"y":493,"w":60,"h":80},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
+	"sourceSize": {"w":60,"h":80},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "pickle.png",
+	"frame": {"x":1,"y":575,"w":60,"h":80},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
+	"sourceSize": {"w":60,"h":80},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "throwcat.png",
+	"frame": {"x":1,"y":925,"w":50,"h":50},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
+	"sourceSize": {"w":50,"h":50},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "tomato chunk 1.png",
+	"frame": {"x":41,"y":977,"w":16,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
+	"sourceSize": {"w":16,"h":16},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "tomato chunk 2.png",
+	"frame": {"x":41,"y":995,"w":13,"h":16},
+	"rotated": true,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":13,"h":16},
+	"sourceSize": {"w":13,"h":16},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "tomato splat.png",
+	"frame": {"x":1,"y":657,"w":60,"h":80},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
+	"sourceSize": {"w":60,"h":80},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "tomato.png",
+	"frame": {"x":1,"y":739,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -113,8 +149,8 @@
 	"version": "1.0",
 	"image": "test.png",
 	"format": "RGBA8888",
-	"size": {"w":62,"h":681},
+	"size": {"w":62,"h":1009},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:2e7099bc8bbc4a6ca67855375be57343:a6896d76ed3d003ae794da63f4f7bd0f:02ab132358d6d8b512e80119463a8329$"
+	"smartupdate": "$TexturePacker:SmartUpdate:6f2441624ed79db7451b7f1457563b47:a637322bf2fed30b079ccb04299f038d:02ab132358d6d8b512e80119463a8329$"
 }
 }

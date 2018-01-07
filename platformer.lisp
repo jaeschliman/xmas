@@ -1,4 +1,4 @@
-(defpackage :platformer (:use :cl :alexandria :node :sprite :action :texture :texture-packer :display))
+(defpackage :platformer (:use :cl :alexandria :node :sprite :action :texture :texture-packer :display :xmas.animation-manager))
 (in-package :platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -302,7 +302,27 @@
 (defmethod leave-state ((self player) state next-state)
   (format t "leaving ~A for ~A~%" state next-state))
 (defmethod enter-state ((self player) state prev-state)
-  (format t "entering ~A from ~A~%" state prev-state))
+  (format t "entering ~A from ~A~%" state prev-state)
+  (flet ((set-frame (f)
+           (stop-animation self)
+           (setf (sprite-frame self) (get-frame f)))
+         (animate (name)
+           (run-animation self name :repeat :forever)))
+    (case state
+      (standing
+       (set-frame "pickle.png"))
+      (walking
+       (animate 'pickle-walk))
+      (running
+       (animate 'pickle-run))
+      (floating
+       (set-frame "pickle float.png"))
+      (falling
+       (set-frame "pickle fall.png"))
+      (jumping
+       (set-frame "pickle jump.png"))
+      (t
+       (set-frame "pickle.png")))))
 
 (defun hz-accel-rate-for-tile (tile)
   (case (tile-material tile)
@@ -438,6 +458,8 @@
   (declare (ignore display))
   (with-struct (pf- root tmx tmx-node player tile-table background) self
     (texture-packer-add-frames-from-file "./res/test.json")
+    (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
+    (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
     (let* ((frame  (get-frame "pickle.png"))
            (objects nil))
       (setf root (make-instance 'node)
