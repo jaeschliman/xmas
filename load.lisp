@@ -28,6 +28,7 @@
   (load "./node-lifecycle.lisp")
   (load "./display.lisp")
   (load "./texture.lisp")
+  (load "./sprite.lisp")
   (load "./texture-packer.lisp")
   (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
   (load "./tmx-reader.lisp")

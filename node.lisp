@@ -31,7 +31,15 @@
    #:on-exit
    #:visible
    #:opacity
-   #:z-order))
+   #:z-order
+
+
+   #:width
+   #:height
+   #:right
+   #:left
+   #:bottom
+   #:top))
 (in-package :node)
 
 ;;; honestly, this should probably be a struct...
@@ -150,4 +158,35 @@
     (into-matrix ((node-to-world-transform p))
       (left-cat-matrix (node-to-parent-transform self)))
     (copy-matrix (node-to-parent-transform self))))
+
+;;TODO: have a sensible definition for these for nodes.
+(defgeneric width (node))
+(defgeneric height (node))
+
+(defmethod width  ((self node)) 0)
+(defmethod height ((self node)) 0)
+
+(defun right (node)
+  (+ (x node) (/ (width node) 2.0)))
+
+(defun (setf right) (x node)
+  (setf (x node) (- x (/ (width node) 2.0))))
+
+(defun left (node)
+  (- (x node) (/ (width node) 2.0)))
+
+(defun (setf left) (x node)
+  (setf (x node) (+ x (/ (width node) 2.0))))
+
+(defun bottom (node)
+  (- (y node) (/ (height node) 2.0)))
+
+(defun (setf bottom) (y node)
+  (setf (y node) (+ y (/ (height node) 2.0))))
+
+(defun top (node)
+  (+ (y node) (/ (height node) 2.0)))
+
+(defun (setf top) (y node)
+  (setf (y node) (- y (/ (height node) 2.0))))
 

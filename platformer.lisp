@@ -1,4 +1,4 @@
-(defpackage :platformer (:use :cl :alexandria :node :action :texture :texture-packer :display))
+(defpackage :platformer (:use :cl :alexandria :node :sprite :action :texture :texture-packer :display))
 (in-package :platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -48,15 +48,6 @@
 (defclass image (node)
   ((texture :accessor texture :initarg :texture)))
 
-(defclass sprite (node)
-  ((sprite-frame :accessor sprite-frame :initarg :sprite-frame)))
-
-(defun sprite-width (sprite)
-  (* (scale-x sprite) (texture-frame-width (sprite-frame sprite))))
-
-(defun sprite-height (sprite)
-  (* (scale-y sprite) (texture-frame-height (sprite-frame sprite))))
-
 (defclass physics-sprite (sprite)
   ((velocity-x :accessor velocity-x :initarg :velocity-x)
    (velocity-y :accessor velocity-y :initarg :velocity-y)
@@ -75,12 +66,6 @@
 (defclass tmx-node (node)
   ((tmx :accessor tmx :initarg :tmx)))
 
-(defgeneric width (node))
-(defgeneric height (node))
-(defmethod width ((self sprite))
-  (sprite-width self))
-(defmethod height ((self sprite))
-  (sprite-height self))
 (defmethod width ((self player))
   24.0
   ;;(* 0.6 (sprite-width self))
@@ -89,30 +74,6 @@
   64
   ;;(* 0.8 (sprite-height self))
   )
-
-(defun right (sprite)
-  (+ (x sprite) (/ (width sprite) 2.0)))
-
-(defun (setf right) (x sprite)
-  (setf (x sprite) (- x (/ (width sprite) 2.0))))
-
-(defun left (sprite)
-  (- (x sprite) (/ (width sprite) 2.0)))
-
-(defun (setf left) (x sprite)
-  (setf (x sprite) (+ x (/ (width sprite) 2.0))))
-
-(defun bottom (sprite)
-  (- (y sprite) (/ (height sprite) 2.0)))
-
-(defun (setf bottom) (y sprite)
-  (setf (y sprite) (+ y (/ (height sprite) 2.0))))
-
-(defun top (sprite)
-  (+ (y sprite) (/ (height sprite) 2.0)))
-
-(defun (setf top) (y sprite)
-  (setf (y sprite) (- y (/ (height sprite) 2.0))))
 
 (defgeneric draw (node))
 (defmethod draw ((self node)))
