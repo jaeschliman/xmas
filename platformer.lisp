@@ -427,21 +427,18 @@
         (setf (x root) 0.0))
       (setf (x background) (+ (- (x root)) 250)))))
 
-(defun get-frame (sprites path)
-  (texture-packer-get-frame sprites path))
-
-(defun make-node-from-object-info (sprites type initargs)
+(defun make-node-from-object-info (type initargs)
   (when-let* ((path (case type
                       (jewel "jewel.png")
                       (cat "throwcat.png")))
-              (frame (get-frame sprites path)))
+              (frame (get-frame path)))
     (apply #'make-instance 'sprite :sprite-frame frame initargs)))
 
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
   (with-struct (pf- root tmx tmx-node player tile-table background) self
-    (let* ((sprites (texture-packer-from-file "./res/test.json"))
-           (frame  (get-frame sprites "pickle.png"))
+    (texture-packer-add-frames-from-file "./res/test.json")
+    (let* ((frame  (get-frame "pickle.png"))
            (objects nil))
       (setf root (make-instance 'node)
             background (make-instance 'image :x 250 :y 250
@@ -463,7 +460,7 @@
           (let* ((tile (aref tile-table (getf plist :gid)))
                  (type (tile-type tile))
                  (initargs (rest (rest plist))))
-            (when-let (object (make-node-from-object-info sprites type initargs))
+            (when-let (object (make-node-from-object-info type initargs))
               (format t "built object for type: ~S ~A ~A ~%" type object (getf initargs :y))
               (push object objects)))))
       (setf (bottom player) 32.0)
