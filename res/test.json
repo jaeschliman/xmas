@@ -1,8 +1,26 @@
 {"frames": [
 
 {
+	"filename": "catwalk0.png",
+	"frame": {"x":1,"y":493,"w":50,"h":50},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
+	"sourceSize": {"w":50,"h":50},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "catwalk1.png",
+	"frame": {"x":1,"y":545,"w":50,"h":50},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
+	"sourceSize": {"w":50,"h":50},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
 	"filename": "jewel.png",
-	"frame": {"x":1,"y":545,"w":24,"h":38},
+	"frame": {"x":1,"y":649,"w":24,"h":38},
 	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":38},
@@ -47,7 +65,7 @@
 },
 {
 	"filename": "throwcat.png",
-	"frame": {"x":1,"y":493,"w":50,"h":50},
+	"frame": {"x":1,"y":597,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -56,7 +74,7 @@
 },
 {
 	"filename": "tomato chunk 1.png",
-	"frame": {"x":41,"y":545,"w":16,"h":16},
+	"frame": {"x":41,"y":649,"w":16,"h":16},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
@@ -65,7 +83,7 @@
 },
 {
 	"filename": "tomato chunk 2.png",
-	"frame": {"x":41,"y":563,"w":13,"h":16},
+	"frame": {"x":41,"y":667,"w":13,"h":16},
 	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":13,"h":16},
@@ -95,8 +113,8 @@
 	"version": "1.0",
 	"image": "test.png",
 	"format": "RGBA8888",
-	"size": {"w":62,"h":577},
+	"size": {"w":62,"h":681},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:4ec566dc9252a1dff98ebbc401d3b39b:bdadac0236531868ee0b09d493a31be7:02ab132358d6d8b512e80119463a8329$"
+	"smartupdate": "$TexturePacker:SmartUpdate:2e7099bc8bbc4a6ca67855375be57343:a6896d76ed3d003ae794da63f4f7bd0f:02ab132358d6d8b512e80119463a8329$"
 }
 }

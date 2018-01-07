@@ -30,6 +30,7 @@
   (load "./texture.lisp")
   (load "./sprite.lisp")
   (load "./sprite-actions.lisp")
+  (load "./animation-manager.lisp")
   (load "./texture-packer.lisp")
   (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
   (load "./tmx-reader.lisp")

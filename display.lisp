@@ -16,7 +16,8 @@
              #:display-enqueue-for-gl
              #:display-texture-manager
              #:size-to-fit
-             #:preserve-aspect-ratio))
+             #:preserve-aspect-ratio
+             #:display-animation-manager))
 
 (in-package :display)
 
@@ -37,7 +38,9 @@
                    :initform (matrix:make-matrix))
    (action-manager :accessor display-action-manager
                    :initform (action-manager:make-manager))
-   (texture-manager :accessor display-texture-manager)))
+   (texture-manager :accessor display-texture-manager)
+   (animation-manager :accessor display-animation-manager
+                      :initform (xmas.animation-manager:make-manager))))
 
 (defun display-drain-gl-queue (display)
   (loop

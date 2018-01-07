@@ -10,7 +10,8 @@
   (:method (contents (display display:display))
     (let ((scratch-matrix (display:display-scratch-matrix display))
           (texture-manager (display:display-texture-manager display))
-          (action-manager (display:display-action-manager display)))
+          (action-manager (display:display-action-manager display))
+          (animation-manager (display:display-animation-manager display)))
       (setf (display:display-runloop display)
             (runloop:make-runloop
              :name "runloop"
@@ -19,7 +20,8 @@
              (lambda (dt)
                (let ((matrix:*tmp-matrix* scratch-matrix)
                      (texture:*texture-manager* texture-manager)
-                     (action-manager:*action-manager* action-manager))
+                     (action-manager:*action-manager* action-manager)
+                     (xmas.animation-manager:*animation-manager* animation-manager))
                  (render-buffer::with-writes-to-render-buffer
                      ((display:display-renderbuffer display))
                    (action-manager:update-actions action-manager dt)
@@ -28,7 +30,8 @@
              (lambda (event)
                (let ((matrix:*tmp-matrix* scratch-matrix)
                      (texture:*texture-manager* texture-manager)
-                     (action-manager:*action-manager* action-manager))
+                     (action-manager:*action-manager* action-manager)
+                     (xmas.animation-manager:*animation-manager* animation-manager))
                  (handle-event contents event))))))))
 
 (defgeneric unmount-contents (contents display)
@@ -96,7 +99,8 @@
   (remove-running-display display)
   (let ((matrix:*tmp-matrix* (display:display-scratch-matrix display))
         (texture:*texture-manager* (display:display-texture-manager display))
-        (action-manager:*action-manager* (display:display-action-manager display)))
+        (action-manager:*action-manager* (display:display-action-manager display))
+        (xmas.animation-manager:*animation-manager* (display:display-animation-manager display)))
     (contents-will-unmount (display:contents display) display)
     (unmount-contents (display:contents display) display))
   (setf (display:native-view display) nil
@@ -264,7 +268,8 @@
         (init-display result)
         (let ((matrix:*tmp-matrix* (display:display-scratch-matrix result))
               (texture:*texture-manager* (display:display-texture-manager result))
-              (action-manager:*action-manager* (display:display-action-manager result)))
+              (action-manager:*action-manager* (display:display-action-manager result))
+              (xmas.animation-manager:*animation-manager* (display:display-animation-manager result)))
           (contents-will-mount contents result)
           (mount-contents contents result))
         (#/setLevel: w 100)

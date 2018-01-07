@@ -698,6 +698,7 @@
 (defmethod cl-user::contents-will-mount ((self test16) display)
   (declare (ignore display))
   (texture-packer:texture-packer-add-frames-from-file "./res/test.json")
+  (xmas.animation-manager:add-animation 'cat (/ 1.0 7.5) '("catwalk0.png" "catwalk1.png"))
   (let ((sprite (make-instance 'sprite:sprite
                                :x 250
                                :y 250
@@ -705,11 +706,7 @@
                                :scale-y 2.0
                                :sprite-frame (texture:get-frame "pickle.png"))))
     (node:run-action sprite
-                     (action:sprite-animation-action
-                      (/ 1.0 7.5)
-                      (list
-                       (texture:get-frame "catwalk0.png")
-                       (texture:get-frame "catwalk1.png")))
+                     (xmas.animation-manager:get-animation 'cat)
                      :repeat :forever)
 
     (setf (node:rotation sprite) -15)
