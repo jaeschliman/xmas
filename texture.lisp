@@ -16,7 +16,13 @@
              #:texture-frame-ty2
              #:texture-frame-width
              #:texture-frame-height
-             #:texture-frame-rotated))
+             #:texture-frame-rotated
+             #:texture-manager
+             #:texture-manager-table
+             #:texture-manager-display
+             #:texture-manager-frames
+             #:texture-manager-add-frame
+             #:get-frame))
 
 (in-package :texture)
 
@@ -45,7 +51,8 @@
 
 (defstruct texture-manager
   (table (make-hash-table :test 'equal))
-  display)
+  display
+  (frames (make-hash-table :test 'equal)))
 
 (defvar *texture-manager* nil)
 
@@ -121,3 +128,11 @@
 (defun get-texture (path)
   (when-let (mgr *texture-manager*)
     (get-or-load-texture mgr path)))
+
+(defun get-frame (path)
+  (when-let (mgr *texture-manager*)
+    (gethash path (texture-manager-frames mgr))))
+
+(defun texture-manager-add-frame (path frame)
+  (when-let (mgr *texture-manager*)
+    (setf (gethash path (texture-manager-frames mgr)) frame)))

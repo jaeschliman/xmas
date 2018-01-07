@@ -1,7 +1,8 @@
 (defpackage :texture-packer (:use :cl :alexandria)
             (:export
              #:texture-packer-get-frame
-             #:texture-packer-from-file))
+             #:texture-packer-from-file
+             #:texture-packer-add-frames-from-file))
 (in-package :texture-packer)
 
 #| requires file exported as 'JSON Array' |#
@@ -47,3 +48,10 @@
 
 (defun texture-packer-get-frame (texture-packer-file path)
   (gethash path (texture-packer-file-table texture-packer-file)))
+
+(defun texture-packer-add-frames-from-file (path)
+  (let ((p (texture-packer-from-file path)))
+    (maphash (lambda (k v)
+               (texture:texture-manager-add-frame k v))
+             (texture-packer-file-table p))
+    t))
