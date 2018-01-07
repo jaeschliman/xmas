@@ -24,7 +24,8 @@
    #:find-easing-function
    #:move-by
    #:fade-in
-   #:fade-out))
+   #:fade-out
+   #:sprite-animation-action))
 (in-package :action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)

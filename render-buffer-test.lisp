@@ -206,6 +206,10 @@
   (draw-node-color self)
   (draw-rect -20.0 -20.0 40.0 40.0))
 
+(defmethod draw ((self sprite:sprite))
+  (draw-node-color self)
+  (draw-texture-frame (sprite:sprite-frame self) 0.0 0.0))
+
 ;; the fast method:
 (defmethod visit ((self node:node))
   (push-matrix)
@@ -687,3 +691,35 @@
   (visit (test15-node self)))
 
 (cl-user::display-contents (make-test15) :width 500 :height 500)
+
+(defstruct test16
+  node started)
+
+(defmethod cl-user::contents-will-mount ((self test16) display)
+  (declare (ignore display))
+  (texture-packer:texture-packer-add-frames-from-file "./res/test.json")
+  (let ((sprite (make-instance 'sprite:sprite
+                               :x 250
+                               :y 250
+                               :scale-x 2.0
+                               :scale-y 2.0
+                               :sprite-frame (texture:get-frame "pickle.png"))))
+    (node:run-action sprite
+                     (action:sprite-animation-action
+                      (/ 1.0 7.5)
+                      (list
+                       (texture:get-frame "catwalk0.png")
+                       (texture:get-frame "catwalk1.png")))
+                     :repeat :forever)
+
+    (setf (node:rotation sprite) -15)
+    (setf (test16-node self) sprite)))
+
+(defmethod cl-user::step-contents ((self test16) dt)
+  (declare (ignorable dt))
+  (unless (test16-started self)
+    (setf (test16-started self) t)
+    (node:on-enter (test16-node self)))
+  (visit (test16-node self)))
+
+(cl-user::display-contents (make-test16) :width 500 :height 500)
