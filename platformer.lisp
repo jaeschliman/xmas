@@ -61,7 +61,18 @@
   ((can-jump :accessor can-jump :initform nil)
    (jump-power :accessor jump-power :initform 100.0)
    (jumping :accessor jumping :initform nil)
-   (standing-on :accessor standing-on :initform nil)))
+   (standing-on :accessor standing-on :initform nil)
+   (state :accessor state :initform nil :initarg :state)))
+
+(defgeneric leave-state (object state next-state))
+(defgeneric enter-state (object state prev-state))
+
+(defun set-state (player next-state)
+  (let ((prev-state (state player)))
+    (unless (eq prev-state next-state)
+      (leave-state player prev-state next-state)
+      (setf (state player) next-state)
+      (enter-state player next-state prev-state))))
 
 (defclass tmx-node (node)
   ((tmx :accessor tmx :initarg :tmx)))
@@ -288,6 +299,11 @@
            (jumping self) nil
            (jump-power self) 0))))
 
+(defmethod leave-state ((self player) state next-state)
+  (format t "leaving ~A for ~A~%" state next-state))
+(defmethod enter-state ((self player) state prev-state)
+  (format t "entering ~A from ~A~%" state prev-state))
+
 (defun hz-accel-rate-for-tile (tile)
   (case (tile-material tile)
     (brick 300.0)
@@ -297,6 +313,29 @@
   (case (tile-material tile)
     (brick (* 300.0 2.25))
     (ice   (* 300.0 0.05))))
+
+(defun update-state (player pf dt)
+  (declare (ignore dt))
+  (with-struct (pf- tmx keys) pf
+    (flet ((key-down (key) (gethash key keys))
+           (key-up   (key) (null (gethash key keys))))
+      (let ((state (state player))
+            (left (key-down :left))
+            (right (key-down :right))
+            (fast (key-down #\a))
+            (jump (key-down #\s))
+            (on-ground (standing-on player)))
+        (cond
+          (on-ground
+           (cond
+             (jump 'jumping)
+             ((or left right) (if fast 'running 'walking))
+             (t 'standing)))
+          ((eq state 'jumping)
+           (cond
+             (jump (if (< (velocity-y player) 0.0) 'falling 'jumping))
+             (t    'floating)))
+          (t (if (< (velocity-y player) 0.0) 'falling 'floating)))))))
 
 (defun move-player (pf dt)
   (let* ((jump-vel 225.0)
@@ -411,7 +450,8 @@
             player (make-instance 'player
                                   :x 80.0
                                   :acceleration-y -100.0
-                                  :sprite-frame frame)
+                                  :sprite-frame frame
+                                  :state 'standing)
             tile-table (tile-lookup-table-from-tmx-renderer tmx))
       (let* ((map (render-buffer::tmx-renderer-map tmx))
              (layers (tmx-reader:map-layers map))
@@ -437,6 +477,7 @@
     (unless started
       (setf started t)
       (on-enter root))
+    (set-state player (update-state player self dt))
     (move-player self dt)
     (move-camera self dt)
     (visit root)))
