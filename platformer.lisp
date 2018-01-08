@@ -376,11 +376,45 @@
              (t    'floating)))
           (t (if (< (velocity-y player) 0.0) 'falling 'floating)))))))
 
+(defun maybe-jump-player (pf dt)
+  (with-struct (pf- player tmx keys) pf
+    (labels ((key-down (key) (gethash key keys))
+             (key-up   (key) (null (gethash key keys)))
+             (use-floating-jump  () nil))
+      (cond
+        ((use-floating-jump)
+         (let ((jump-vel 225.0)
+               (jump-power 100.0)
+               (jump-drain-speed 100.0))
+           ;;use jump-power to allow keypress to float player longer
+           (when (and (key-down #\s)
+                      (or (can-jump player) (> (jump-power player) 10.0)))
+             (when (can-jump player)
+               (setf (jump-power player) jump-power
+                     (jumping player) t))
+             (move-towards! (jump-power player) 0.0 jump-drain-speed dt)
+             (setf (velocity-y player) (* jump-vel (/ (jump-power player) 80.0))
+                   (can-jump player) nil))
+           (when (key-up #\s)
+             (setf (jump-power player) 0.0
+                   (jumping player) nil))))
+        (t
+         (let ((initial-vel 275)
+               (holding-gravity -200)
+               (jump-power 0.5))
+           (when (and (key-down #\s) (can-jump player))
+             (setf (can-jump player) nil
+                   (jumping player) t
+                   (velocity-y player) initial-vel
+                   (jump-power player) jump-power))
+           (when (and (key-down #\s) (jumping player))
+             (setf (acceleration-y player) holding-gravity)
+             (decf (jump-power player) dt))
+           (when (or (key-up #\s) (< (jump-power player) 0.0))
+             (setf (jumping player) nil))))))))
+
 (defun move-player (pf dt)
-  (let* ((jump-vel 225.0)
-         (jump-power 100.0)
-         (jump-drain-speed 100.0)
-         (rise-gravity -800.0)
+  (let* ((rise-gravity -800.0)
          (fall-gravity -1200.0)
          (hz-max-vel 200.0))
     (with-struct (pf- player tmx keys) pf
@@ -394,18 +428,7 @@
                   (jump-power player) 0.0
                   (jumping player) nil))
 
-        ;;use jump-power to allow keypress to float player longer
-        (when (and (key-down #\s)
-                   (or (can-jump player) (> (jump-power player) 10.0)))
-          (when (can-jump player)
-            (setf (jump-power player) jump-power
-                  (jumping player) t))
-          (move-towards! (jump-power player) 0.0 jump-drain-speed dt)
-          (setf (velocity-y player) (* jump-vel (/ (jump-power player) 80.0))
-                (can-jump player) nil))
-        (when (key-up #\s)
-          (setf (jump-power player) 0.0
-                (jumping player) nil))
+        (maybe-jump-player pf dt)
 
         ;;horizontal motion
         (let ((tile (standing-on player)))
