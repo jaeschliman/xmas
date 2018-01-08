@@ -260,14 +260,17 @@
 (defun update-sprite-physics (pf sprite dt)
   (let (standing-on)
     (incf (x sprite) (* dt (velocity-x sprite)))
-    (move-sprite-left-if-hitting-tiles-on-right pf sprite dt)
-    (move-sprite-right-if-hitting-tiles-on-left pf sprite dt)
+    (if (> (velocity-x sprite) 0)
+        (move-sprite-left-if-hitting-tiles-on-right pf sprite dt)
+        (move-sprite-right-if-hitting-tiles-on-left pf sprite dt))
     (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
     (clampf (velocity-x sprite) -1000 1000)
 
     (incf (y sprite) (* dt (velocity-y sprite)))
-    (setf standing-on (move-sprite-up-if-hitting-tiles-on-bottom pf sprite dt))
-    (move-sprite-down-if-hitting-tiles-on-top pf sprite dt)
+    (setf standing-on 
+          (if (> (velocity-y sprite) 0)
+              (prog1 nil (move-sprite-down-if-hitting-tiles-on-top pf sprite dt))
+              (move-sprite-up-if-hitting-tiles-on-bottom pf sprite dt)))
     (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
     (clampf (velocity-y sprite) -1000 1000)
     standing-on))
@@ -467,7 +470,9 @@
         (when (key-down :right)
           (setf (flip-x player) nil))
         (setf (can-jump player) nil)
+
         (setf (standing-on player) (update-sprite-physics pf player dt))
+
         (when (< (y player) 0.0)
           (setf (y player) 0.0
                 (velocity-y player) 0.0))
