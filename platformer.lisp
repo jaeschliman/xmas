@@ -408,8 +408,8 @@
            (when (and (key-down #\s) (can-jump player))
              (setf (can-jump player) nil
                    (jumping player) t
-                   (velocity-y player) initial-vel
-                   (jump-power player) jump-power))
+                   (jump-power player) jump-power)
+             (maxf (velocity-y player) initial-vel))
            (when (and (key-down #\s) (jumping player))
              (setf (acceleration-y player) holding-gravity)
              (decf (jump-power player) dt))
