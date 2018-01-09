@@ -1,4 +1,4 @@
-(in-package :action)
+(in-package :xmas.action)
 
 (defstruct (sprite-animation (:include finite-time-action))
   frames)
@@ -10,7 +10,7 @@
          (max-index (1- count))
          (index (floor (* time count)))
          (frame (aref frames (max 0 (min max-index index)))))
-    (setf (sprite:sprite-frame target) frame)))
+    (setf (xmas.sprite:sprite-frame target) frame)))
 
 (defact sprite-animation-action (frame-delay frames)
   (let* ((frames (coerce frames 'vector))

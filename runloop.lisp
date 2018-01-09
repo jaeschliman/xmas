@@ -1,5 +1,5 @@
-(defpackage :runloop (:use :cl :alexandria) (:export #:make-runloop #:kill-runloop #:enqueue-runloop-event))
-(in-package :runloop)
+(defpackage :xmas.runloop (:use :cl :alexandria) (:export #:make-runloop #:kill-runloop #:enqueue-runloop-event))
+(in-package :xmas.runloop)
 
 (defstruct (runloop (:constructor %make-runloop))
   thread

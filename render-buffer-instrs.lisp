@@ -1,4 +1,4 @@
-(in-package :render-buffer)
+(in-package :xmas.render-buffer)
 
 (definstr set-color (r g b a)
   (gl:color r g b a))

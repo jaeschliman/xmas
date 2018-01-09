@@ -1,9 +1,9 @@
-(defpackage :texture-packer (:use :cl :alexandria)
+(defpackage :xmas.texture-packer (:use :cl :alexandria)
             (:export
              #:texture-packer-get-frame
              #:texture-packer-from-file
              #:texture-packer-add-frames-from-file))
-(in-package :texture-packer)
+(in-package :xmas.texture-packer)
 
 #| requires file exported as 'JSON Array' |#
 
@@ -26,7 +26,7 @@
            (meta   (r data :meta))
            (image  (r meta :image))
            (image-path (file-pathname-relative-to-file path image))
-           (texture (texture:get-texture (namestring image-path)))
+           (texture (xmas.texture:get-texture (namestring image-path)))
            (size   (r meta :size))
            (result (make-texture-packer-file
                     :path path
@@ -39,7 +39,7 @@
         (dolist (frame frames)
           (let ((f (r frame :frame)))
             (setf (gethash (r frame :filename) table)
-                  (texture:texture-frame
+                  (xmas.texture:texture-frame
                    texture
                    (r f :x) (r f :y)
                    (r f :w) (r f :h)
@@ -52,6 +52,6 @@
 (defun texture-packer-add-frames-from-file (path)
   (let ((p (texture-packer-from-file path)))
     (maphash (lambda (k v)
-               (texture:texture-manager-add-frame k v))
+               (xmas.texture:texture-manager-add-frame k v))
              (texture-packer-file-table p))
     t))

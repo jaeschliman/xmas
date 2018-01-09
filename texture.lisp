@@ -1,4 +1,4 @@
-(defpackage :texture (:use :cl :alexandria)
+(defpackage :xmas.texture (:use :cl :alexandria)
             (:export
              #:texture-id
              #:texture-width
@@ -24,7 +24,7 @@
              #:texture-manager-add-frame
              #:get-frame))
 
-(in-package :texture)
+(in-package :xmas.texture)
 
 (defstruct texture
   id width height path)
@@ -108,14 +108,14 @@
                                          :width width
                                          :height height)))
               (#/retain rep)
-              (display:display-enqueue-for-gl
+              (xmas.display:display-enqueue-for-gl
                display
                (lambda ()
                  (gl-load-texture-image-rep texture rep format)
                  (#/release rep)))
               texture))
           (let ((texture (make-texture :path pathname)))
-            (display:display-enqueue-for-gl
+            (xmas.display:display-enqueue-for-gl
              display
              (lambda () (gl-load-texture texture)))
             texture)))))

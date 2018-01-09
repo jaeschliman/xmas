@@ -1,4 +1,4 @@
-(defpackage :matrix (:use :cl :alexandria)
+(defpackage :xmas.matrix (:use :cl :alexandria)
             (:export
              #:make-matrix
              #:copy-matrix
@@ -17,7 +17,7 @@
              #:rotate
              #:scale))
 
-(in-package :matrix)
+(in-package :xmas.matrix)
 
 ;;column-major 4x4 matrix
 (defun make-m4/unwrapped ()

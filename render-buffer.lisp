@@ -2,8 +2,8 @@
 'render' the scene into a vector of bytecode which can be double/triple buffered,
  and have the drawing thread just interpret that.
 |#
-(defpackage :render-buffer (:use :cl :alexandria))
-(in-package :render-buffer)
+(defpackage :xmas.render-buffer (:use :cl :alexandria))
+(in-package :xmas.render-buffer)
 
 (defun make-buffer (&key (size 1024))
   (make-array size :element-type t :adjustable t :fill-pointer 0))

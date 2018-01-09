@@ -1,5 +1,5 @@
-(defpackage :node
-  (:use :cl :alexandria :matrix)
+(defpackage :xmas.node
+  (:use :cl :alexandria :xmas.matrix)
   (:export
    #:node
    #:x
@@ -40,7 +40,7 @@
    #:left
    #:bottom
    #:top))
-(in-package :node)
+(in-package :xmas.node)
 
 ;;; honestly, this should probably be a struct...
 (defclass node ()
@@ -60,9 +60,9 @@
 
    (parent               :accessor parent               :initform nil)
    (children             :accessor children             :initform nil)
-   (xform                :accessor xform                :initform (matrix:make-matrix))
+   (xform                :accessor xform                :initform (xmas.matrix:make-matrix))
    (xform-dirty-p        :accessor xform-dirty-p        :initform t)
-   (parent-xform         :accessor parent-xform         :initform (matrix:make-matrix))
+   (parent-xform         :accessor parent-xform         :initform (xmas.matrix:make-matrix))
    (parent-xform-dirty-p :accessor parent-xform-dirty-p :initform t)
    (running              :accessor running              :initform nil)
    (pending-actions      :accessor pending-actions      :initform nil))

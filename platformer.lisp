@@ -1,5 +1,5 @@
-(defpackage :platformer (:use :cl :alexandria :node :sprite :action :texture :texture-packer :display :xmas.animation-manager))
-(in-package :platformer)
+(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager))
+(in-package :xmas.platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
   (once-only (var)
@@ -38,7 +38,7 @@
           (setf (tile-type result) (read-from-string string))) ))))
 
 (defun tile-lookup-table-from-tmx-renderer (tmx)
-  (let* ((props (render-buffer::tmx-renderer-tile-properties tmx))
+  (let* ((props (xmas.render-buffer::tmx-renderer-tile-properties tmx))
          (result (make-array (length props))))
     (prog1 result
       (loop for plist across props
@@ -91,36 +91,36 @@
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
-    (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
+    (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
 (defmethod draw ((self image))
   (draw-node-color self)
-  (render-buffer::draw-texture (texture self)))
+  (xmas.render-buffer::draw-texture (texture self)))
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
+  (xmas.render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
 
 (defmethod draw ((self tmx-node))
   (let* ((r (tmx self))
-         (x (/ (render-buffer::tmx-renderer-width r) 2.0))
-         (y (/ (render-buffer::tmx-renderer-height r) 2.0)))
-    (render-buffer::draw-tmx-renderer x y r)))
+         (x (/ (xmas.render-buffer::tmx-renderer-width r) 2.0))
+         (y (/ (xmas.render-buffer::tmx-renderer-height r) 2.0)))
+    (xmas.render-buffer::draw-tmx-renderer x y r)))
 
 (defmethod visit ((self node))
   (when (not (visible self))
     (return-from visit))
-  (render-buffer::push-matrix)
-  (render-buffer::translate-scale-rotate
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::translate-scale-rotate
    (x self) (y self)
    (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
    (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
    (rotation self))
   (draw self)
-  (when (node:children self)
-    (loop for child across (node:children self) do
+  (when (children self)
+    (loop for child across (children self) do
          (visit child)))
-  (render-buffer::pop-matrix))
+  (xmas.render-buffer::pop-matrix))
 
 (defstruct pf
   started
@@ -134,7 +134,7 @@
   )
 
 (defun tile-at-point (tmx x y)
-  (render-buffer::tmx-renderer-tile-at-point tmx x y))
+  (xmas.render-buffer::tmx-renderer-tile-at-point tmx x y))
 
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
@@ -523,7 +523,7 @@
       (setf root (make-instance 'node)
             background (make-instance 'image :x 250 :y 250
                                       :texture (get-texture "./res/platformer/sky.png"))
-            tmx (render-buffer::tmx-renderer-from-file
+            tmx (xmas.render-buffer::tmx-renderer-from-file
                  "./res/platformer/dev.tmx")
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
@@ -533,10 +533,10 @@
                                   :sprite-frame frame
                                   :state 'standing)
             tile-table (tile-lookup-table-from-tmx-renderer tmx))
-      (let* ((map (render-buffer::tmx-renderer-map tmx))
-             (layers (tmx-reader:map-layers map))
-             (objects-layer (find :objects layers :key 'tmx-reader:layer-type))
-             (data (tmx-reader:layer-data objects-layer)))
+      (let* ((map (xmas.render-buffer::tmx-renderer-map tmx))
+             (layers (xmas.tmx-reader:map-layers map))
+             (objects-layer (find :objects layers :key 'xmas.tmx-reader:layer-type))
+             (data (xmas.tmx-reader:layer-data objects-layer)))
         (dolist (plist data)
           (let* ((tile (aref tile-table (getf plist :gid)))
                  (type (tile-type tile))

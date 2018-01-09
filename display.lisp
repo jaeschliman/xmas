@@ -1,4 +1,4 @@
-(defpackage :display (:use :cl :alexandria)
+(defpackage :xmas.display (:use :cl :alexandria)
             (:export
              #:display
              #:native-view
@@ -19,7 +19,7 @@
              #:preserve-aspect-ratio
              #:display-animation-manager))
 
-(in-package :display)
+(in-package :xmas.display)
 
 (defclass display ()
   ((native-view :accessor native-view :initform nil)
@@ -33,14 +33,14 @@
    (runloop :accessor display-runloop :initform nil)
    (gl-queue :accessor display-gl-queue :initform (queues:make-queue :simple-cqueue))
    (renderbuffer :accessor display-renderbuffer
-                 :initform (render-buffer::make-render-buffer))
+                 :initform (xmas.render-buffer::make-render-buffer))
    (scratch-matrix :accessor display-scratch-matrix
-                   :initform (matrix:make-matrix))
+                   :initform (xmas.matrix:make-matrix))
    (action-manager :accessor display-action-manager
-                   :initform (action-manager:make-manager))
+                   :initform (xmas.action-manager:make-manager))
    (texture-manager :accessor display-texture-manager)
    (animation-manager :accessor display-animation-manager
-                      :initform (xmas.animation-manager:make-manager))))
+                      :initarg :animation-manager)))
 
 (defun display-drain-gl-queue (display)
   (loop

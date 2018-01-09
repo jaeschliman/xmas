@@ -1,4 +1,4 @@
-(in-package :sprite)
+(in-package :xmas.sprite)
 
 (defmethod stop-animation ((self sprite))
   (stop-all-actions self :tag 'animation))

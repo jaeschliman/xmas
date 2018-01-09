@@ -1,10 +1,10 @@
-(defpackage :sprite (:use :cl :alexandria :texture :node)
+(defpackage :xmas.sprite (:use :cl :alexandria :xmas.texture :xmas.node)
             (:export
              #:sprite
              #:sprite-frame
              #:stop-animation
              #:run-animation))
-(in-package :sprite)
+(in-package :xmas.sprite)
 
 (defclass sprite (node)
   ((sprite-frame :accessor sprite-frame :initarg :sprite-frame)))

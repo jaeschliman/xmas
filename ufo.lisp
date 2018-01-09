@@ -1,5 +1,5 @@
-(defpackage :ufo (:use :cl :alexandria :node :action :texture :display))
-(in-package :ufo)
+(defpackage :xmas.ufo (:use :cl :alexandria :xmas.node :xmas.action :xmas.texture :xmas.display))
+(in-package :xmas.ufo)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
   (once-only (var)
@@ -19,7 +19,7 @@
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
-    (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
+    (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
 (defclass sprite (node)
   ((texture :accessor texture :initarg :texture)))
@@ -57,27 +57,27 @@
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (render-buffer::draw-texture (texture self)))
+  (xmas.render-buffer::draw-texture (texture self)))
 
 (defmethod draw ((self rect))
   (draw-node-color self)
   (when-let (id (texture-id (texture self)))
-    (render-buffer::simple-draw-gl-texture-no-color
+    (xmas.render-buffer::simple-draw-gl-texture-no-color
      id (rect-width self) (rect-height self))))
 
 (defmethod visit ((self node))
   (when (not (visible self))
     (return-from visit))
-  (render-buffer::push-matrix)
-  (render-buffer::translate-scale-rotate
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::translate-scale-rotate
    (x self) (y self)
    (scale-x self) (scale-y self)
    (rotation self))
   (draw self)
-  (when (node:children self)
-    (loop for child across (node:children self) do
+  (when (xmas.node:children self)
+    (loop for child across (xmas.node:children self) do
          (visit child)))
-  (render-buffer::pop-matrix))
+  (xmas.render-buffer::pop-matrix))
 
 (defstruct ufo-game
   player
@@ -329,4 +329,7 @@
       (:keyup   (setf (gethash info keys) nil)))))
 
 
-(cl-user::display-contents (make-ufo-game) :width 500 :height 500)
+(cl-user::display-contents (make-ufo-game)
+                           :width 500 :height 500
+                           :expandable t
+                           :preserve-aspect-ratio t)

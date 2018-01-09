@@ -1,4 +1,4 @@
-(defpackage :action-manager
+(defpackage :xmas.action-manager
   (:use :cl :alexandria)
   (:export
    #:make-manager
@@ -8,7 +8,7 @@
    #:pause-all-actions-for-target
    #:resume-all-actions-for-target
    #:*action-manager*))
-(in-package :action-manager)
+(in-package :xmas.action-manager)
 
 (defstruct manager
   (actions (make-array 128 :element-type t :adjustable t :fill-pointer 0))
@@ -28,7 +28,7 @@
 (defun maybe-start-action (act)
   (unless (act-started act)
     (setf (act-started act) t)
-    (action:start-with-target (act-action act) (act-target act))))
+    (xmas.action:start-with-target (act-action act) (act-target act))))
 
 (defun add-act (manager act)
   (vector-push-extend act (manager-actions manager))
@@ -76,9 +76,9 @@
             for action = (act-action act)
             do
               (unless paused
-                (if (action:stopped-p action)
+                (if (xmas.action:stopped-p action)
                     (setf stopped t)
-                    (action:step-action action dt))))
+                    (xmas.action:step-action action dt))))
       (setf (manager-running manager) nil))
     (when-let (deletions (manager-pending-deletions manager))
       (loop for (target . tag) in deletions do
@@ -86,7 +86,7 @@
       (setf (manager-pending-deletions manager) nil))
     (when stopped
       (setf (manager-actions manager)
-            (delete-if #'action:stopped-p (manager-actions manager) :key #'act-action)))
+            (delete-if #'xmas.action:stopped-p (manager-actions manager) :key #'act-action)))
     (when-let (additions (manager-pending-additions manager))
       (dolist (act additions)
         (add-act manager act))

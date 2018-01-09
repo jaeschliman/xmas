@@ -1,4 +1,4 @@
-(defpackage :tmx-reader (:use :cl :alexandria)
+(defpackage :xmas.tmx-reader (:use :cl :alexandria)
             (:export
              #:read-tilemap
              #:map
@@ -26,7 +26,7 @@
              #:tileset-tile-properties
              #:map-tile-properties
              #:layer-type))
-(in-package :tmx-reader)
+(in-package :xmas.tmx-reader)
 
 (defun file-pathname-relative-to-file (path file)
   (let ((dir (make-pathname :directory (pathname-directory (truename path)))))

@@ -1,7 +1,7 @@
-(defpackage :pickle
-  (:use :cl :alexandria :node :action :texture :texture-packer :display)
+(defpackage :xmas.pickle
+  (:use :cl :alexandria :xmas.node :xmas.action :xmas.texture :xmas.texture-packer :xmas.display)
   (:shadow #:get-frame))
-(in-package :pickle)
+(in-package :xmas.pickle)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
   (once-only (var)
@@ -70,7 +70,7 @@
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
-    (render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
+    (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
 (defgeneric draw (node))
 
@@ -78,22 +78,22 @@
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
+  (xmas.render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
 
 (defmethod visit ((self node))
   (when (not (visible self))
     (return-from visit))
-  (render-buffer::push-matrix)
-  (render-buffer::translate-scale-rotate
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::translate-scale-rotate
    (x self) (y self)
    (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
    (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
    (rotation self))
   (draw self)
-  (when (node:children self)
-    (loop for child across (node:children self) do
+  (when (xmas.node:children self)
+    (loop for child across (xmas.node:children self) do
          (visit child)))
-  (render-buffer::pop-matrix))
+  (xmas.render-buffer::pop-matrix))
 
 (defstruct pickle-game
   (keys (make-hash-table :test 'eql))

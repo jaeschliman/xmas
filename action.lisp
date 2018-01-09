@@ -1,4 +1,4 @@
-(defpackage :action
+(defpackage :xmas.action
   (:use :cl :alexandria)
   (:export
    #:start-with-target
@@ -26,7 +26,7 @@
    #:fade-in
    #:fade-out
    #:sprite-animation-action))
-(in-package :action)
+(in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
   (once-only (var)
@@ -271,17 +271,17 @@
 (defmethod start-with-target ((self rotate-by) target)
   (call-next-method)
   (setf (rotate-by-initial-rotation self)
-        (node:rotation target)))
+        (xmas.node:rotation target)))
 
 (defmethod reset ((self rotate-by))
   (call-next-method)
   (setf (rotate-by-initial-rotation self)
-        (node:rotation (rotate-by-target self))))
+        (xmas.node:rotation (rotate-by-target self))))
 
 (defmethod update ((self rotate-by) time)
   (with-struct (rotate-by- delta initial-rotation target) self
     (let* ((rotation (mod (+ initial-rotation (* time delta)) 360.0)))
-      (setf (node:rotation target) rotation))))
+      (setf (xmas.node:rotation target) rotation))))
 
 (defact rotate-by (duration delta)
   (make-rotate-by :duration duration :delta delta))
@@ -292,18 +292,18 @@
 
 (defmethod start-with-target ((self move-by) target)
   (call-next-method)
-  (setf (move-by-initial-x self) (node:x target))
-  (setf (move-by-initial-y self) (node:y target)))
+  (setf (move-by-initial-x self) (xmas.node:x target))
+  (setf (move-by-initial-y self) (xmas.node:y target)))
 
 (defmethod reset ((self move-by))
   (call-next-method)
-  (setf (move-by-initial-x self) (node:x (move-by-target self)))
-  (setf (move-by-initial-y self) (node:y (move-by-target self))))
+  (setf (move-by-initial-x self) (xmas.node:x (move-by-target self)))
+  (setf (move-by-initial-y self) (xmas.node:y (move-by-target self))))
 
 (defmethod update ((self move-by) time)
   (with-struct (move-by- initial-x delta-x initial-y delta-y target) self
-    (setf (node:x target) (+ initial-x (* time delta-x)))
-    (setf (node:y target) (+ initial-y (* time delta-y)))))
+    (setf (xmas.node:x target) (+ initial-x (* time delta-x)))
+    (setf (xmas.node:y target) (+ initial-y (* time delta-y)))))
 
 (defact move-by (duration x y)
   (make-move-by :duration duration :delta-x x :delta-y y))
@@ -311,7 +311,7 @@
 (defstruct (fade-in (:include finite-time-action)))
 
 (defmethod update ((self fade-in) time)
-  (setf (node:opacity (fade-in-target self)) (clamp time 0.0 1.0)))
+  (setf (xmas.node:opacity (fade-in-target self)) (clamp time 0.0 1.0)))
 
 (defact fade-in (duration)
   (make-fade-in :duration duration))
@@ -319,7 +319,7 @@
 (defstruct (fade-out (:include finite-time-action)))
 
 (defmethod update ((self fade-out) time)
-  (setf (node:opacity (fade-out-target self)) (clamp (- 1.0 time) 0.0 1.0)))
+  (setf (xmas.node:opacity (fade-out-target self)) (clamp (- 1.0 time) 0.0 1.0)))
 
 (defact fade-out (duration)
   (make-fade-out :duration duration))

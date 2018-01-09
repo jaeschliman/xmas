@@ -1,23 +1,23 @@
-(in-package :node)
+(in-package :xmas.node)
 
 (defmethod run-action ((self node) action &key repeat ease tag)
   (when (listp action)
-    (setf action (apply 'action:run-sequence action)))
+    (setf action (apply 'xmas.action:run-sequence action)))
   (when ease
-    (if-let (fn (action:find-easing-function ease))
+    (if-let (fn (xmas.action:find-easing-function ease))
       (setf action (funcall fn action))
       (error "unknown easing function: ~S" ease)))
   (when repeat
     (if (eq repeat :forever)
-        (setf action (action:repeat-forever action))
+        (setf action (xmas.action:repeat-forever action))
         (error "unknown repeat method: ~S" repeat)))
   (if (running self)
-      (action-manager:add-action action-manager:*action-manager* action self :tag tag)
+      (xmas.action-manager:add-action xmas.action-manager:*action-manager* action self :tag tag)
       (push (cons action tag) (pending-actions self))))
 
 (defmethod stop-all-actions ((self node) &key tag)
-  (action-manager:remove-all-actions-for-target
-   action-manager:*action-manager* self :tag tag)
+  (xmas.action-manager:remove-all-actions-for-target
+   xmas.action-manager:*action-manager* self :tag tag)
   (setf (pending-actions self)
         (if tag (remove tag (pending-actions self) :key #'cdr) nil)))
 

@@ -1,9 +1,15 @@
-(defpackage :xmas.animation-manager (:use :cl :alexandria :texture :sprite :action)
-            (:export
-             #:*animation-manager*
-             #:make-manager
-             #:add-animation
-             #:get-animation))
+(defpackage :xmas.animation-manager
+  (:use
+   :cl
+   :alexandria
+   :xmas.texture
+   :xmas.sprite
+   :xmas.action)
+  (:export
+   #:*animation-manager*
+   #:make-manager
+   #:add-animation
+   #:get-animation))
 (in-package :xmas.animation-manager)
 
 (defvar *animation-manager* nil)

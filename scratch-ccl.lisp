@@ -7,49 +7,49 @@
   (:method (contents dt) (declare (ignorable contents dt))))
 
 (defgeneric mount-contents (contents display)
-  (:method (contents (display display:display))
-    (let ((scratch-matrix (display:display-scratch-matrix display))
-          (texture-manager (display:display-texture-manager display))
-          (action-manager (display:display-action-manager display))
-          (animation-manager (display:display-animation-manager display)))
-      (setf (display:display-runloop display)
-            (runloop:make-runloop
+  (:method (contents (display xmas.display:display))
+    (let ((scratch-matrix (xmas.display:display-scratch-matrix display))
+          (texture-manager (xmas.display:display-texture-manager display))
+          (action-manager (xmas.display:display-action-manager display))
+          (animation-manager (xmas.display:display-animation-manager display)))
+      (setf (xmas.display:display-runloop display)
+            (xmas.runloop:make-runloop
              :name "runloop"
-             :step (display:display-fps display)
+             :step (xmas.display:display-fps display)
              :function
              (lambda (dt)
-               (let ((matrix:*tmp-matrix* scratch-matrix)
-                     (texture:*texture-manager* texture-manager)
-                     (action-manager:*action-manager* action-manager)
+               (let ((xmas.matrix:*tmp-matrix* scratch-matrix)
+                     (xmas.texture:*texture-manager* texture-manager)
+                     (xmas.action-manager:*action-manager* action-manager)
                      (xmas.animation-manager:*animation-manager* animation-manager))
-                 (render-buffer::with-writes-to-render-buffer
-                     ((display:display-renderbuffer display))
-                   (action-manager:update-actions action-manager dt)
+                 (xmas.render-buffer::with-writes-to-render-buffer
+                     ((xmas.display:display-renderbuffer display))
+                   (xmas.action-manager:update-actions action-manager dt)
                    (step-contents contents dt))))
              :event-handler
              (lambda (event)
-               (let ((matrix:*tmp-matrix* scratch-matrix)
-                     (texture:*texture-manager* texture-manager)
-                     (action-manager:*action-manager* action-manager)
+               (let ((xmas.matrix:*tmp-matrix* scratch-matrix)
+                     (xmas.texture:*texture-manager* texture-manager)
+                     (xmas.action-manager:*action-manager* action-manager)
                      (xmas.animation-manager:*animation-manager* animation-manager))
                  (handle-event contents event))))))))
 
 (defgeneric unmount-contents (contents display)
-  (:method (contents (display display:display))
+  (:method (contents (display xmas.display:display))
     (declare (ignorable contents))
-    (when (display:display-runloop display)
-      (runloop:kill-runloop (display:display-runloop display)))))
+    (when (xmas.display:display-runloop display)
+      (xmas.runloop:kill-runloop (xmas.display:display-runloop display)))))
 
 (defgeneric draw (contents display)
-  (:method (contents (display display:display))
+  (:method (contents (display xmas.display:display))
     (declare (ignorable contents))
     (gl:clear-color 0.0 0.0 0.0 1.0)
     (gl:clear :color-buffer)
     (gl:enable :texture-2d)
     (gl:enable :blend)
     (gl:blend-func :src-alpha :one-minus-src-alpha)
-    (render-buffer::with-reads-from-render-buffer ((display:display-renderbuffer display))
-      (render-buffer::run!))))
+    (xmas.render-buffer::with-reads-from-render-buffer ((xmas.display:display-renderbuffer display))
+      (xmas.render-buffer::run!))))
 
 (defvar *running-displays* nil)
 (defvar *running-displays-loop* nil)
@@ -64,7 +64,7 @@
                   (sleep (/ 1.0 60.0))
                   (progmain ()
                     (dolist (display *running-displays*)
-                      (alexandria:when-let (view (display:native-view display))
+                      (alexandria:when-let (view (xmas.display:native-view display))
                         (#/setNeedsDisplay: view #$YES))))))))))
 
 (defun stop-update-loop ()
@@ -97,14 +97,14 @@
 
 (defun cleanup-display (display)
   (remove-running-display display)
-  (let ((matrix:*tmp-matrix* (display:display-scratch-matrix display))
-        (texture:*texture-manager* (display:display-texture-manager display))
-        (action-manager:*action-manager* (display:display-action-manager display))
-        (xmas.animation-manager:*animation-manager* (display:display-animation-manager display)))
-    (contents-will-unmount (display:contents display) display)
-    (unmount-contents (display:contents display) display))
-  (setf (display:native-view display) nil
-        (display:native-window display) nil))
+  (let ((xmas.matrix:*tmp-matrix* (xmas.display:display-scratch-matrix display))
+        (xmas.texture:*texture-manager* (xmas.display:display-texture-manager display))
+        (xmas.action-manager:*action-manager* (xmas.display:display-action-manager display))
+        (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager display)))
+    (contents-will-unmount (xmas.display:contents display) display)
+    (unmount-contents (xmas.display:contents display) display))
+  (setf (xmas.display:native-view display) nil
+        (xmas.display:native-window display) nil))
 
 (defclass my-window (ns:ns-window)
   ((display :accessor display))
@@ -153,14 +153,14 @@
 (defun reshape-window (self)
   (multiple-value-bind (w h) (nsview-size self)
     (let* ((display (my-view-display self))
-           (width (display:display-width display))
-           (height (display:display-height display)))
-      (with-slots (display:size-to-fit display:preserve-aspect-ratio) display
+           (width (xmas.display:display-width display))
+           (height (xmas.display:display-height display)))
+      (with-slots (xmas.display:size-to-fit xmas.display:preserve-aspect-ratio) display
         (cond
-          (display:preserve-aspect-ratio
+          (xmas.display:preserve-aspect-ratio
            (multiple-value-bind (x y w h) (aspect-fit w h width height)
              (resize-gl-2d x y w h width height)))
-          (display:size-to-fit
+          (xmas.display:size-to-fit
            (resize-gl-2d 0 0 w h width height))
           (t
            (resize-gl-2d 0 0 w h w h)))))))
@@ -168,7 +168,7 @@
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
   (#_glClearColor 0.05 0.05 0.05 0.0)
   (reshape-window self)
-  (display:display-drain-gl-queue (my-view-display self)))
+  (xmas.display:display-drain-gl-queue (my-view-display self)))
 
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
@@ -179,14 +179,14 @@
   (let ((view (#/contentView self)))
     (setf (my-view-requires-resize? view) t)
     (multiple-value-bind (w h) (nsview-size view)
-      (runloop:enqueue-runloop-event (display:display-runloop (display self))
+      (xmas.runloop:enqueue-runloop-event (xmas.display:display-runloop (display self))
                                      (cons :resize (cons w h))))))
 
 (objc:defmethod (#/drawRect: :void) ((self my-view) (a-rect :ns-rect))
   (declare (ignorable a-rect))
   (when (my-view-requires-resize? self)
     (reshape-window self))
-  (display:display-drain-gl-queue (my-view-display self))
+  (xmas.display:display-drain-gl-queue (my-view-display self))
   (with-slots (contents display) self
     (when contents (draw contents display)))
   (#_glFlush))
@@ -212,8 +212,8 @@
 
 (defun %enqueue-key-event (myview ns-event event)
   (let ((key (%translate-keycode ns-event))
-        (runloop (display:display-runloop (my-view-display myview))))
-    (runloop:enqueue-runloop-event runloop (cons event key))))
+        (runloop (xmas.display:display-runloop (my-view-display myview))))
+    (xmas.runloop:enqueue-runloop-event runloop (cons event key))))
 
 (objc:defmethod (#/keyDown: :void) ((self my-view) event)
   (%enqueue-key-event self event :keydown))
@@ -222,8 +222,8 @@
   (%enqueue-key-event self event :keyup)
   (%enqueue-key-event self event :keypress))
 
-(defmethod redisplay ((self display:display))
-  (alexandria:when-let ((view (display:native-view self)))
+(defmethod redisplay ((self xmas.display:display))
+  (alexandria:when-let ((view (xmas.display:native-view self)))
     (progmain ()
       (#/setNeedsDisplay: view #$YES))))
 
@@ -235,16 +235,17 @@
                                     (fps (/ 1.0 60.0))
                                     (size-to-fit nil)
                                     (preserve-aspect-ratio nil))
-  (let* ((result (make-instance 'display:display
+  (let* ((result (make-instance 'xmas.display:display
                                 :fps fps
                                 :contents contents
                                 :width width
                                 :height height
                                 :size-to-fit size-to-fit
+                                :animation-manager (xmas.animation-manager:make-manager)
                                 :preserve-aspect-ratio preserve-aspect-ratio))
-         (texture-manager (texture:make-texture-manager :display result))
+         (texture-manager (xmas.texture:make-texture-manager :display result))
          (package *package*))
-    (setf (display:display-texture-manager result)
+    (setf (xmas.display:display-texture-manager result)
           texture-manager)
     (progmain ()
       (let* ((*package* package)
@@ -262,14 +263,14 @@
                                     :pixel-format (#/defaultPixelFormat ns:ns-opengl-view))))
         (#/setContentView: w glview)
         (#/setDelegate: w w)
-        (setf (display:native-view result) glview
-              (display:native-window result) w
+        (setf (xmas.display:native-view result) glview
+              (xmas.display:native-window result) w
               (display w) result)
         (init-display result)
-        (let ((matrix:*tmp-matrix* (display:display-scratch-matrix result))
-              (texture:*texture-manager* (display:display-texture-manager result))
-              (action-manager:*action-manager* (display:display-action-manager result))
-              (xmas.animation-manager:*animation-manager* (display:display-animation-manager result)))
+        (let ((xmas.matrix:*tmp-matrix* (xmas.display:display-scratch-matrix result))
+              (xmas.texture:*texture-manager* (xmas.display:display-texture-manager result))
+              (xmas.action-manager:*action-manager* (xmas.display:display-action-manager result))
+              (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager result)))
           (contents-will-mount contents result)
           (mount-contents contents result))
         (#/setLevel: w 100)
