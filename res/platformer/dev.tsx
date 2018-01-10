@@ -26,6 +26,24 @@
    <property name="shape" value="block"/>
   </properties>
  </tile>
+ <tile id="4">
+  <properties>
+   <property name="material" value="grass"/>
+   <property name="shape" value="platform"/>
+  </properties>
+ </tile>
+ <tile id="5">
+  <properties>
+   <property name="material" value="grass"/>
+   <property name="shape" value="platform"/>
+  </properties>
+ </tile>
+ <tile id="6">
+  <properties>
+   <property name="material" value="grass"/>
+   <property name="shape" value="platform"/>
+  </properties>
+ </tile>
  <tile id="8">
   <properties>
    <property name="material" value="ice"/>

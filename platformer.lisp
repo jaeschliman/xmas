@@ -139,28 +139,37 @@
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
 
-(defun top-for-tile (tile x y)
+(defun top-for-tile (sprite tile x y)
   (case (tile-shape tile)
     (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
     (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
-    (block       (+ 1.0 (* 32.0 (+ 1.0 (floor y 32.0)))))))
+    (block (+ 0.0 (* 32.0 (+ 1.0 (floor y 32.0)))))
+    (platform
+     (cond
+       ((and (< (velocity-y sprite) 0.0)
+             (> (mod y 32.0) 5.0))
+        (+ 0.0 (* 32.0 (+ 1.0 (floor y 32.0)))))
+       (t y)))))
 
-(defun bottom-for-tile (tile x y)
-  (declare (ignore x))
+(defun bottom-for-tile (sprite tile x y)
+  (declare (ignore x sprite))
   (case (tile-shape tile)
+    (platform y)
     (t (1- (* 32.0 (+ 0.0 (floor y 32.0)))))))
 
-(defun left-for-tile (tile x y)
-  (declare (ignore y))
+(defun left-for-tile (sprite tile x y)
+  (declare (ignore y sprite))
   (ecase (tile-shape tile)
     ((slope-left slope-right) x) ;;so we can get 'pushed up' to correct position
+    (platform x)
     (block (1- (* 32.0 (floor x 32.0))))))
 
-(defun right-for-tile (tile x y)
-  (declare (ignore y))
+(defun right-for-tile (sprite tile x y)
+  (declare (ignore y sprite))
   (ecase (tile-shape tile)
     ((slope-left slope-right) x)
-    (block (1+ (* 32.0 (1+ (floor x 32.0)))))))
+    (platform x)
+    (block (* 32.0 (1+ (floor x 32.0))))))
 
 (defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite dt)
   (declare (ignore dt))
@@ -168,9 +177,10 @@
     (let ((y (bottom sprite)) (hit nil))
       (labels
           ((check (x)
-             (let ((tile (tile-at-point tmx x y)))
-               (unless (zerop tile)
-                 (maxf y (top-for-tile (aref tile-table tile) x y))
+             (let* ((gid (tile-at-point tmx x y))
+                    (tile (aref tile-table gid)))
+               (unless (null (tile-material tile))
+                 (maxf y (top-for-tile sprite tile x y))
                  (setf hit tile))))
            (run-checks ()
              (check (x sprite))
@@ -182,9 +192,8 @@
            (setf (bottom sprite) y)
            (go :loop))
          (when hit
-           (let ((tile (aref tile-table hit)))
-             (collide-with-tile sprite 'bottom tile)
-             (return tile))))))))
+           (collide-with-tile sprite 'bottom hit)
+           (return hit)))))))
 
 (defun move-sprite-down-if-hitting-tiles-on-top (pf sprite dt)
   (declare (ignore dt))
@@ -192,9 +201,10 @@
     (let ((y (top sprite)) (hit nil))
       (labels
           ((check (x)
-             (let ((tile (tile-at-point tmx x y)))
-               (unless (zerop tile)
-                 (minf y (bottom-for-tile (aref tile-table tile) x y))
+             (let* ((gid (tile-at-point tmx x y))
+                    (tile (aref tile-table gid)))
+               (unless (null (tile-material tile))
+                 (minf y (bottom-for-tile sprite tile x y))
                  (setf hit tile))))
            (run-checks ()
              (check (x sprite))
@@ -206,7 +216,7 @@
            (setf (top sprite) y)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'top (aref tile-table hit))))))))
+           (collide-with-tile sprite 'top hit)))))))
 
 (defun move-sprite-left-if-hitting-tiles-on-right (pf sprite dt)
   (declare (ignore dt))
@@ -214,9 +224,10 @@
     (let ((x (right sprite)) (hit nil))
       (labels
           ((check (y)
-             (let ((tile (tile-at-point tmx x y)))
-               (unless (zerop tile)
-                 (minf x (left-for-tile (aref tile-table tile) x y))
+             (let* ((gid (tile-at-point tmx x y))
+                    (tile (aref tile-table gid)))
+               (unless (null (tile-material tile))
+                 (minf x (left-for-tile sprite tile x y))
                  (setf hit tile))))
            (run-checks ()
              (check (y sprite))
@@ -231,16 +242,17 @@
            (setf (right sprite) x)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'right (aref tile-table hit))))))))
+           (collide-with-tile sprite 'right hit)))))))
 
 (defun move-sprite-right-if-hitting-tiles-on-left (pf sprite dt)
   (declare (ignore dt))
   (with-struct (pf- tmx tile-table) pf
     (let ((x (left sprite)) (hit nil))
       (labels ((check (y)
-                 (let ((tile (tile-at-point tmx x y)))
-                   (unless (zerop tile)
-                     (maxf x (right-for-tile (aref tile-table tile) x y))
+                 (let* ((gid (tile-at-point tmx x y))
+                        (tile (aref tile-table gid)))
+                   (unless (null (tile-material tile))
+                     (maxf x (right-for-tile sprite tile x y))
                      (setf hit tile))))
                (run-checks ()
                  (check (y sprite))
@@ -255,7 +267,7 @@
            (setf (left sprite) x)
            (go :loop))
          (when hit
-           (collide-with-tile sprite 'left (aref tile-table hit))))))))
+           (collide-with-tile sprite 'left hit)))))))
 
 (defun update-sprite-physics (pf sprite dt)
   (let (standing-on)
@@ -301,20 +313,22 @@
            ;;so the player will stick to the ground when walking
            (when (> (velocity-x self) 0)
              (setf (acceleration-y self) -1000)))
-          (block
-              ;;keep the player on the ground, but allow running to
-              ;;to float off of slopes a bit
-              (setf (velocity-y self) -100))))
+          ((block platform)
+           (setf (velocity-y self) 0.0))))
        ((left right)
         (case (tile-shape tile)
           ;;do nothing
           ((slope-left slope-right))
           (block (setf (velocity-x self) 0))))
        (top
-        ;;richochet
-        (setf (velocity-y self) (* -0.5 (velocity-y self))
-              (jumping self) nil
-              (jump-power self) 0))))))
+        (case (tile-shape tile)
+          (platform ;;do nothing
+           )
+          ;;richochet
+          (t
+           (setf (velocity-y self) (* -0.5 (velocity-y self))
+                 (jumping self) nil
+                 (jump-power self) 0))))))))
 
 (defmethod leave-state ((self player) state next-state)
   (declare (ignore state next-state))
