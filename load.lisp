@@ -22,12 +22,13 @@
   (load "./render-buffer.lisp")
   (load "./render-buffer-instrs.lisp")
   (load "./matrix.lisp")
+  (load "./display.lisp")
+  (load "./texture.lisp")
+  (load "./draw.lisp")
   (load "./node.lisp")
   (load "./action.lisp")
   (load "./action-manager.lisp")
   (load "./node-lifecycle.lisp")
-  (load "./display.lisp")
-  (load "./texture.lisp")
   (load "./sprite.lisp")
   (load "./sprite-actions.lisp")
   (load "./animation-manager.lisp")
@@ -35,5 +36,6 @@
   (load "./texture-packer.lisp")
   (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
   (load "./tmx-reader.lisp")
+  (load "./tmx-renderer.lisp")
   )
 

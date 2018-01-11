@@ -38,7 +38,7 @@
           (setf (tile-type result) (read-from-string string))) ))))
 
 (defun tile-lookup-table-from-tmx-renderer (tmx)
-  (let* ((props (xmas.render-buffer::tmx-renderer-tile-properties tmx))
+  (let* ((props (xmas.tmx-renderer:tmx-renderer-tile-properties tmx))
          (result (make-array (length props))))
     (prog1 result
       (loop for plist across props
@@ -95,17 +95,17 @@
 
 (defmethod draw ((self image))
   (draw-node-color self)
-  (xmas.render-buffer::draw-texture (texture self)))
+  (xmas.draw:draw-texture (texture self)))
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (xmas.render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
+  (xmas.draw:draw-texture-frame (sprite-frame self) 0.0 0.0))
 
 (defmethod draw ((self tmx-node))
   (let* ((r (tmx self))
-         (x (/ (xmas.render-buffer::tmx-renderer-width r) 2.0))
-         (y (/ (xmas.render-buffer::tmx-renderer-height r) 2.0)))
-    (xmas.render-buffer::draw-tmx-renderer x y r)))
+         (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
+         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0)))
+    (xmas.tmx-renderer:draw-tmx-renderer x y r)))
 
 (defmethod visit ((self node))
   (when (not (visible self))
@@ -134,7 +134,7 @@
   )
 
 (defun tile-at-point (tmx x y)
-  (xmas.render-buffer::tmx-renderer-tile-at-point tmx x y))
+  (xmas.tmx-renderer:tmx-renderer-tile-at-point tmx x y))
 
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
@@ -143,12 +143,12 @@
   (case (tile-shape tile)
     (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
     (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
-    (block (+ 0.0 (* 32.0 (+ 1.0 (floor y 32.0)))))
+    (block (* 32.0 (+ 1.0 (floor y 32.0))))
     (platform
      (cond
        ((and (< (velocity-y sprite) 0.0)
              (> (mod y 32.0) 5.0))
-        (+ 0.0 (* 32.0 (+ 1.0 (floor y 32.0)))))
+        (* 32.0 (+ 1.0 (floor y 32.0))))
        (t y)))))
 
 (defun bottom-for-tile (sprite tile x y)
@@ -162,7 +162,7 @@
   (ecase (tile-shape tile)
     ((slope-left slope-right) x) ;;so we can get 'pushed up' to correct position
     (platform x)
-    (block (1- (* 32.0 (floor x 32.0))))))
+    (block (+ -1.0 (* 32.0 (floor x 32.0))))))
 
 (defun right-for-tile (sprite tile x y)
   (declare (ignore y sprite))
@@ -537,7 +537,7 @@
       (setf root (make-instance 'node)
             background (make-instance 'image :x 250 :y 250
                                       :texture (get-texture "./res/platformer/sky.png"))
-            tmx (xmas.render-buffer::tmx-renderer-from-file
+            tmx (xmas.tmx-renderer:tmx-renderer-from-file
                  "./res/platformer/dev.tmx")
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
@@ -547,7 +547,7 @@
                                   :sprite-frame frame
                                   :state 'standing)
             tile-table (tile-lookup-table-from-tmx-renderer tmx))
-      (let* ((map (xmas.render-buffer::tmx-renderer-map tmx))
+      (let* ((map (xmas.tmx-renderer:tmx-renderer-map tmx))
              (layers (xmas.tmx-reader:map-layers map))
              (objects-layer (find :objects layers :key 'xmas.tmx-reader:layer-type))
              (data (xmas.tmx-reader:layer-data objects-layer)))

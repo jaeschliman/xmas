@@ -37,7 +37,7 @@
    (scratch-matrix :accessor display-scratch-matrix
                    :initform (xmas.matrix:make-matrix))
    (action-manager :accessor display-action-manager
-                   :initform (xmas.action-manager:make-manager))
+                   :initarg :action-manager)
    (texture-manager :accessor display-texture-manager)
    (animation-manager :accessor display-animation-manager
                       :initarg :animation-manager)))

@@ -241,6 +241,7 @@
                                 :width width
                                 :height height
                                 :size-to-fit size-to-fit
+                                :action-manager (xmas.action-manager:make-manager)
                                 :animation-manager (xmas.animation-manager:make-manager)
                                 :preserve-aspect-ratio preserve-aspect-ratio))
          (texture-manager (xmas.texture:make-texture-manager :display result))

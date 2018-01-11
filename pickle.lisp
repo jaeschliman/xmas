@@ -78,7 +78,7 @@
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (xmas.render-buffer::draw-texture-frame (sprite-frame self) 0.0 0.0))
+  (xmas.draw::draw-texture-frame (sprite-frame self) 0.0 0.0))
 
 (defmethod visit ((self node))
   (when (not (visible self))

@@ -1,12 +1,5 @@
 (in-package :xmas.render-buffer)
 
-(defun draw-texture (texture)
-  (when (xmas.texture:texture-id texture)
-    (simple-draw-gl-texture-no-color
-     (xmas.texture:texture-id texture)
-     (xmas.texture:texture-width texture)
-     (xmas.texture:texture-height texture))))
-
 (defstruct bouncy-box
   (x (random 230))
   (y (random 230))
@@ -86,7 +79,7 @@
 
 (defmethod cl-user::step-contents ((self test4) dt)
   (declare (ignorable dt))
-  (draw-texture (test4-alien self)))
+  (xmas.draw:draw-texture (test4-alien self)))
 
 (cl-user::display-contents (make-test4))
 
@@ -122,7 +115,7 @@
                           (sprite-sx sprite) (sprite-sy sprite)
                           (sprite-r sprite))
   (set-color 1.0 1.0 1.0 1.0)
-  (draw-texture (sprite-texture sprite))
+  (xmas.draw:draw-texture (sprite-texture sprite))
   (pop-matrix))
 
 (defstruct test5
@@ -208,7 +201,7 @@
 
 (defmethod draw ((self xmas.sprite:sprite))
   (draw-node-color self)
-  (draw-texture-frame (xmas.sprite:sprite-frame self) 0.0 0.0))
+  (xmas.draw:draw-texture-frame (xmas.sprite:sprite-frame self) 0.0 0.0))
 
 ;; the fast method:
 (defmethod visit ((self xmas.node:node))
@@ -431,31 +424,6 @@
 
 (cl-user::display-contents (make-test9))
 
-
-
-(defun draw-texture-frame (frame x y &optional outset)
-  (when-let (id (xmas.texture:texture-id (xmas.texture:texture-frame-texture frame)))
-    (let ((w (xmas.texture:texture-frame-width frame))
-          (h (xmas.texture:texture-frame-height frame)))
-      (when outset
-        (decf x 0.5)
-        (decf y 0.5)
-        (incf w 1.0)
-        (incf h 1.0))
-      (if (xmas.texture:texture-frame-rotated frame)
-          (simple-draw-gl-with-tex-coords-rotated
-           id x y w h
-           (xmas.texture:texture-frame-tx1 frame)
-           (xmas.texture:texture-frame-ty1 frame)
-           (xmas.texture:texture-frame-tx2 frame)
-           (xmas.texture:texture-frame-ty2 frame))
-          (simple-draw-gl-with-tex-coords
-           id x y w h
-           (xmas.texture:texture-frame-tx1 frame)
-           (xmas.texture:texture-frame-ty1 frame)
-           (xmas.texture:texture-frame-tx2 frame)
-           (xmas.texture:texture-frame-ty2 frame))))))
-
 (defstruct test10
   a b c d)
 
@@ -471,10 +439,10 @@
 (defmethod cl-user::step-contents ((self test10) dt)
   (declare (ignore dt))
   (push-matrix)
-  (draw-texture-frame (test10-a self) 125.0 125.0)
-  (draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
-  (draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
-  (draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
+  (xmas.draw:draw-texture-frame (test10-a self) 125.0 125.0)
+  (xmas.draw:draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
+  (xmas.draw:draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
+  (xmas.draw:draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
   (pop-matrix))
 
 (cl-user::display-contents (make-test10) :width 500 :height 500)
@@ -496,43 +464,15 @@
 
 (defmethod cl-user::step-contents ((self test11) dt)
   (declare (ignore dt))
-  (draw-texture-frame (test11-normal-frame self) 125.0 250.0)
-  (draw-texture-frame (test11-blink-frame self) 375.0 250.0)
-  (draw-texture-frame (test11-jewel self) 250.0 250.0))
+  (xmas.draw:draw-texture-frame (test11-normal-frame self) 125.0 250.0)
+  (xmas.draw:draw-texture-frame (test11-blink-frame self) 375.0 250.0)
+  (xmas.draw:draw-texture-frame (test11-jewel self) 250.0 250.0))
 
 (cl-user::display-contents (make-test11) :width 500 :height 500)
 
 ;; -----------------------------------------------------------------------------
 ;; tmx reader proto/test
 
-(defun make-tileset-texture-frames (tileset)
-  (let* ((texture (xmas.texture:get-texture (xmas.tmx-reader:tileset-source tileset)))
-         (tile-width (coerce (xmas.tmx-reader:tileset-tile-width tileset) 'float))
-         (tile-height (coerce (xmas.tmx-reader:tileset-tile-height tileset) 'float))
-         (texture-width (xmas.texture:texture-width texture))
-         (texture-height (xmas.texture:texture-height texture))
-         (cols (floor texture-width tile-width))
-         (rows (floor texture-height tile-height))
-         ;;TODO: read this from input
-         (first-gid 1)
-         (vec (make-array (1+ (* rows cols)) :element-type t :initial-element nil))
-         (idx first-gid))
-    ;; (format t "got ~S elements ~%" (length vec))
-    ;; (format t "texture width = ~S ~%" texture-width)
-    ;; (format t "texture height = ~S ~%" texture-height)
-    ;; (format t "tile-width = ~S ~%" tile-width)
-    ;; (format t "tile-height = ~S ~%" tile-height)
-    (prog1 vec
-      (dotimes (row rows)
-        (dotimes (col cols)
-          (setf (aref vec idx)
-                (xmas.texture:texture-frame texture
-                                       (+ (* col tile-width) 0.5)
-                                       (+ (* row tile-height) 0.5)
-                                       (- tile-width 1.0)
-                                       (- tile-height 1.0)
-                                       :flipped nil))
-          (incf idx))))))
 
 (defstruct test12
   tmx-map
@@ -542,7 +482,7 @@
   (declare (ignore display))
   (let* ((map (xmas.tmx-reader:read-tilemap "./res/test-tilemap.tmx"))
          (tileset (first (xmas.tmx-reader:map-tilesets map)))
-         (frames (make-tileset-texture-frames tileset)))
+         (frames (xmas.tmx-renderer:make-tileset-texture-frames tileset)))
     (setf (test12-tmx-map self) map
           (test12-frames self) frames)))
 
@@ -554,7 +494,7 @@
     (loop for frame across frames
        for i upfrom 0
        when frame
-       do (draw-texture-frame frame (+ x (* i 50)) y))))
+       do (xmas.draw:draw-texture-frame frame (+ x (* i 50)) y))))
 
 
 (cl-user::display-contents (make-test12) :width 500 :height 500)
@@ -569,24 +509,13 @@
   (declare (ignore display))
   (let* ((map (xmas.tmx-reader:read-tilemap "./res/test-tilemap.tmx"))
          (tileset (first (xmas.tmx-reader:map-tilesets map)))
-         (frames (make-tileset-texture-frames tileset))
+         (frames (xmas.tmx-renderer:make-tileset-texture-frames tileset))
          (layer (first (xmas.tmx-reader:map-layers map))))
     (setf (test13-tmx-map self) map
           (test13-tileset self) tileset
           (test13-frames self) frames
           (test13-layer self) layer)))
 
-(defun draw-tmx-layer (at-x at-y tile-width tile-height layer frames)
-  (let* ((cols (xmas.tmx-reader:layer-width layer))
-         (rows (xmas.tmx-reader:layer-height layer))
-         (start-x (+ (- at-x (/ (* tile-width cols) 2.0)) (/ tile-width 2.0)))
-         (start-y (- (+ at-y (/ (* tile-height rows) 2.0)) (/ tile-width 2.0))))
-    (dotimes (row rows)
-      (dotimes (col cols)
-        (when-let (frame (aref frames (xmas.tmx-reader:layer-gid-at layer col row)))
-          (let ((x (+ start-x (* col tile-width)))
-                (y (- start-y (* row tile-height))))
-            (draw-texture-frame frame x y t)))))))
 
 (defmethod cl-user::step-contents ((self test13) dt)
   (declare (ignore dt))
@@ -595,69 +524,31 @@
         (tileset (test13-tileset self))
         (frames (test13-frames self))
         (layer (test13-layer self)))
-    (draw-tmx-layer x y
-                    (xmas.tmx-reader:tileset-tile-width tileset)
-                    (xmas.tmx-reader:tileset-tile-height tileset)
-                    layer
-                    frames)))
+    (xmas.tmx-renderer:draw-tmx-layer
+     x y
+     (xmas.tmx-reader:tileset-tile-width tileset)
+     (xmas.tmx-reader:tileset-tile-height tileset)
+     layer
+     frames)))
 
 (cl-user::display-contents (make-test13) :width 500 :height 500)
 
-(defstruct tmx-renderer
-  width height tile-width tile-height layer frames map)
-
-(defun tmx-renderer-from-file (path)
-  (let* ((map (xmas.tmx-reader:read-tilemap path))
-         (tileset (first (xmas.tmx-reader:map-tilesets map)))
-         (frames (make-tileset-texture-frames tileset))
-         (layer (first (xmas.tmx-reader:map-layers map)))
-         (tile-width (xmas.tmx-reader:tileset-tile-width tileset))
-         (tile-height (xmas.tmx-reader:tileset-tile-height tileset))
-         (width (* tile-width (xmas.tmx-reader:layer-width layer)))
-         (height (* tile-height (xmas.tmx-reader:layer-height layer))))
-    (make-tmx-renderer :width width :height height
-                       :tile-width tile-width :tile-height tile-height
-                       :layer layer :frames frames :map map)))
-
-(defun tmx-renderer-tile-properties (tmx)
-  (xmas.tmx-reader:map-tile-properties (tmx-renderer-map tmx)))
-
-(defun tmx-renderer-tile-at-point (tmx x y &optional (default 0))
-  (let* ((w (tmx-renderer-width tmx))
-         (h (tmx-renderer-height tmx))
-         (tw (tmx-renderer-tile-width tmx))
-         (th (tmx-renderer-tile-height tmx))
-         (height-in-tiles (floor h th))
-         (layer (tmx-renderer-layer tmx)))
-    (cond ((or (<= x 0.0) (>= x w)) default)
-          ((or (<= y 0.0) (>= y h)) default)
-          (t (let ((tx (floor x tw))
-                   (ty (- height-in-tiles (floor y th) 1)))
-               (xmas.tmx-reader:layer-gid-at layer tx ty))))))
-
-(defun draw-tmx-renderer (x y renderer)
-  (draw-tmx-layer x y
-                  (tmx-renderer-tile-width renderer)
-                  (tmx-renderer-tile-height renderer)
-                  (tmx-renderer-layer renderer)
-                  (tmx-renderer-frames renderer)))
 
 (defstruct test14
   renderer)
 
 (defmethod cl-user::contents-will-mount ((self test14) display)
   (declare (ignore display))
-  (setf (test14-renderer self) (tmx-renderer-from-file "./res/test-tilemap.tmx")))
+  (setf (test14-renderer self) (xmas.tmx-renderer:tmx-renderer-from-file "./res/test-tilemap.tmx")))
 
 (defmethod cl-user::step-contents ((self test14) dt)
   (declare (ignore dt))
   (let* ((r (test14-renderer self))
-         (x (/ (tmx-renderer-width r) 2.0))
-         (y (/ (tmx-renderer-height r) 2.0)))
-    (draw-tmx-renderer x y r)))
+         (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
+         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0)))
+    (xmas.tmx-renderer:draw-tmx-renderer x y r)))
 
 (cl-user::display-contents (make-test14) :width 500 :height 500)
-
 
 (defstruct test15
   node started)

@@ -57,7 +57,7 @@
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (xmas.render-buffer::draw-texture (texture self)))
+  (xmas.draw::draw-texture (texture self)))
 
 (defmethod draw ((self rect))
   (draw-node-color self)
