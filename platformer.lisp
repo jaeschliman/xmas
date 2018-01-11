@@ -20,6 +20,9 @@
 
 (define-modify-macro clampf (min max) clamp)
 
+(defvar *camera-x*)
+(defvar *camera-y*)
+
 (defstruct tile
   shape
   gid
@@ -104,8 +107,15 @@
 (defmethod draw ((self tmx-node))
   (let* ((r (tmx self))
          (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
-         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0)))
-    (xmas.tmx-renderer:draw-tmx-renderer x y r)))
+         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0))
+         (x1 (- *camera-x* 300))
+         (x2 (+ *camera-x* 300))
+         (y1 (- *camera-y* 300))
+         (y2 (+ *camera-y* 300)))
+    (xmas.tmx-renderer:draw-tmx-renderer-windowed
+     x y r
+     x1 y1
+     x2 y2)))
 
 (defmethod visit ((self node))
   (when (not (visible self))
@@ -516,6 +526,8 @@
          (incf (y root) (- bottom-edge (y player)))))
       (when (> (y root) 0.0)
         (setf (y root) 0.0))
+      (setf *camera-x* (+ (- (x root)) 250)
+            *camera-y* (+ (- (y root)) 250))
       (setf (y background) (+ (- (y root)) 250))
       (setf (x background) (+ (- (x root)) 250)))))
 
@@ -570,14 +582,16 @@
 
 
 (defmethod cl-user::step-contents ((self pf) dt)
-  (with-struct (pf- root started player) self
-    (unless started
-      (setf started t)
-      (on-enter root))
-    (set-state player (update-state player self dt))
-    (move-player self dt)
-    (move-camera self dt)
-    (visit root)))
+  (let ((*camera-x* 0.0)
+        (*camera-y* 0.0))
+    (with-struct (pf- root started player) self
+      (unless started
+        (setf started t)
+        (on-enter root))
+      (set-state player (update-state player self dt))
+      (move-player self dt)
+      (move-camera self dt)
+      (visit root))))
 
 (defmethod cl-user::handle-event ((self pf) event)
   (let ((info (cdr event)) (keys (pf-keys self)))
