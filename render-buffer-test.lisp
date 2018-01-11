@@ -1,4 +1,12 @@
-(in-package :xmas.render-buffer)
+(defpackage :xmas.render-buffer-tests)
+(in-package :xmas.render-buffer-tests)
+
+(defvar *tests* (make-hash-table :test 'equal))
+
+(defmacro deftest (name (&key) &body body)
+  `(setf (gethash ',name *tests*) (lambda () ,@body)))
+
+(defun run-test (name) (funcall (gethash name *tests*)))
 
 (defstruct bouncy-box
   (x (random 230))
@@ -59,11 +67,12 @@
 
 (defvar *my-random-state* (make-random-state t))
 
-(let ((*random-state* *my-random-state*))
-  (cl-user::display-contents (make-test3)
-                             :width 500
-                             :height 500
-                             :expandable t))
+(deftest bouncy-balls ()
+  (let ((*random-state* *my-random-state*))
+    (cl-user::display-contents (make-test3)
+                               :width 500
+                               :height 500
+                               :expandable t)))
 
 (defstruct test4
   alien)
@@ -81,8 +90,8 @@
   (declare (ignorable dt))
   (xmas.draw:draw-texture (test4-alien self)))
 
-(cl-user::display-contents (make-test4))
-
+(deftest draw-texture ()
+  (cl-user::display-contents (make-test4)))
 
 (defstruct sprite
   (x 0.0)
@@ -163,7 +172,8 @@
              (test5-height self) h)))
     (t (format t "got unhandled event: ~S~%" event))))
 
-(cl-user::display-contents (make-test5) :width 500 :height 500 :expandable t)
+(deftest draw-many-textures ()
+  (cl-user::display-contents (make-test5) :width 500 :height 500 :expandable t))
 
 (defstruct test6
   (matrix (xmas.matrix:make-matrix))
@@ -189,7 +199,8 @@
   (draw-rect 30.0 30.0 20.0 20.0)
   (pop-matrix))
 
-(cl-user::display-contents (make-test6))
+(deftest matrix-translation ()
+  (cl-user::display-contents (make-test6)))
 
 (defun draw-node-color (node)
   (let ((c (xmas.node:color node)) (a (xmas.node:opacity node)))
@@ -292,7 +303,8 @@
   (set-color 0.0 1.0 1.0 0.4)
   (visit (test7-root-node self)))
 
-(cl-user::display-contents (make-test7) :width 500 :height 500)
+(deftest visit-and-draw-many-nodes ()
+  (cl-user::display-contents (make-test7) :width 500 :height 500))
 
 
 (defstruct test8
@@ -384,7 +396,8 @@
     (xmas.node:on-enter (test8-node self)))
   (visit (test8-node self)))
 
-(cl-user::display-contents (make-test8))
+(deftest node-actions ()
+  (cl-user::display-contents (make-test8)))
 
 
 (defstruct test9
@@ -422,7 +435,9 @@
     (xmas.node:on-enter (test9-node self)))
   (visit (test9-node self)))
 
-(cl-user::display-contents (make-test9))
+(deftest action-manager-test ()
+  (cl-user::display-contents (make-test9)))
+
 
 (defstruct test10
   a b c d)
@@ -445,7 +460,8 @@
   (xmas.draw:draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
   (pop-matrix))
 
-(cl-user::display-contents (make-test10) :width 500 :height 500)
+(deftest texture-frame-test ()
+  (cl-user::display-contents (make-test10) :width 500 :height 500))
 
 (defstruct test11
   packer normal-frame blink-frame jewel)
@@ -468,11 +484,8 @@
   (xmas.draw:draw-texture-frame (test11-blink-frame self) 375.0 250.0)
   (xmas.draw:draw-texture-frame (test11-jewel self) 250.0 250.0))
 
-(cl-user::display-contents (make-test11) :width 500 :height 500)
-
-;; -----------------------------------------------------------------------------
-;; tmx reader proto/test
-
+(deftest texture-packer-test ()
+  (cl-user::display-contents (make-test11) :width 500 :height 500))
 
 (defstruct test12
   tmx-map
@@ -497,7 +510,8 @@
        do (xmas.draw:draw-texture-frame frame (+ x (* i 50)) y))))
 
 
-(cl-user::display-contents (make-test12) :width 500 :height 500)
+(deftest tilemap-test-0 ()
+  (cl-user::display-contents (make-test12) :width 500 :height 500))
 
 (defstruct test13
   tmx-map
@@ -531,8 +545,8 @@
      layer
      frames)))
 
-(cl-user::display-contents (make-test13) :width 500 :height 500)
-
+(deftest tilemap-test-1 ()
+  (cl-user::display-contents (make-test13) :width 500 :height 500))
 
 (defstruct test14
   renderer)
@@ -548,7 +562,8 @@
          (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0)))
     (xmas.tmx-renderer:draw-tmx-renderer x y r)))
 
-(cl-user::display-contents (make-test14) :width 500 :height 500)
+(deftest tmx-renderer ()
+  (cl-user::display-contents (make-test14) :width 500 :height 500))
 
 (defstruct test15
   node started)
@@ -581,7 +596,8 @@
     (xmas.node:on-enter (test15-node self)))
   (visit (test15-node self)))
 
-(cl-user::display-contents (make-test15) :width 500 :height 500)
+(deftest action-tags ()
+  (cl-user::display-contents (make-test15) :width 500 :height 500))
 
 (defstruct test16
   node started)
@@ -607,4 +623,5 @@
     (xmas.node:on-enter (test16-node self)))
   (visit (test16-node self)))
 
-(cl-user::display-contents (make-test16) :width 500 :height 500)
+(deftest animation ()
+  (cl-user::display-contents (make-test16) :width 500 :height 500))
