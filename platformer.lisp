@@ -149,32 +149,36 @@
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
 
-(defun top-for-tile (sprite tile x y)
+(defun top-for-tile (sprite tile x y dt)
   (case (tile-shape tile)
     (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
     (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
     (block (* 32.0 (+ 1.0 (floor y 32.0))))
     (platform
-     (cond
-       ((and (< (velocity-y sprite) 0.0)
-             (> (mod y 32.0) 5.0))
-        (* 32.0 (+ 1.0 (floor y 32.0))))
-       (t y)))))
+     (let* ((top (* 32.0 (+ 1.0 (floor y 32.0))))
+            (vel (velocity-y sprite))
+            (prev-y (+ y (* -1.0 dt vel))))
+       (cond
+         ((and (< vel 0.0)
+               (>= prev-y top)
+               (<= y top))
+          top)
+         (t y))))))
 
-(defun bottom-for-tile (sprite tile x y)
+(defun bottom-for-tile (sprite tile x y dt)
   (declare (ignore x sprite))
   (case (tile-shape tile)
     (platform y)
     (t (1- (* 32.0 (+ 0.0 (floor y 32.0)))))))
 
-(defun left-for-tile (sprite tile x y)
+(defun left-for-tile (sprite tile x y dt)
   (declare (ignore y sprite))
   (ecase (tile-shape tile)
     ((slope-left slope-right) x) ;;so we can get 'pushed up' to correct position
     (platform x)
     (block (+ -1.0 (* 32.0 (floor x 32.0))))))
 
-(defun right-for-tile (sprite tile x y)
+(defun right-for-tile (sprite tile x y dt)
   (declare (ignore y sprite))
   (ecase (tile-shape tile)
     ((slope-left slope-right) x)
@@ -182,7 +186,6 @@
     (block (* 32.0 (1+ (floor x 32.0))))))
 
 (defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite dt)
-  (declare (ignore dt))
   (with-struct (pf- tmx tile-table) pf
     (let ((y (bottom sprite)) (hit nil))
       (labels
@@ -190,8 +193,12 @@
              (let* ((gid (tile-at-point tmx x y))
                     (tile (aref tile-table gid)))
                (unless (null (tile-material tile))
-                 (maxf y (top-for-tile sprite tile x y))
-                 (setf hit tile))))
+                 ;; TODO: should really return a second value indicating whether
+                 ;;       a hit was detected.
+                 (let ((new-y (top-for-tile sprite tile x y dt)))
+                   (unless (= new-y y)
+                     (maxf y new-y)
+                     (setf hit tile))))))
            (run-checks ()
              (check (x sprite))
              (check (left sprite))
@@ -214,7 +221,7 @@
              (let* ((gid (tile-at-point tmx x y))
                     (tile (aref tile-table gid)))
                (unless (null (tile-material tile))
-                 (minf y (bottom-for-tile sprite tile x y))
+                 (minf y (bottom-for-tile sprite tile x y dt))
                  (setf hit tile))))
            (run-checks ()
              (check (x sprite))
@@ -237,7 +244,7 @@
              (let* ((gid (tile-at-point tmx x y))
                     (tile (aref tile-table gid)))
                (unless (null (tile-material tile))
-                 (minf x (left-for-tile sprite tile x y))
+                 (minf x (left-for-tile sprite tile x y dt))
                  (setf hit tile))))
            (run-checks ()
              (check (y sprite))
@@ -262,7 +269,7 @@
                  (let* ((gid (tile-at-point tmx x y))
                         (tile (aref tile-table gid)))
                    (unless (null (tile-material tile))
-                     (maxf x (right-for-tile sprite tile x y))
+                     (maxf x (right-for-tile sprite tile x y dt))
                      (setf hit tile))))
                (run-checks ()
                  (check (y sprite))
