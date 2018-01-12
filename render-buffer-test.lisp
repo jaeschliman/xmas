@@ -204,11 +204,11 @@
 
 (defun draw-node-color (node)
   (let ((c (xmas.node:color node)) (a (xmas.node:opacity node)))
-    (set-color (svref c 0) (svref c 1) (svref c 2) a)))
+    (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
 (defmethod draw ((self xmas.node:node))
   (draw-node-color self)
-  (draw-rect -20.0 -20.0 40.0 40.0))
+  (xmas.render-buffer::draw-rect -20.0 -20.0 40.0 40.0))
 
 (defmethod draw ((self xmas.sprite:sprite))
   (draw-node-color self)
@@ -216,15 +216,16 @@
 
 ;; the fast method:
 (defmethod visit ((self xmas.node:node))
-  (push-matrix)
-  (translate-scale-rotate (xmas.node:x self) (xmas.node:y self)
-                          (xmas.node:scale-x self) (xmas.node:scale-y self)
-                          (xmas.node:rotation self))
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::translate-scale-rotate
+   (xmas.node:x self) (xmas.node:y self)
+   (xmas.node:scale-x self) (xmas.node:scale-y self)
+   (xmas.node:rotation self))
   (draw self)
   (when (xmas.node:children self)
     (loop for child across (xmas.node:children self) do
          (visit child)))
-  (pop-matrix))
+  (xmas.render-buffer::pop-matrix))
 
 ;; the also-fast method:
 ;; (defmethod visit ((self xmas.node:node))
@@ -625,3 +626,31 @@
 
 (deftest animation ()
   (cl-user::display-contents (make-test16) :width 500 :height 500))
+
+(defstruct test17
+  root started nodes
+  (qtree (xmas.qtree:qtree)))
+
+(defmethod cl-user::contents-will-mount ((self test17) display)
+  (declare (ignore display))
+  (setf (test17-root self) (make-instance 'xmas.node:node))
+  (let (nodes)
+    (loop repeat 10 do
+         (let ((n (make-instance 'xmas.node:node
+                                 :x (random 500)
+                                 :y (random 500))))
+           (xmas.node:add-child (test17-root self) n)
+           (push n nodes)))
+    (setf (test17-nodes self) nodes)))
+
+(defmethod cl-user::step-contents ((self test17) dt)
+  (declare (ignorable dt))
+  (unless (test17-started self)
+    (setf (test17-started self) t)
+    (xmas.node:on-enter (test17-root self)))
+  (xmas.qtree:qtree-reset (test17-qtree self) :x 250 :y 250 :width 500 :height 500)
+  (dolist (node (test17-nodes self))
+    (xmas.qtree:qtree-add (test17-qtree self) node))
+  (visit (test17-root self)))
+
+(cl-user::display-contents (make-test17) :width 500 :height 500)
