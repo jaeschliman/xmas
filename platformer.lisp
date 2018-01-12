@@ -588,17 +588,21 @@
       (add-child root player))))
 
 
-(defmethod cl-user::step-contents ((self pf) dt)
+(defmethod cl-user::call-with-contents ((self pf) fn)
+  (declare (ignore fn))
   (let ((*camera-x* 0.0)
         (*camera-y* 0.0))
-    (with-struct (pf- root started player) self
-      (unless started
-        (setf started t)
-        (on-enter root))
-      (set-state player (update-state player self dt))
-      (move-player self dt)
-      (move-camera self dt)
-      (visit root))))
+    (call-next-method)))
+
+(defmethod cl-user::step-contents ((self pf) dt)
+  (with-struct (pf- root started player) self
+    (unless started
+      (setf started t)
+      (on-enter root))
+    (set-state player (update-state player self dt))
+    (move-player self dt)
+    (move-camera self dt)
+    (visit root)))
 
 (defmethod cl-user::handle-event ((self pf) event)
   (let ((info (cdr event)) (keys (pf-keys self)))

@@ -6,6 +6,11 @@
 (defgeneric step-contents (contents dt)
   (:method (contents dt) (declare (ignorable contents dt))))
 
+(defgeneric call-with-contents (contents fn)
+  (:method (contents fn)
+    (declare (ignore contents))
+    (funcall fn)))
+
 (defgeneric mount-contents (contents display)
   (:method (contents (display xmas.display:display))
     (let ((scratch-matrix (xmas.display:display-scratch-matrix display))
@@ -21,18 +26,24 @@
                (let ((xmas.matrix:*tmp-matrix* scratch-matrix)
                      (xmas.texture:*texture-manager* texture-manager)
                      (xmas.action-manager:*action-manager* action-manager)
-                     (xmas.animation-manager:*animation-manager* animation-manager))
-                 (xmas.render-buffer::with-writes-to-render-buffer
-                     ((xmas.display:display-renderbuffer display))
-                   (xmas.action-manager:update-actions action-manager dt)
-                   (step-contents contents dt))))
+                     (xmas.animation-manager:*animation-manager* animation-manager)
+                     (loop-body
+                        (lambda ()
+                          (xmas.render-buffer::with-writes-to-render-buffer
+                              ((xmas.display:display-renderbuffer display))
+                            (xmas.action-manager:update-actions action-manager dt)
+                            (step-contents contents dt)))))
+                 (declare (dynamic-extent loop-body))
+                 (call-with-contents contents loop-body)))
              :event-handler
              (lambda (event)
                (let ((xmas.matrix:*tmp-matrix* scratch-matrix)
                      (xmas.texture:*texture-manager* texture-manager)
                      (xmas.action-manager:*action-manager* action-manager)
                      (xmas.animation-manager:*animation-manager* animation-manager))
-                 (handle-event contents event))))))))
+                 (let ((handler (lambda () (handle-event contents event))))
+                   (declare (dynamic-extent handler))
+                   (call-with-contents contents handler)))))))))
 
 (defgeneric unmount-contents (contents display)
   (:method (contents (display xmas.display:display))
@@ -100,11 +111,16 @@
   (let ((xmas.matrix:*tmp-matrix* (xmas.display:display-scratch-matrix display))
         (xmas.texture:*texture-manager* (xmas.display:display-texture-manager display))
         (xmas.action-manager:*action-manager* (xmas.display:display-action-manager display))
-        (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager display)))
-    (contents-will-unmount (xmas.display:contents display) display)
-    (unmount-contents (xmas.display:contents display) display))
+        (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager display))
+        (contents (xmas.display:contents display)))
+    (call-with-contents
+     contents
+     (lambda ()
+       (contents-will-unmount contents display)
+       (unmount-contents contents display))))
   (setf (xmas.display:native-view display) nil
         (xmas.display:native-window display) nil))
+
 
 (defclass my-window (ns:ns-window)
   ((display :accessor display))
@@ -272,8 +288,11 @@
               (xmas.texture:*texture-manager* (xmas.display:display-texture-manager result))
               (xmas.action-manager:*action-manager* (xmas.display:display-action-manager result))
               (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager result)))
-          (contents-will-mount contents result)
-          (mount-contents contents result))
+          (call-with-contents
+           contents
+           (lambda ()
+             (contents-will-mount contents result)
+             (mount-contents contents result))))
         (#/setLevel: w 100)
         (#/makeFirstResponder: w glview)
         (#/makeKeyAndOrderFront: w nil)))
