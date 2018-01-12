@@ -635,7 +635,7 @@
   (declare (ignore display))
   (setf (test17-root self) (make-instance 'xmas.node:node))
   (let (nodes)
-    (loop repeat 10 do
+    (loop repeat 20 do
          (let ((n (make-instance 'xmas.node:node
                                  :x (random 500)
                                  :y (random 500))))
@@ -651,6 +651,13 @@
   (xmas.qtree:qtree-reset (test17-qtree self) :x 250 :y 250 :width 500 :height 500)
   (dolist (node (test17-nodes self))
     (xmas.qtree:qtree-add (test17-qtree self) node))
+  (xmas.render-buffer::set-color 1.0 1.0 1.0 0.1)
+  (xmas.qtree:qtree-map-nodes
+   (test17-qtree self)
+   (lambda (x y w h items)
+     (declare (ignore items))
+     (xmas.render-buffer::draw-rect
+      (- x (/ w 2.0)) (- y (/ h 2.0)) (- w 4.0) (- h 4.0))))
   (visit (test17-root self)))
 
 (cl-user::display-contents (make-test17) :width 500 :height 500)

@@ -2,7 +2,8 @@
             (:export
              #:qtree
              #:qtree-reset
-             #:qtree-add))
+             #:qtree-add
+             #:qtree-map-nodes))
 (in-package xmas.qtree)
 
 (defstruct qtree
@@ -155,3 +156,20 @@
  
 (defun qtree-add (qtree item)
   (add-to-node qtree (qtree-root qtree) item))
+
+
+(defun qtree-map-nodes (qtree fn)
+  (labels
+      ((map-node (node)
+         (when node
+           (funcall fn
+                    (qtree-node-x node)
+                    (qtree-node-y node)
+                    (qtree-node-width node)
+                    (qtree-node-height node)
+                    (qtree-node-items node))
+           (map-node (qtree-node-ul node))
+           (map-node (qtree-node-ll node))
+           (map-node (qtree-node-ur node))
+           (map-node (qtree-node-lr node)))))
+    (map-node (qtree-root qtree))))
