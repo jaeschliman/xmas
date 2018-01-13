@@ -29,8 +29,8 @@
 
 (defun draw-bouncing-box (box)
   (with-slots (x y r g b a) box
-    (set-color r g b a)
-    (draw-rect x y 20 20)))
+    (xmas.render-buffer::set-color r g b a)
+    (xmas.render-buffer::draw-rect x y 20 20)))
 
 (defstruct test3
   (boxes (loop repeat 4000 collect (make-bouncy-box)))
@@ -119,13 +119,14 @@
           ((> y maxy) (setf y maxy dy (* -1 dy))))))
 
 (defun draw-sprite (sprite)
-  (push-matrix)
-  (translate-scale-rotate (sprite-x sprite) (sprite-y sprite)
-                          (sprite-sx sprite) (sprite-sy sprite)
-                          (sprite-r sprite))
-  (set-color 1.0 1.0 1.0 1.0)
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::translate-scale-rotate
+   (sprite-x sprite) (sprite-y sprite)
+   (sprite-sx sprite) (sprite-sy sprite)
+   (sprite-r sprite))
+  (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
   (xmas.draw:draw-texture (sprite-texture sprite))
-  (pop-matrix))
+  (xmas.render-buffer::pop-matrix))
 
 (defstruct test5
   width
@@ -191,13 +192,13 @@
   (let ((xmas.matrix:*tmp-matrix* (test6-scratch-matrix self)))
     (xmas.matrix:into-matrix ((test6-matrix self))
       (xmas.matrix:rotate (* 40 dt))))
-  (set-color 0.0 1.0 0.0 0.5)
-  (draw-rect 10.0 10.0 20.0 20.0)
-  (push-matrix)
-  (mult-matrix (xmas.matrix:unwrap-matrix (test6-matrix self)))
-  (draw-rect 10.0 10.0 20.0 20.0)
-  (draw-rect 30.0 30.0 20.0 20.0)
-  (pop-matrix))
+  (xmas.render-buffer::set-color 0.0 1.0 0.0 0.5)
+  (xmas.render-buffer::draw-rect 10.0 10.0 20.0 20.0)
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::mult-matrix (xmas.matrix:unwrap-matrix (test6-matrix self)))
+  (xmas.render-buffer::draw-rect 10.0 10.0 20.0 20.0)
+  (xmas.render-buffer::draw-rect 30.0 30.0 20.0 20.0)
+  (xmas.render-buffer::pop-matrix))
 
 (deftest matrix-translation ()
   (cl-user::display-contents (make-test6)))
@@ -301,7 +302,7 @@
       (incf r (* dt 100))
       (setf r (mod r 360))
       (setf (xmas.node:rotation node) r)))
-  (set-color 0.0 1.0 1.0 0.4)
+  (xmas.render-buffer::set-color 0.0 1.0 1.0 0.4)
   (visit (test7-root-node self)))
 
 (deftest visit-and-draw-many-nodes ()
@@ -454,12 +455,12 @@
 
 (defmethod cl-user::step-contents ((self test10) dt)
   (declare (ignore dt))
-  (push-matrix)
+  (xmas.render-buffer::push-matrix)
   (xmas.draw:draw-texture-frame (test10-a self) 125.0 125.0)
   (xmas.draw:draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
   (xmas.draw:draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
   (xmas.draw:draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
-  (pop-matrix))
+  (xmas.render-buffer::pop-matrix))
 
 (deftest texture-frame-test ()
   (cl-user::display-contents (make-test10) :width 500 :height 500))

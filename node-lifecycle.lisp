@@ -59,8 +59,8 @@
     ;;remove from parent but don't clean up if we are reparenting
     (remove-child child-parent child) nil)
   (vector-push-extend child (children parent))
-  (stable-sort (children parent) #'< :key #'z-order)
-  (setf (parent child) parent)
+  (setf (children parent) (stable-sort (children parent) #'< :key #'z-order)
+        (parent child) parent)
   (mark-as-dirty child)
   (when (and (running parent) (not (running child)))
     (on-enter child)))
