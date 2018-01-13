@@ -149,17 +149,16 @@
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
 
-(defun top-for-tile (sprite tile x y dt)
+(defun top-for-tile (sprite tile x y prev-y dt)
   (case (tile-shape tile)
     (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
     (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
     (block (* 32.0 (+ 1.0 (floor y 32.0))))
     (platform
      (let* ((top (* 32.0 (+ 1.0 (floor y 32.0))))
-            (vel (velocity-y sprite))
-            (prev-y (+ y (* -1.0 dt vel))))
+            (vel (velocity-y sprite)))
        (cond
-         ((and (< vel 0.0)
+         ((and (<= vel 0.0)
                (>= prev-y top)
                (<= y top))
           top)
@@ -185,7 +184,7 @@
     (platform x)
     (block (* 32.0 (1+ (floor x 32.0))))))
 
-(defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite dt)
+(defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite prev-y dt)
   (with-struct (pf- tmx tile-table) pf
     (let ((y (bottom sprite)) (hit nil))
       (labels
@@ -195,7 +194,7 @@
                (unless (null (tile-material tile))
                  ;; TODO: should really return a second value indicating whether
                  ;;       a hit was detected.
-                 (let ((new-y (top-for-tile sprite tile x y dt)))
+                 (let ((new-y (top-for-tile sprite tile x y prev-y dt)))
                    (unless (= new-y y)
                      (maxf y new-y)
                      (setf hit tile))))))
@@ -295,11 +294,12 @@
     (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
     (clampf (velocity-x sprite) -1000 1000)
 
-    (incf (y sprite) (* dt (velocity-y sprite)))
-    (setf standing-on 
-          (if (> (velocity-y sprite) 0)
-              (prog1 nil (move-sprite-down-if-hitting-tiles-on-top pf sprite dt))
-              (move-sprite-up-if-hitting-tiles-on-bottom pf sprite dt)))
+    (let ((prev-bottom (bottom sprite)))
+      (incf (y sprite) (* dt (velocity-y sprite)))
+      (setf standing-on 
+            (if (> (velocity-y sprite) 0)
+                (prog1 nil (move-sprite-down-if-hitting-tiles-on-top pf sprite dt))
+                (move-sprite-up-if-hitting-tiles-on-bottom pf sprite prev-bottom dt))))
     (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
     (clampf (velocity-y sprite) -1000 1000)
     standing-on))

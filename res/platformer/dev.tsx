@@ -44,10 +44,22 @@
    <property name="shape" value="platform"/>
   </properties>
  </tile>
+ <tile id="7">
+  <properties>
+   <property name="material" value="grass"/>
+   <property name="shape" value="platform"/>
+  </properties>
+ </tile>
  <tile id="8">
   <properties>
    <property name="material" value="ice"/>
    <property name="shape" value="block"/>
+  </properties>
+ </tile>
+ <tile id="15">
+  <properties>
+   <property name="material" value="grass"/>
+   <property name="shape" value="platform"/>
   </properties>
  </tile>
  <tile id="63">

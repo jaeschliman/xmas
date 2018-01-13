@@ -4,7 +4,7 @@
  <tileset firstgid="65" source="dev-objects.tsx"/>
  <layer name="Tile Layer 1" width="150" height="20">
   <data encoding="base64" compression="zlib">
-   eJztmN0OgjAMRpmixgvl/d9WSFhCEFjbtfv9TvIlXOjYxmHrGAYAdHG5OwCaBF4BC+AVsABeAQvgVfu8idHEDXAL/DNG/h9eAQvgFbhCum714JXbJfQbEE8Pc9n6+PZYjJe7bpXk1WPO8yCvnJ0CIkry6jPne5DJ4F6UvbE2ShpHSfOa0qtcUL8lpfzWxIWyJ2p4dVvbuEe2U7NXOdc+yllEkvEi1DakeKd8uG4tNZWvn6y84oxVMiea89kS0nnYOyVxa3Fp2lzXtl5ZvKuce5eMpH9nToX88me+7RpVq1eW+0ALcMdPcerMLe/O1iULr6yfK6dO6ZVQ3RZb/3GjcV5K3WfNUJ+PRtuW/ACKigZG
+   eJztmN0OwiAMRplOpxe6vf/TOpKRNGSTUtpRWE/yJbtQBHYsP84ZBi9D7Q4YXWJeGRKYV4YE5pUhgUavHmueW6bKfemBNzKcDE6fW5813y1z5b5clbHw++aVIYFmr17O1sPaUOuWZq+46tYQJfUZoxyNcynh1ZWQGG9u3dLkFTwHwizO9lmtockrWJ9gZsfvFWZtbA1N49A0r2d6VQvsXdKZd025YNZEDq9uWxv3wnZa9qpm7cOcRSgZ/wTbBpXgVEiuW35PFe4Q9u4XYKh3DTljpcwJ53z2BHUeYqcobnmXZvAcnwPjuqUNif9qzm9rhtK/I6dSfoUzH6xRrXoluQ70QBh/WG/2gOsRxqkjt4Iz0CX/DO8YFlfulfR7zdmnXJXUvs0/Q69K94OpcJyXpPsoGez74Whbkh/hCghM
   </data>
  </layer>
  <objectgroup name="Object Layer 1">
