@@ -22,6 +22,10 @@
 
 (defvar *camera-x*)
 (defvar *camera-y*)
+(defvar *last-player-top*)
+(defvar *last-player-left*)
+(defvar *last-player-right*)
+(defvar *last-player-bottom*)
 
 (defstruct tile
   shape
@@ -79,6 +83,21 @@
 (defclass belongs-to-game-object ()
   ((game-object :accessor game-object)))
 
+(defclass game-sprite (sprite belongs-to-game-object)
+  ())
+
+(defclass jewel (game-sprite)
+  ())
+
+(defclass cat (game-sprite)
+  ())
+
+(defmethod player-collision (player (jewel jewel))
+  (declare (ignore player))
+  (let ((object (game-object jewel)))
+    (remove-from-parent jewel)
+    (setf (sprite object) nil)))
+
 (defstruct game-object-manager
   sprite-node
   (objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
@@ -135,13 +154,14 @@
 (defun update-object-manager (pf dt)
   (declare (ignorable dt))
   (with-struct (pf- player object-manager) pf
-    (with-struct (game-object-manager- awake-objects object-qtree) object-manager
-      (let* ((x (x player))
-             (y (y player))
-             (left (- x 100))
-             (bottom (- y 100))
-             (right (+ x 100))
-             (top (+ y 100))
+    (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree) object-manager
+      (let* ((outset 300.0)
+             (x *camera-x*)
+             (y *camera-y*)
+             (left (- x outset))
+             (bottom (- y outset))
+             (right (+ x outset))
+             (top (+ y outset))
              (wake (lambda (object) (wake object object-manager))))
         (declare (dynamic-extent wake))
         (qtree-query-collisions object-qtree left bottom right top wake)
@@ -150,7 +170,26 @@
              (when (should-sleep? object object-manager left bottom right top)
                (push object sleepers))
            finally
-             (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))))))
+             (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))
+        (qtree-reset sprite-qtree
+                     :x x :y y
+                     :width (* 2.0 outset) :height (* 2.0 outset))
+        (loop for object across awake-objects do
+             (when-let (s (sprite object))
+               (qtree-add sprite-qtree s)))))))
+
+(defgeneric player-collision (player object)
+  (:method (player object)
+    (declare (ignore player object))))
+
+(defun collide-player-with-objects (pf dt)
+  (declare (ignorable dt))
+  (with-struct (pf- player object-manager) pf
+    (with-struct (game-object-manager- sprite-qtree) object-manager
+      (flet ((collide (object) (player-collision player object)))
+        (qtree-query-collisions
+         sprite-qtree (left player) (bottom player) (right player) (top player)
+         #'collide)))))
 
 (defgeneric leave-state (object state next-state))
 (defgeneric enter-state (object state prev-state))
@@ -538,6 +577,10 @@
          (fall-gravity -1200.0)
          (hz-max-vel 200.0))
     (with-struct (pf- player tmx keys) pf
+      (setf *last-player-top* (top player))
+      (setf *last-player-left* (left player))
+      (setf *last-player-bottom* (bottom player))
+      (setf *last-player-right* (right player))
       (flet ((key-down (key) (gethash key keys))
              (key-up   (key) (null (gethash key keys))))
 
@@ -629,11 +672,14 @@
                       (jewel "jewel.png")
                       (cat "throwcat.png")))
               (frame (get-frame path)))
-    (apply #'make-instance 'sprite :sprite-frame frame initargs)))
+    (apply #'make-instance type :sprite-frame frame initargs)))
 
 (defun make-game-object-from-object-info (type initargs)
   (when-let (sprite (make-node-from-object-info type initargs))
-    (make-instance 'game-object :sprite sprite :x (getf initargs :x) :y (getf initargs :y))))
+    (let ((obj (make-instance 'game-object
+                :sprite sprite :x (getf initargs :x) :y (getf initargs :y))))
+      (setf (game-object sprite) obj)
+      obj)))
 
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
@@ -684,7 +730,11 @@
 
 (defmethod cl-user::runloop-bindings-alist ((self pf))
   `((*camera-x* . 250.0)
-    (*camera-y* . 250.0)))
+    (*camera-y* . 250.0)
+    (*last-player-top* . 0.0)
+    (*last-player-left* . 0.0)
+    (*last-player-right* . 0.0)
+    (*last-player-bottom* . 0.0)))
 
 (defmethod cl-user::step-contents ((self pf) dt)
   (with-struct (pf- root started player object-manager) self
@@ -694,6 +744,7 @@
     (set-state player (update-state player self dt))
     (move-player self dt)
     (update-object-manager self dt)
+    (collide-player-with-objects self dt)
     (move-camera self dt)
     (visit root)))
 
