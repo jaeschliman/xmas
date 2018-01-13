@@ -1,4 +1,4 @@
-(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager))
+(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree))
 (in-package :xmas.platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -51,7 +51,7 @@
 (defclass image (node)
   ((texture :accessor texture :initarg :texture)))
 
-(defclass physics-sprite (sprite)
+(defclass physics ()
   ((velocity-x :accessor velocity-x :initarg :velocity-x)
    (velocity-y :accessor velocity-y :initarg :velocity-y)
    (acceleration-x :accessor acceleration-x :initarg :acceleration-x)
@@ -60,12 +60,97 @@
    :velocity-x 0.0 :velocity-y 0.0
    :acceleration-x 0.0 :acceleration-y 0.0))
 
-(defclass player (physics-sprite)
+(defclass player (physics sprite)
   ((can-jump :accessor can-jump :initform nil)
    (jump-power :accessor jump-power :initform 100.0)
    (jumping :accessor jumping :initform nil)
    (standing-on :accessor standing-on :initform nil)
    (state :accessor state :initform nil :initarg :state)))
+
+(defclass game-object ()
+  ((x :reader x :initarg :x) ;; immutable
+   (y :reader y :initarg :y) ;; immutable
+   (sprite :accessor sprite :initarg :sprite)
+   (sleeping :accessor sleeping :initform t)))
+
+(defmethod width  ((self game-object)) 0.0)
+(defmethod height ((self game-object)) 0.0)
+
+(defclass belongs-to-game-object ()
+  ((game-object :accessor game-object)))
+
+(defstruct game-object-manager
+  sprite-node
+  (objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
+  (awake-objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
+  (object-qtree (qtree))
+  (sprite-qtree (qtree)))
+
+(defmethod wake ((object game-object) manager)
+  (setf (sleeping object) nil)
+  (with-struct (game-object-manager- awake-objects sprite-node) manager
+    (vector-push-extend object awake-objects)
+    (when-let (sprite (sprite object))
+      (add-child sprite-node sprite))))
+
+(defmethod wake :around ((object game-object) manager)
+  (declare (ignore manager))
+  (when (sleeping object)
+    (call-next-method)))
+
+(defmethod to-sleep ((object game-object) manager)
+  (setf (sleeping object) t)
+  (with-struct (game-object-manager- awake-objects) manager
+    (setf awake-objects (delete object awake-objects))
+    (when-let (sprite (sprite object))
+      (remove-from-parent sprite))))
+
+(defmethod to-sleep :around ((object game-object) manager)
+  (declare (ignore manager))
+  (unless (sleeping object)
+    (call-next-method)))
+
+(defun game-object-manager-set-active-area (manager x y w h)
+  (with-struct (game-object-manager- object-qtree) manager
+      (qtree-reset object-qtree :x x :y y :width w :height h)))
+  
+(defun game-object-manager-add-object (manager object)
+  (with-struct (game-object-manager- objects object-qtree) manager
+    (vector-push-extend object objects)
+    (qtree-add object-qtree object)))
+
+(defun should-sleep? (object manager left bottom right top)
+  (declare (ignorable manager))
+  (flet ((outside (obj) (or
+                         (> (left obj) right)
+                         (> (bottom obj) top)
+                         (< (top obj) bottom)
+                         (< (right obj) left))))
+    (when (outside object)
+      (if-let (sprite (sprite object))
+        (when (outside sprite)
+          t)
+        t))))
+
+(defun update-object-manager (pf dt)
+  (declare (ignorable dt))
+  (with-struct (pf- player object-manager) pf
+    (with-struct (game-object-manager- awake-objects object-qtree) object-manager
+      (let* ((x (x player))
+             (y (y player))
+             (left (- x 100))
+             (bottom (- y 100))
+             (right (+ x 100))
+             (top (+ y 100))
+             (wake (lambda (object) (wake object object-manager))))
+        (declare (dynamic-extent wake))
+        (qtree-query-collisions object-qtree left bottom right top wake)
+        (loop with sleepers = nil
+           for object across awake-objects do
+             (when (should-sleep? object object-manager left bottom right top)
+               (push object sleepers))
+           finally
+             (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))))))
 
 (defgeneric leave-state (object state next-state))
 (defgeneric enter-state (object state prev-state))
@@ -141,6 +226,7 @@
   tmx-node
   tile-table
   background
+  object-manager
   )
 
 (defun tile-at-point (tmx x y)
@@ -545,15 +631,21 @@
               (frame (get-frame path)))
     (apply #'make-instance 'sprite :sprite-frame frame initargs)))
 
+(defun make-game-object-from-object-info (type initargs)
+  (when-let (sprite (make-node-from-object-info type initargs))
+    (make-instance 'game-object :sprite sprite :x (getf initargs :x) :y (getf initargs :y))))
+
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
-  (with-struct (pf- root tmx tmx-node player tile-table background) self
+  (with-struct (pf- root tmx tmx-node player
+                    tile-table background object-manager)
+      self
     (texture-packer-add-frames-from-file "./res/test.json")
     (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
     (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
-    (let* ((frame  (get-frame "pickle.png"))
-           (objects nil))
+    (let* ((frame  (get-frame "pickle.png")))
       (setf root (make-instance 'node)
+            object-manager (make-game-object-manager :sprite-node root)
             background (make-instance 'image :x 250 :y 250
                                       :texture (get-texture "./res/platformer/sky.png"))
             tmx (xmas.tmx-renderer:tmx-renderer-from-file
@@ -566,6 +658,11 @@
                                   :sprite-frame frame
                                   :state 'standing)
             tile-table (tile-lookup-table-from-tmx-renderer tmx))
+      (let* ((width (xmas.tmx-renderer:tmx-renderer-width tmx))
+             (height (xmas.tmx-renderer:tmx-renderer-height tmx))
+             (x (/ width 2.0))
+             (y (/ height 2.0)))
+        (game-object-manager-set-active-area object-manager x y width height))
       (let* ((map (xmas.tmx-renderer:tmx-renderer-map tmx))
              (layers (xmas.tmx-reader:map-layers map))
              (objects-layer (find :objects layers :key 'xmas.tmx-reader:layer-type))
@@ -574,17 +671,15 @@
           (let* ((tile (aref tile-table (getf plist :gid)))
                  (type (tile-type tile))
                  (initargs (rest (rest plist))))
-            (when-let (object (make-node-from-object-info type initargs))
+            (when-let (object (make-game-object-from-object-info type initargs))
               (format t "built object for type: ~S ~A ~A ~%" type object (getf initargs :y))
-              (push object objects)))))
+              (game-object-manager-add-object object-manager object)))))
       (setf (bottom player) 32.0)
       ;;should have a 'move-player-to-ground' function
       (setf (standing-on player)
             (update-sprite-physics self player (/ 1.0 60.0)))
       (add-child root background)
       (add-child root tmx-node)
-      (dolist (sprite objects)
-        (add-child root sprite))
       (add-child root player))))
 
 
@@ -595,12 +690,13 @@
     (call-next-method)))
 
 (defmethod cl-user::step-contents ((self pf) dt)
-  (with-struct (pf- root started player) self
+  (with-struct (pf- root started player object-manager) self
     (unless started
       (setf started t)
       (on-enter root))
     (set-state player (update-state player self dt))
     (move-player self dt)
+    (update-object-manager self dt)
     (move-camera self dt)
     (visit root)))
 
