@@ -37,5 +37,6 @@
   (load "./scratch-ccl.lisp") ;; really should be called "runtime-ccl"
   (load "./tmx-reader.lisp")
   (load "./tmx-renderer.lisp")
+  (load "./qtree.lisp")
   )
 
