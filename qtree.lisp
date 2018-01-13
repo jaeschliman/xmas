@@ -12,7 +12,8 @@
   x y
   width
   height
-  pool
+  (pool (make-array 256 :element-type t :adjustable t :fill-pointer 0))
+  (pool-index 0)
   (items-pool (make-array 256 :element-type t :adjustable t :fill-pointer 0))
   (items-index 0))
 
@@ -23,49 +24,39 @@
   split)
 
 (defun alloc-items (qtree)
-  (let ((pool (qtree-items-pool qtree)))
+  (let* ((pool (qtree-items-pool qtree))
+         (items nil))
     (cond
       ((< (qtree-items-index qtree) (length pool))
-       (prog1 (aref pool (qtree-items-index qtree))
-         (incf (qtree-items-index qtree))))
+       (setf items (aref pool (qtree-items-index qtree))
+             (fill-pointer items) 0))
       (t
-       (let ((items (make-array 5 :element-type t :adjustable t :fill-pointer 0)))
-         (vector-push-extend items pool)
-         (incf (qtree-items-index qtree))
-         items)))))
-
-(defun free-items (qtree items)
-  (declare (ignore qtree))
-  (setf (fill-pointer items) 0))
+       (setf items (make-array 5 :element-type t :adjustable t :fill-pointer 0))
+       (vector-push-extend items pool)))
+    (incf (qtree-items-index qtree))
+    items))
 
 (defun alloc-node (qtree &key x y width height)
-  (if-let (node (pop (qtree-pool qtree)))
-    (prog1 node
-      (setf
-       (qtree-node-x node) x
-       (qtree-node-y node) y
-       (qtree-node-width node) width
-       (qtree-node-height node) height
-       (qtree-node-items node) (alloc-items qtree)))
-    (make-qtree-node :x x :y y :width width :height height
-                     :items (alloc-items qtree))))
-
-(defun free-node (qtree node)
-  (when node
-    (free-node qtree (qtree-node-ul node))
-    (free-node qtree (qtree-node-ll node))
-    (free-node qtree (qtree-node-ur node))
-    (free-node qtree (qtree-node-lr node))   
-    (free-items qtree (qtree-node-items node))
-    (setf
-     (qtree-node-ul node) nil
-     (qtree-node-ll node) nil
-     (qtree-node-ur node) nil
-     (qtree-node-lr node) nil
-     (qtree-node-split node) nil
-     (qtree-node-items node) nil)
-    ;;TODO: should not cons
-    (push node (qtree-pool qtree))))
+  (let ((pool (qtree-pool qtree))
+        (node nil))
+    (cond ((< (qtree-pool-index qtree) (length pool))
+           (setf
+            node (aref pool (qtree-pool-index qtree))
+            (qtree-node-ul node) nil
+            (qtree-node-ll node) nil
+            (qtree-node-ur node) nil
+            (qtree-node-lr node) nil
+            (qtree-node-x node) x
+            (qtree-node-y node) y
+            (qtree-node-width node) width
+            (qtree-node-height node) height
+            (qtree-node-items node) (alloc-items qtree)))
+          (t
+           (setf node (make-qtree-node :x x :y y :width width :height height
+                                        :items (alloc-items qtree)))
+           (vector-push-extend node (qtree-pool qtree))))
+    (incf (qtree-pool-index qtree))
+    node))
 
 (defun ensure-child-node (qtree node which)
   (let ((x (qtree-node-x node))
@@ -107,8 +98,7 @@
     (setf (qtree-node-items node) (alloc-items qtree)
           (qtree-node-split node) t)
     (loop for item across items do (add-to-node qtree node item))
-    (add-to-node qtree node item)
-    (free-items qtree items)))
+    (add-to-node qtree node item)))
 
 (defun add-to-node (qtree node item)
   (let ((items (qtree-node-items node))
@@ -150,14 +140,12 @@
       (setf (qtree-root result) (alloc-node result :x 0 :y 0 :width 0 :height 0)))))
 
 (defun qtree-reset (qtree &key x y width height)
-  (when-let ((root (qtree-root qtree)))
-    (free-node qtree root))
   (setf (qtree-items-index qtree) 0)
+  (setf (qtree-pool-index qtree) 0)
   (setf (qtree-root qtree) (alloc-node qtree :x x :y y :width width :height height)))
  
 (defun qtree-add (qtree item)
   (add-to-node qtree (qtree-root qtree) item))
-
 
 (defun qtree-map-nodes (qtree fn)
   (labels
@@ -182,18 +170,18 @@
            (let* ((x (qtree-node-x node))
                   (y (qtree-node-y node))
                   (w2 (/ (qtree-node-width node) 2.0))
-                  (h2 (/ (qtree-node-height node) 2.0))
-                  (-left (- x w2))
-                  (-right (+ x w2))
-                  (-top (+ y h2))
-                  (-bottom (- y h2)))
-             (unless (or (> left -right)
-                         (> bottom -top)
-                         (< right -left)
-                         (< top -bottom))
-               (map nil fn (qtree-node-items node))
-               (query (qtree-node-ul node))
-               (query (qtree-node-ll node))
-               (query (qtree-node-ur node))
-               (query (qtree-node-lr node)))))))
+                  (h2 (/ (qtree-node-height node) 2.0)))
+             (symbol-macrolet ((-left (- x w2))
+                               (-right (+ x w2))
+                               (-top (+ y h2))
+                               (-bottom (- y h2)))
+               (unless (or (> left -right)
+                           (> bottom -top)
+                           (< right -left)
+                           (< top -bottom))
+                 (map nil fn (qtree-node-items node))
+                 (query (qtree-node-ul node))
+                 (query (qtree-node-ll node))
+                 (query (qtree-node-ur node))
+                 (query (qtree-node-lr node))))))))
     (query (qtree-root qtree))))

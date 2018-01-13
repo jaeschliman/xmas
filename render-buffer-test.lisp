@@ -1,5 +1,14 @@
-(defpackage :xmas.render-buffer-tests)
+(defpackage :xmas.render-buffer-tests (:use :cl :alexandria))
 (in-package :xmas.render-buffer-tests)
+
+(defmacro with-struct ((prefix &rest slots) var &body body)
+  (once-only (var)
+    `(symbol-macrolet
+         ,(loop for slot in slots collect
+               (list slot (list (symbolicate prefix slot) var)))
+       ,@body)))
+
+(define-modify-macro clampf (min max) clamp)
 
 (defvar *tests* (make-hash-table :test 'equal))
 
@@ -645,6 +654,10 @@
 (deftest animation ()
   (cl-user::display-contents (make-test16) :width 500 :height 500))
 
+(defclass box (rect)
+  ((vx :accessor box-vx :initarg :vx)
+   (vy :accessor box-vy :initarg :vy)))
+
 (defstruct test17
   root started nodes
   (qtree (xmas.qtree:qtree))
@@ -656,12 +669,14 @@
   (setf (test17-root self) (make-instance 'xmas.node:node))
   (let (nodes)
     (loop repeat 100 do
-         (let ((n (make-instance 'rect
+         (let ((n (make-instance 'box
                                  :width 20
                                  :height 20
                                  :opacity 0.5
                                  :x (random 500)
-                                 :y (random 500))))
+                                 :y (random 500)
+                                 :vx (- (/ (random 100) 100.0) 0.5)
+                                 :vy (- (/ (random 100) 100.0) 0.5))))
            (xmas.node:add-child (test17-root self) n)
            (push n nodes)))
     (setf (test17-nodes self) nodes)))
@@ -672,13 +687,20 @@
                                  5.0 5.0))
 
 (defmethod cl-user::step-contents ((self test17) dt)
-  (declare (ignorable dt))
   (unless (test17-started self)
     (setf (test17-started self) t)
     (xmas.node:on-enter (test17-root self)))
   (xmas.qtree:qtree-reset (test17-qtree self) :x 250 :y 250 :width 500 :height 500)
-  (dolist (node (test17-nodes self))
-    (xmas.qtree:qtree-add (test17-qtree self) node))
+  (dolist (box (test17-nodes self))
+    (incf (xmas.node:x box) (* 100 dt (box-vx box)))
+    (incf (xmas.node:y box) (* 100 dt (box-vy box)))
+    (when (or (< (xmas.node:x box) 0.0) (> (xmas.node:x box) 500.0))
+      (setf (box-vx box) (* -1.0 (box-vx box)))
+      (clampf (xmas.node:x box) 0.0 500.0))
+    (when (or (< (xmas.node:y box) 0.0) (> (xmas.node:y box) 500.0))
+      (setf (box-vy box) (* -1.0 (box-vy box)))
+      (clampf (xmas.node:y box) 0.0 500.0))
+    (xmas.qtree:qtree-add (test17-qtree self) box))
   (xmas.render-buffer::set-color 1.0 1.0 1.0 0.1)
   (xmas.qtree:qtree-map-nodes
    (test17-qtree self)
