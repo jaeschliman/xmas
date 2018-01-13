@@ -3,7 +3,8 @@
              #:qtree
              #:qtree-reset
              #:qtree-add
-             #:qtree-map-nodes))
+             #:qtree-map-nodes
+             #:qtree-query))
 (in-package xmas.qtree)
 
 (defstruct qtree
@@ -173,3 +174,26 @@
            (map-node (qtree-node-ur node))
            (map-node (qtree-node-lr node)))))
     (map-node (qtree-root qtree))))
+
+(defun qtree-query (qtree left bottom right top fn)
+  (labels
+      ((query (node)
+         (when node
+           (let* ((x (qtree-node-x node))
+                  (y (qtree-node-y node))
+                  (w2 (/ (qtree-node-width node) 2.0))
+                  (h2 (/ (qtree-node-height node) 2.0))
+                  (-left (- x w2))
+                  (-right (+ x w2))
+                  (-top (+ y h2))
+                  (-bottom (- y h2)))
+             (unless (or (> left -right)
+                         (> bottom -top)
+                         (< right -left)
+                         (< top -bottom))
+               (map nil fn (qtree-node-items node))
+               (query (qtree-node-ul node))
+               (query (qtree-node-ll node))
+               (query (qtree-node-ur node))
+               (query (qtree-node-lr node)))))))
+    (query (qtree-root qtree))))

@@ -655,7 +655,7 @@
   (declare (ignore display))
   (setf (test17-root self) (make-instance 'xmas.node:node))
   (let (nodes)
-    (loop repeat 20 do
+    (loop repeat 100 do
          (let ((n (make-instance 'rect
                                  :width 20
                                  :height 20
@@ -665,6 +665,11 @@
            (xmas.node:add-child (test17-root self) n)
            (push n nodes)))
     (setf (test17-nodes self) nodes)))
+
+(defun draw-marker (rect)
+  (xmas.render-buffer::draw-rect (xmas.node:x rect)
+                                 (xmas.node:y rect)
+                                 5.0 5.0))
 
 (defmethod cl-user::step-contents ((self test17) dt)
   (declare (ignorable dt))
@@ -685,7 +690,14 @@
   (xmas.render-buffer::set-color 1.0 0.0 0.0 1)
   (xmas.render-buffer::draw-rect (test17-mouse-x self)
                                  (test17-mouse-y self)
-                                 5.0 5.0))
+                                 5.0 5.0)
+  (xmas.render-buffer::set-color 0.0 1.0 0.0 1)
+  (let ((x (test17-mouse-x self))
+        (y (test17-mouse-y self)))
+    (xmas.qtree:qtree-query (test17-qtree self)
+                            x y (+ x 5) (+ y 5)
+                            'draw-marker
+                            )))
 
 (defmethod cl-user::handle-event ((self test17) event)
   (when (eq (car event) :mousemove)
