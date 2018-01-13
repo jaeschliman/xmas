@@ -11,6 +11,11 @@
     (declare (ignore contents))
     (funcall fn)))
 
+(defgeneric runloop-bindings-alist (contents)
+  (:method (contents)
+    (declare (ignore contents))
+    nil))
+
 (defgeneric mount-contents (contents display)
   (:method (contents (display xmas.display:display))
     (let ((scratch-matrix (xmas.display:display-scratch-matrix display))
@@ -21,6 +26,7 @@
             (xmas.runloop:make-runloop
              :name "runloop"
              :step (xmas.display:display-fps display)
+             :bindings (runloop-bindings-alist contents)
              :function
              (lambda (dt)
                (let ((xmas.matrix:*tmp-matrix* scratch-matrix)

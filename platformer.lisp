@@ -682,12 +682,9 @@
       (add-child root tmx-node)
       (add-child root player))))
 
-
-(defmethod cl-user::call-with-contents ((self pf) fn)
-  (declare (ignore fn))
-  (let ((*camera-x* 0.0)
-        (*camera-y* 0.0))
-    (call-next-method)))
+(defmethod cl-user::runloop-bindings-alist ((self pf))
+  `((*camera-x* . 250.0)
+    (*camera-y* . 250.0)))
 
 (defmethod cl-user::step-contents ((self pf) dt)
   (with-struct (pf- root started player object-manager) self
