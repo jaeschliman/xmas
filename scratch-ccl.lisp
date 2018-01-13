@@ -300,13 +300,11 @@
                                 :action-manager (xmas.action-manager:make-manager)
                                 :animation-manager (xmas.animation-manager:make-manager)
                                 :preserve-aspect-ratio preserve-aspect-ratio))
-         (texture-manager (xmas.texture:make-texture-manager :display result))
-         (package *package*))
+         (texture-manager (xmas.texture:make-texture-manager :display result)))
     (setf (xmas.display:display-texture-manager result)
           texture-manager)
-    (progmain ()
-      (let* ((*package* package)
-             (w (gui::new-cocoa-window :class (find-class 'my-window)
+    (progmain (*package*)
+      (let* ((w (gui::new-cocoa-window :class (find-class 'my-window)
                                        :title title
                                        :width width
                                        :height height

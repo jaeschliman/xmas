@@ -3,9 +3,9 @@
 (require :cocoa)
 
 (defmacro progmain ((&rest bindings) &body b)
-  ;;eventually do something with bindings. get later.
-  (declare (ignorable bindings))
-  `(ccl::queue-for-event-process (lambda () ,@b )))
+  (let* ((save (mapcar (lambda (v) (list (gensym) v)) bindings))
+         (restore (mapcar 'reverse save)))
+    `(let ,save (ccl::queue-for-event-process (lambda () (let ,restore ,@b ))))))
 
 (ql:quickload :alexandria)
 (ql:quickload :queues.simple-cqueue)
