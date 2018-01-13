@@ -207,6 +207,23 @@
   (let ((c (xmas.node:color node)) (a (xmas.node:opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
+(defclass rect (xmas.node:node)
+  ((width :initarg :width)
+   (height :initarg :height)))
+
+(defmethod xmas.node:width ((self rect))
+  (slot-value self 'width))
+
+(defmethod xmas.node:height ((self rect))
+  (slot-value self 'height))
+
+(defmethod draw ((self rect))
+  (draw-node-color self)
+  (with-slots (width height) self
+    (xmas.render-buffer::draw-rect (- (/ width 2.0))
+                                   (- (/ height 2.0))
+                                   width height)))
+
 (defmethod draw ((self xmas.node:node))
   (draw-node-color self)
   (xmas.render-buffer::draw-rect -20.0 -20.0 40.0 40.0))
@@ -630,14 +647,19 @@
 
 (defstruct test17
   root started nodes
-  (qtree (xmas.qtree:qtree)))
+  (qtree (xmas.qtree:qtree))
+  (mouse-x 0.0)
+  (mouse-y 0.0))
 
 (defmethod cl-user::contents-will-mount ((self test17) display)
   (declare (ignore display))
   (setf (test17-root self) (make-instance 'xmas.node:node))
   (let (nodes)
     (loop repeat 20 do
-         (let ((n (make-instance 'xmas.node:node
+         (let ((n (make-instance 'rect
+                                 :width 20
+                                 :height 20
+                                 :opacity 0.5
                                  :x (random 500)
                                  :y (random 500))))
            (xmas.node:add-child (test17-root self) n)
@@ -659,6 +681,16 @@
      (declare (ignore items))
      (xmas.render-buffer::draw-rect
       (- x (/ w 2.0)) (- y (/ h 2.0)) (- w 4.0) (- h 4.0))))
-  (visit (test17-root self)))
+  (visit (test17-root self))
+  (xmas.render-buffer::set-color 1.0 0.0 0.0 1)
+  (xmas.render-buffer::draw-rect (test17-mouse-x self)
+                                 (test17-mouse-y self)
+                                 5.0 5.0))
+
+(defmethod cl-user::handle-event ((self test17) event)
+  (when (eq (car event) :mousemove)
+    (setf (test17-mouse-x self) (cadr event)
+          (test17-mouse-y self) (cddr event))))
 
 (cl-user::display-contents (make-test17) :width 500 :height 500)
+

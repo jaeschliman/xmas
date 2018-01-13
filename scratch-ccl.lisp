@@ -226,6 +226,9 @@
            (when (length s)
              (aref s 0))))))
 
+;;TODO: have some pooled event struct.
+;;      would require a queue back to the main thread to return events after use.
+
 (defun %enqueue-key-event (myview ns-event event)
   (let ((key (%translate-keycode ns-event))
         (runloop (xmas.display:display-runloop (my-view-display myview))))
@@ -237,6 +240,43 @@
 (objc:defmethod (#/keyUp: :void) ((self my-view) event)
   (%enqueue-key-event self event :keyup)
   (%enqueue-key-event self event :keypress))
+
+(defun %translate-mouse-coords (myview ns-event)
+  ;;TODO: take aspect/stretch scaling into account
+  (let* ((p1 (#/locationInWindow ns-event))
+         (p2 (#/convertPoint:fromView: myview p1 +null-ptr+))
+         (x  (ns:ns-point-x p2))
+         (y  (ns:ns-point-y p2)))
+    (values x y)))
+
+(defun %enqueue-mouse-event (myview ns-event event)
+  (multiple-value-bind (x y) (%translate-mouse-coords myview ns-event)
+    (let ((runloop (xmas.display:display-runloop (my-view-display myview))))
+      (xmas.runloop:enqueue-runloop-event runloop (cons event (cons x y))))))
+
+(objc:defmethod (#/mouseDown: :void)
+    ((self my-view) event)
+  (%enqueue-mouse-event self event :mousedown))
+
+(objc:defmethod (#/mouseUp: :void)
+    ((self my-view) event)
+  (%enqueue-mouse-event self event :mouseup)
+  (let* ((count (#/clickCount event))
+         (type (case count
+                 (1 :click)
+                 (2 :doubleclick)
+                 (3 :tripleclick)
+                 (t nil))))
+    (when type
+      (%enqueue-mouse-event self event type))))
+
+(objc:defmethod (#/mouseMoved: :void)
+    ((self my-view) event)
+  (%enqueue-mouse-event self event :mousemove))
+
+(objc:defmethod (#/mouseDragged: :void)
+    ((self my-view) event)
+  (%enqueue-mouse-event self event :mousedrag))
 
 (defmethod redisplay ((self xmas.display:display))
   (alexandria:when-let ((view (xmas.display:native-view self)))
@@ -280,6 +320,7 @@
                                     :pixel-format (#/defaultPixelFormat ns:ns-opengl-view))))
         (#/setContentView: w glview)
         (#/setDelegate: w w)
+        (#/setAcceptsMouseMovedEvents: w #$YES)
         (setf (xmas.display:native-view result) glview
               (xmas.display:native-window result) w
               (display w) result)
