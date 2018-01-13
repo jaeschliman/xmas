@@ -4,7 +4,8 @@
              #:qtree-reset
              #:qtree-add
              #:qtree-map-nodes
-             #:qtree-query))
+             #:qtree-query
+             #:qtree-query-collisions))
 (in-package xmas.qtree)
 
 (defstruct qtree
@@ -185,3 +186,14 @@
                  (query (qtree-node-ur node))
                  (query (qtree-node-lr node))))))))
     (query (qtree-root qtree))))
+
+
+(defun qtree-query-collisions (qtree left bottom right top fn)
+  (let ((check (lambda (item)
+                (unless (or (> left (right item))
+                            (> bottom (top item))
+                            (< right (left item))
+                            (< top (bottom item)))
+                  (funcall fn item)))))
+    (declare (dynamic-extent check))
+    (qtree-query qtree left bottom right top check)))

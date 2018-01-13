@@ -713,13 +713,14 @@
   (xmas.render-buffer::draw-rect (test17-mouse-x self)
                                  (test17-mouse-y self)
                                  5.0 5.0)
-  (xmas.render-buffer::set-color 0.0 1.0 0.0 1)
   (let ((x (test17-mouse-x self))
         (y (test17-mouse-y self)))
-    (xmas.qtree:qtree-query (test17-qtree self)
-                            x y (+ x 5) (+ y 5)
-                            'draw-marker
-                            )))
+    (xmas.render-buffer::set-color 0.0 1.0 0.0 1)
+    (xmas.qtree:qtree-query
+     (test17-qtree self) x y (+ x 5) (+ y 5) 'draw-marker)
+    (xmas.render-buffer::set-color 0.0 0.0 1.0 1)
+    (xmas.qtree:qtree-query-collisions
+     (test17-qtree self) x y (+ x 5) (+ y 5) 'draw-marker)))
 
 (defmethod cl-user::handle-event ((self test17) event)
   (when (eq (car event) :mousemove)
