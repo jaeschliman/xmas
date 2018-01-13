@@ -55,7 +55,7 @@
           (t
            (setf node (make-qtree-node :x x :y y :width width :height height
                                         :items (alloc-items qtree)))
-           (vector-push-extend node (qtree-pool qtree))))
+           (vector-push-extend node pool)))
     (incf (qtree-pool-index qtree))
     node))
 
