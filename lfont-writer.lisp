@@ -67,7 +67,7 @@
     t))
 
 (when nil
-  (write-font-string "ABCDEFGHIJKLMNOPQRSTUVXZYabcdefghijklmnopqrstuvwxyz .,!?"
+  (write-font-string "0123456789ABCDEFGHIJKLMNOPQRSTUVXZYabcdefghijklmnopqrstuvwxyz .,!?"
                      :font "./res/ttf/november.ttf"
                      :image-output-path "november.png"
                      :font-output-path "november.lfont"

@@ -69,7 +69,8 @@
    (jump-power :accessor jump-power :initform 100.0)
    (jumping :accessor jumping :initform nil)
    (standing-on :accessor standing-on :initform nil)
-   (state :accessor state :initform nil :initarg :state)))
+   (state :accessor state :initform nil :initarg :state)
+   (jewel-count :accessor jewel-count :initform 0)))
 
 (defclass game-object ()
   ((x :reader x :initarg :x) ;; immutable
@@ -93,10 +94,10 @@
   ())
 
 (defmethod player-collision (player (jewel jewel))
-  (declare (ignore player))
   (let ((object (game-object jewel)))
     (remove-from-parent jewel)
-    (setf (sprite object) nil)))
+    (setf (sprite object) nil)
+    (incf (jewel-count player))))
 
 (defstruct game-object-manager
   sprite-node
@@ -256,6 +257,9 @@
          (visit child)))
   (xmas.render-buffer::pop-matrix))
 
+(defun make-output-string (&optional (length 0))
+  (make-array length :element-type 'base-char :fill-pointer 0 :adjustable t))
+
 (defstruct pf
   started
   (keys (make-hash-table :test 'eql))
@@ -266,7 +270,8 @@
   tile-table
   background
   object-manager
-  )
+  (jewel-count-label (make-output-string))
+  font-22)
 
 (defun tile-at-point (tmx x y)
   (xmas.tmx-renderer:tmx-renderer-tile-at-point tmx x y))
@@ -684,7 +689,8 @@
 (defmethod cl-user::contents-will-mount ((self pf) display)
   (declare (ignore display))
   (with-struct (pf- root tmx tmx-node player
-                    tile-table background object-manager)
+                    tile-table background object-manager
+                    font-22)
       self
     (texture-packer-add-frames-from-file "./res/test.json")
     (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
@@ -703,7 +709,8 @@
                                   :acceleration-y -100.0
                                   :sprite-frame frame
                                   :state 'standing)
-            tile-table (tile-lookup-table-from-tmx-renderer tmx))
+            tile-table (tile-lookup-table-from-tmx-renderer tmx)
+            font-22 (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
       (let* ((width (xmas.tmx-renderer:tmx-renderer-width tmx))
              (height (xmas.tmx-renderer:tmx-renderer-height tmx))
              (x (/ width 2.0))
@@ -737,7 +744,9 @@
     (*last-player-bottom* . 0.0)))
 
 (defmethod cl-user::step-contents ((self pf) dt)
-  (with-struct (pf- root started player object-manager) self
+  (with-struct (pf- root started player object-manager
+                    jewel-count-label font-22)
+      self
     (unless started
       (setf started t)
       (on-enter root))
@@ -746,7 +755,11 @@
     (update-object-manager self dt)
     (collide-player-with-objects self dt)
     (move-camera self dt)
-    (visit root)))
+    (visit root)
+    (setf (fill-pointer jewel-count-label) 0)
+    (with-output-to-string (s jewel-count-label)
+      (format s "~S jewels" (jewel-count player)))
+    (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 470.0)))
 
 (defmethod cl-user::handle-event ((self pf) event)
   (let ((info (cdr event)) (keys (pf-keys self)))
