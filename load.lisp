@@ -14,6 +14,7 @@
 (ql:quickload :xmls)
 (ql:quickload :chipz)
 (ql:quickload :cl-base64)
+(ql:quickload :vecto)
 (progmain ()
   (ql:quickload :cl-opengl)
   (ql:quickload :cl-glu)
@@ -38,5 +39,6 @@
   (load "./tmx-reader.lisp")
   (load "./tmx-renderer.lisp")
   (load "./qtree.lisp")
+  (load "./lfont-reader.lisp")
   )
 

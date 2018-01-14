@@ -727,5 +727,21 @@
     (setf (test17-mouse-x self) (cadr event)
           (test17-mouse-y self) (cddr event))))
 
-(cl-user::display-contents (make-test17) :width 500 :height 500)
+(deftest quadtree-test ()
+  (cl-user::display-contents (make-test17) :width 500 :height 500))
 
+
+(defstruct test18
+  font)
+
+(defmethod cl-user::contents-will-mount ((self test18) display)
+  (declare (ignore display))
+  (setf (test18-font self) (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont")))
+
+(defmethod cl-user::step-contents ((self test18) dt)
+  (declare (ignore dt))
+  (xmas.lfont-reader:lfont-draw-string (test18-font self)
+                                       "Hello, world!"
+                                       50.0 50.0))
+
+(cl-user::display-contents (make-test18) :width 500 :height 500)
