@@ -18,7 +18,23 @@
            (setf ,place ,dest)
            (setf ,place new-val)))))
 
+(defun make-output-string (&optional (length 0))
+  (make-array length :element-type 'base-char :fill-pointer 0 :adjustable t))
+
 (define-modify-macro clampf (min max) clamp)
+
+(defstruct level
+  started
+  (keys (make-hash-table :test 'eql))
+  root
+  tmx
+  player
+  tmx-node
+  tile-table
+  background
+  object-manager
+  (jewel-count-label (make-output-string))
+  font-22)
 
 (defvar *camera-x*)
 (defvar *camera-y*)
@@ -26,6 +42,14 @@
 (defvar *last-player-left*)
 (defvar *last-player-right*)
 (defvar *last-player-bottom*)
+
+(defmethod cl-user::runloop-bindings-alist ((self level))
+  `((*camera-x* . 250.0)
+    (*camera-y* . 250.0)
+    (*last-player-top* . 0.0)
+    (*last-player-left* . 0.0)
+    (*last-player-right* . 0.0)
+    (*last-player-bottom* . 0.0)))
 
 (defstruct tile
   shape
@@ -152,9 +176,9 @@
           t)
         t))))
 
-(defun update-object-manager (pf dt)
+(defun update-object-manager (level dt)
   (declare (ignorable dt))
-  (with-struct (pf- player object-manager) pf
+  (with-struct (level- player object-manager) level
     (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree) object-manager
       (let* ((outset 300.0)
              (x *camera-x*)
@@ -183,9 +207,9 @@
   (:method (player object)
     (declare (ignore player object))))
 
-(defun collide-player-with-objects (pf dt)
+(defun collide-player-with-objects (level dt)
   (declare (ignorable dt))
-  (with-struct (pf- player object-manager) pf
+  (with-struct (level- player object-manager) level
     (with-struct (game-object-manager- sprite-qtree) object-manager
       (flet ((collide (object) (player-collision player object)))
         (qtree-query-collisions
@@ -257,22 +281,6 @@
          (visit child)))
   (xmas.render-buffer::pop-matrix))
 
-(defun make-output-string (&optional (length 0))
-  (make-array length :element-type 'base-char :fill-pointer 0 :adjustable t))
-
-(defstruct pf
-  started
-  (keys (make-hash-table :test 'eql))
-  root
-  tmx
-  player
-  tmx-node
-  tile-table
-  background
-  object-manager
-  (jewel-count-label (make-output-string))
-  font-22)
-
 (defun tile-at-point (tmx x y)
   (xmas.tmx-renderer:tmx-renderer-tile-at-point tmx x y))
 
@@ -314,8 +322,8 @@
     (platform x)
     (block (* 32.0 (1+ (floor x 32.0))))))
 
-(defun move-sprite-up-if-hitting-tiles-on-bottom  (pf sprite prev-y dt)
-  (with-struct (pf- tmx tile-table) pf
+(defun move-sprite-up-if-hitting-tiles-on-bottom  (level sprite prev-y dt)
+  (with-struct (level- tmx tile-table) level
     (let ((y (bottom sprite)) (hit nil))
       (labels
           ((check (x)
@@ -341,9 +349,9 @@
            (collide-with-tile sprite 'bottom hit)
            (return hit)))))))
 
-(defun move-sprite-down-if-hitting-tiles-on-top (pf sprite dt)
+(defun move-sprite-down-if-hitting-tiles-on-top (level sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx tile-table) pf
+  (with-struct (level- tmx tile-table) level
     (let ((y (top sprite)) (hit nil))
       (labels
           ((check (x)
@@ -364,9 +372,9 @@
          (when hit
            (collide-with-tile sprite 'top hit)))))))
 
-(defun move-sprite-left-if-hitting-tiles-on-right (pf sprite dt)
+(defun move-sprite-left-if-hitting-tiles-on-right (level sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx tile-table) pf
+  (with-struct (level- tmx tile-table) level
     (let ((x (right sprite)) (hit nil))
       (labels
           ((check (y)
@@ -390,9 +398,9 @@
          (when hit
            (collide-with-tile sprite 'right hit)))))))
 
-(defun move-sprite-right-if-hitting-tiles-on-left (pf sprite dt)
+(defun move-sprite-right-if-hitting-tiles-on-left (level sprite dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx tile-table) pf
+  (with-struct (level- tmx tile-table) level
     (let ((x (left sprite)) (hit nil))
       (labels ((check (y)
                  (let* ((gid (tile-at-point tmx x y))
@@ -415,12 +423,12 @@
          (when hit
            (collide-with-tile sprite 'left hit)))))))
 
-(defun update-sprite-physics (pf sprite dt)
+(defun update-sprite-physics (level sprite dt)
   (let (standing-on)
     (incf (x sprite) (* dt (velocity-x sprite)))
     (if (> (velocity-x sprite) 0)
-        (move-sprite-left-if-hitting-tiles-on-right pf sprite dt)
-        (move-sprite-right-if-hitting-tiles-on-left pf sprite dt))
+        (move-sprite-left-if-hitting-tiles-on-right level sprite dt)
+        (move-sprite-right-if-hitting-tiles-on-left level sprite dt))
     (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
     (clampf (velocity-x sprite) -1000 1000)
 
@@ -428,8 +436,8 @@
       (incf (y sprite) (* dt (velocity-y sprite)))
       (setf standing-on 
             (if (> (velocity-y sprite) 0)
-                (prog1 nil (move-sprite-down-if-hitting-tiles-on-top pf sprite dt))
-                (move-sprite-up-if-hitting-tiles-on-bottom pf sprite prev-bottom dt))))
+                (prog1 nil (move-sprite-down-if-hitting-tiles-on-top level sprite dt))
+                (move-sprite-up-if-hitting-tiles-on-bottom level sprite prev-bottom dt))))
     (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
     (clampf (velocity-y sprite) -1000 1000)
     standing-on))
@@ -517,9 +525,9 @@
     (ice   (* 300.0 0.05))
     (t     (* 300.0 2.25))))
 
-(defun update-state (player pf dt)
+(defun update-state (player level dt)
   (declare (ignore dt))
-  (with-struct (pf- tmx keys) pf
+  (with-struct (level- tmx keys) level
     (flet ((key-down (key) (gethash key keys))
            (key-up   (key) (null (gethash key keys))))
       (let ((state (state player))
@@ -540,8 +548,8 @@
              (t    'floating)))
           (t (if (< (velocity-y player) 0.0) 'falling 'floating)))))))
 
-(defun maybe-jump-player (pf dt)
-  (with-struct (pf- player tmx keys) pf
+(defun maybe-jump-player (level dt)
+  (with-struct (level- player tmx keys) level
     (labels ((key-down (key) (gethash key keys))
              (key-up   (key) (null (gethash key keys)))
              (use-floating-jump  () nil))
@@ -577,11 +585,11 @@
            (when (or (key-up #\s) (< (jump-power player) 0.0))
              (setf (jumping player) nil))))))))
 
-(defun move-player (pf dt)
+(defun move-player (level dt)
   (let* ((rise-gravity -800.0)
          (fall-gravity -1200.0)
          (hz-max-vel 200.0))
-    (with-struct (pf- player tmx keys) pf
+    (with-struct (level- player tmx keys) level
       (setf *last-player-top* (top player))
       (setf *last-player-left* (left player))
       (setf *last-player-bottom* (bottom player))
@@ -596,7 +604,7 @@
                   (jump-power player) 0.0
                   (jumping player) nil))
 
-        (maybe-jump-player pf dt)
+        (maybe-jump-player level dt)
 
         ;;horizontal motion
         (let ((tile (standing-on player)))
@@ -636,7 +644,7 @@
           (setf (flip-x player) nil))
         (setf (can-jump player) nil)
 
-        (setf (standing-on player) (update-sprite-physics pf player dt))
+        (setf (standing-on player) (update-sprite-physics level player dt))
 
         (when (< (y player) 0.0)
           (setf (y player) 0.0
@@ -644,9 +652,9 @@
         (clampf (x player) 0.0 15000)
         (clampf (y player) 0.0 1500)))))
 
-(defun move-camera (pf dt)
+(defun move-camera (level dt)
   (declare (ignore dt))
-  (with-struct (pf- root player background) pf
+  (with-struct (level- root player background) level
     (let* ((center-x (+ (- (x root)) 250))
            (right-edge (+ center-x 100))
            (left-edge (- center-x 100))
@@ -686,9 +694,9 @@
       (setf (game-object sprite) obj)
       obj)))
 
-(defmethod cl-user::contents-will-mount ((self pf) display)
+(defmethod cl-user::contents-will-mount ((self level) display)
   (declare (ignore display))
-  (with-struct (pf- root tmx tmx-node player
+  (with-struct (level- root tmx tmx-node player
                     tile-table background object-manager
                     font-22)
       self
@@ -735,16 +743,8 @@
       (add-child root tmx-node)
       (add-child root player))))
 
-(defmethod cl-user::runloop-bindings-alist ((self pf))
-  `((*camera-x* . 250.0)
-    (*camera-y* . 250.0)
-    (*last-player-top* . 0.0)
-    (*last-player-left* . 0.0)
-    (*last-player-right* . 0.0)
-    (*last-player-bottom* . 0.0)))
-
-(defmethod cl-user::step-contents ((self pf) dt)
-  (with-struct (pf- root started player object-manager
+(defmethod cl-user::step-contents ((self level) dt)
+  (with-struct (level- root started player object-manager
                     jewel-count-label font-22)
       self
     (unless started
@@ -761,12 +761,12 @@
       (format s "~S jewels" (jewel-count player)))
     (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 460.0)))
 
-(defmethod cl-user::handle-event ((self pf) event)
-  (let ((info (cdr event)) (keys (pf-keys self)))
+(defmethod cl-user::handle-event ((self level) event)
+  (let ((info (cdr event)) (keys (level-keys self)))
     (case (car event)
       (:keydown (setf (gethash info keys) t))
       (:keyup   (setf (gethash info keys) nil)))))
 
-(cl-user::display-contents (make-pf) :width 500 :height 500
+(cl-user::display-contents (make-level) :width 500 :height 500
                            :expandable t
                            :preserve-aspect-ratio t)
