@@ -23,6 +23,11 @@
 
 (define-modify-macro clampf (min max) clamp)
 
+(defstruct platformer
+  started
+  level
+  (root (make-instance 'node)))
+
 (defstruct level
   started
   (keys (make-hash-table :test 'eql))
@@ -42,14 +47,19 @@
 (defvar *last-player-left*)
 (defvar *last-player-right*)
 (defvar *last-player-bottom*)
+(defvar *keys*)
 
-(defmethod cl-user::runloop-bindings-alist ((self level))
+(defmethod cl-user::runloop-bindings-alist ((self platformer))
   `((*camera-x* . 250.0)
     (*camera-y* . 250.0)
     (*last-player-top* . 0.0)
     (*last-player-left* . 0.0)
     (*last-player-right* . 0.0)
-    (*last-player-bottom* . 0.0)))
+    (*last-player-bottom* . 0.0)
+    (*keys* . ,(make-hash-table :test 'eql))))
+
+(defun key-down (k) (gethash k *keys*))
+(defun key-up (k) (null (key-down k)))
 
 (defstruct tile
   shape
@@ -527,32 +537,28 @@
 
 (defun update-state (player level dt)
   (declare (ignore dt))
-  (with-struct (level- tmx keys) level
-    (flet ((key-down (key) (gethash key keys))
-           (key-up   (key) (null (gethash key keys))))
-      (let ((state (state player))
-            (left (key-down :left))
-            (right (key-down :right))
-            (fast (key-down #\a))
-            (jump (key-down #\s))
-            (on-ground (standing-on player)))
-        (cond
-          (on-ground
-           (cond
-             (jump 'jumping)
-             ((or left right) (if fast 'running 'walking))
-             (t 'standing)))
-          ((eq state 'jumping)
-           (cond
-             (jump (if (< (velocity-y player) 0.0) 'falling 'jumping))
-             (t    'floating)))
-          (t (if (< (velocity-y player) 0.0) 'falling 'floating)))))))
+  (with-struct (level- tmx) level
+    (let ((state (state player))
+          (left (key-down :left))
+          (right (key-down :right))
+          (fast (key-down #\a))
+          (jump (key-down #\s))
+          (on-ground (standing-on player)))
+      (cond
+        (on-ground
+         (cond
+           (jump 'jumping)
+           ((or left right) (if fast 'running 'walking))
+           (t 'standing)))
+        ((eq state 'jumping)
+         (cond
+           (jump (if (< (velocity-y player) 0.0) 'falling 'jumping))
+           (t    'floating)))
+        (t (if (< (velocity-y player) 0.0) 'falling 'floating))))))
 
 (defun maybe-jump-player (level dt)
-  (with-struct (level- player tmx keys) level
-    (labels ((key-down (key) (gethash key keys))
-             (key-up   (key) (null (gethash key keys)))
-             (use-floating-jump  () nil))
+  (with-struct (level- player tmx) level
+    (labels ((use-floating-jump  () nil))
       (cond
         ((use-floating-jump)
          (let ((jump-vel 225.0)
@@ -589,68 +595,66 @@
   (let* ((rise-gravity -800.0)
          (fall-gravity -1200.0)
          (hz-max-vel 200.0))
-    (with-struct (level- player tmx keys) level
+    (with-struct (level- player tmx) level
       (setf *last-player-top* (top player))
       (setf *last-player-left* (left player))
       (setf *last-player-bottom* (bottom player))
       (setf *last-player-right* (right player))
-      (flet ((key-down (key) (gethash key keys))
-             (key-up   (key) (null (gethash key keys))))
 
-        ;;use faster gravity for falling
-        (if (> (velocity-y player) 0.0)
-            (setf (acceleration-y player) rise-gravity)
-            (setf (acceleration-y player) fall-gravity
-                  (jump-power player) 0.0
-                  (jumping player) nil))
+      ;;use faster gravity for falling
+      (if (> (velocity-y player) 0.0)
+          (setf (acceleration-y player) rise-gravity)
+          (setf (acceleration-y player) fall-gravity
+                (jump-power player) 0.0
+                (jumping player) nil))
 
-        (maybe-jump-player level dt)
+      (maybe-jump-player level dt)
 
-        ;;horizontal motion
-        (let ((tile (standing-on player)))
-          (cond (tile ;;on the ground
-                 (let* ((hz-accel-rate (hz-accel-rate-for-tile tile))
-                        (hz-decel-rate (hz-decel-rate-for-tile tile)))
-                   (when (key-down #\a)
-                     (setf hz-max-vel (* 2.0 hz-max-vel)
-                           hz-accel-rate (* 2.0 hz-accel-rate)))
-                   (when (key-down :left)
-                     (move-towards! (velocity-x player) (- hz-max-vel) hz-accel-rate dt))
-                   (when (key-down :right)
-                     (move-towards! (velocity-x player) hz-max-vel hz-accel-rate dt))
-                   (when (and (key-up :left) (key-up :right))
-                     (move-towards! (velocity-x player) 0.0 hz-decel-rate dt 5.0))))
-                (t ;;floating
-                 (let* ((hz-accel-rate 300.0)
-                        (hz-floating-vel 200.0)
-                        (hz-floating-decel-rate 50.0))
-                   (when (key-down :left)
-                     ;;only adjust speed if not already moving faster.
-                     (when (> (velocity-x player) (- hz-floating-vel))
-                       (move-towards! (velocity-x player)
-                                      (- hz-floating-vel) hz-accel-rate dt)))
-                   (when (key-down :right)
-                     (when (< (velocity-x player) hz-floating-vel)
-                       (move-towards! (velocity-x player)
-                                      hz-floating-vel hz-accel-rate dt)))
-                   (when (and (key-up :left) (key-up :right))
+      ;;horizontal motion
+      (let ((tile (standing-on player)))
+        (cond (tile ;;on the ground
+               (let* ((hz-accel-rate (hz-accel-rate-for-tile tile))
+                      (hz-decel-rate (hz-decel-rate-for-tile tile)))
+                 (when (key-down #\a)
+                   (setf hz-max-vel (* 2.0 hz-max-vel)
+                         hz-accel-rate (* 2.0 hz-accel-rate)))
+                 (when (key-down :left)
+                   (move-towards! (velocity-x player) (- hz-max-vel) hz-accel-rate dt))
+                 (when (key-down :right)
+                   (move-towards! (velocity-x player) hz-max-vel hz-accel-rate dt))
+                 (when (and (key-up :left) (key-up :right))
+                   (move-towards! (velocity-x player) 0.0 hz-decel-rate dt 5.0))))
+              (t ;;floating
+               (let* ((hz-accel-rate 300.0)
+                      (hz-floating-vel 200.0)
+                      (hz-floating-decel-rate 50.0))
+                 (when (key-down :left)
+                   ;;only adjust speed if not already moving faster.
+                   (when (> (velocity-x player) (- hz-floating-vel))
                      (move-towards! (velocity-x player)
-                                    0.0 hz-floating-decel-rate dt))))))
-        (when (< (abs (velocity-x player)) 2.0)
-          (setf (velocity-x player) 0.0))
-        (when (key-down :left)
-          (setf (flip-x player) t))
-        (when (key-down :right)
-          (setf (flip-x player) nil))
-        (setf (can-jump player) nil)
+                                    (- hz-floating-vel) hz-accel-rate dt)))
+                 (when (key-down :right)
+                   (when (< (velocity-x player) hz-floating-vel)
+                     (move-towards! (velocity-x player)
+                                    hz-floating-vel hz-accel-rate dt)))
+                 (when (and (key-up :left) (key-up :right))
+                   (move-towards! (velocity-x player)
+                                  0.0 hz-floating-decel-rate dt))))))
+      (when (< (abs (velocity-x player)) 2.0)
+        (setf (velocity-x player) 0.0))
+      (when (key-down :left)
+        (setf (flip-x player) t))
+      (when (key-down :right)
+        (setf (flip-x player) nil))
+      (setf (can-jump player) nil)
 
-        (setf (standing-on player) (update-sprite-physics level player dt))
+      (setf (standing-on player) (update-sprite-physics level player dt))
 
-        (when (< (y player) 0.0)
-          (setf (y player) 0.0
-                (velocity-y player) 0.0))
-        (clampf (x player) 0.0 15000)
-        (clampf (y player) 0.0 1500)))))
+      (when (< (y player) 0.0)
+        (setf (y player) 0.0
+              (velocity-y player) 0.0))
+      (clampf (x player) 0.0 15000)
+      (clampf (y player) 0.0 1500))))
 
 (defun move-camera (level dt)
   (declare (ignore dt))
@@ -694,22 +698,16 @@
       (setf (game-object sprite) obj)
       obj)))
 
-(defmethod cl-user::contents-will-mount ((self level) display)
-  (declare (ignore display))
+(defmethod init-level ((self level) &key background-node tmx-file)
   (with-struct (level- root tmx tmx-node player
-                    tile-table background object-manager
-                    font-22)
+                       tile-table background object-manager
+                       font-22)
       self
-    (texture-packer-add-frames-from-file "./res/test.json")
-    (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
-    (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
-    (let* ((frame  (get-frame "pickle.png")))
+    (let* ((frame (get-frame "pickle.png")))
       (setf root (make-instance 'node)
             object-manager (make-game-object-manager :sprite-node root)
-            background (make-instance 'image :x 250 :y 250
-                                      :texture (get-texture "./res/platformer/sky.png"))
-            tmx (xmas.tmx-renderer:tmx-renderer-from-file
-                 "./res/platformer/dev.tmx")
+            background background-node
+            tmx (xmas.tmx-renderer:tmx-renderer-from-file tmx-file)
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
             player (make-instance 'player
@@ -743,30 +741,48 @@
       (add-child root tmx-node)
       (add-child root player))))
 
-(defmethod cl-user::step-contents ((self level) dt)
-  (with-struct (level- root started player object-manager
-                    jewel-count-label font-22)
-      self
-    (unless started
-      (setf started t)
-      (on-enter root))
+(defmethod update ((self level) dt)
+  (with-struct (level- player object-manager jewel-count-label font-22) self
     (set-state player (update-state player self dt))
     (move-player self dt)
     (update-object-manager self dt)
     (collide-player-with-objects self dt)
     (move-camera self dt)
-    (visit root)
-    (setf (fill-pointer jewel-count-label) 0)
-    (with-output-to-string (s jewel-count-label)
-      (format s "~S jewels" (jewel-count player)))
-    (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 460.0)))
+    ;; (setf (fill-pointer jewel-count-label) 0)
+    ;; (with-output-to-string (s jewel-count-label)
+    ;;   (format s "~S jewels" (jewel-count player)))
+    ;; (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 460.0)
+    ))
 
-(defmethod cl-user::handle-event ((self level) event)
-  (let ((info (cdr event)) (keys (level-keys self)))
+(defmethod cl-user::contents-will-mount ((self platformer) display)
+  (declare (ignore display))
+  (texture-packer-add-frames-from-file "./res/test.json")
+  (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
+  (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
+  (with-struct (platformer- level root) self
+    (setf level (make-level))
+    (init-level level
+                :background-node (make-instance
+                                  'image :x 250 :y 250
+                                  :texture (get-texture "./res/platformer/sky.png"))
+                :tmx-file "./res/platformer/dev.tmx")
+    (add-child root (level-root level))))
+
+
+(defmethod cl-user::step-contents ((self platformer) dt)
+  (with-struct (platformer- started root level) self
+   (unless started
+     (setf started t)
+     (on-enter root))
+   (update level dt)
+   (visit root)))
+
+(defmethod cl-user::handle-event ((self platformer) event)
+  (let ((info (cdr event)))
     (case (car event)
-      (:keydown (setf (gethash info keys) t))
-      (:keyup   (setf (gethash info keys) nil)))))
+      (:keydown (setf (gethash info *keys*) t))
+      (:keyup   (setf (gethash info *keys*) nil)))))
 
-(cl-user::display-contents (make-level) :width 500 :height 500
+(cl-user::display-contents (make-platformer) :width 500 :height 500
                            :expandable t
                            :preserve-aspect-ratio t)
