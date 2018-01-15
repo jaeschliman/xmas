@@ -29,18 +29,15 @@
   (root (make-instance 'node)))
 
 (defstruct level
-  started
-  (keys (make-hash-table :test 'eql))
   root
-  tmx
   player
+  background
+  tmx
   tmx-node
   tile-table
-  background
-  object-manager
-  (jewel-count-label (make-output-string))
-  font-22)
+  object-manager)
 
+;;TODO: some sort of def-runloop-var macro
 (defvar *camera-x*)
 (defvar *camera-y*)
 (defvar *last-player-top*)
@@ -48,6 +45,9 @@
 (defvar *last-player-right*)
 (defvar *last-player-bottom*)
 (defvar *keys*)
+(defvar *font-22*)
+(defvar *jewel-count*)
+(defvar *jewel-count-label*)
 
 (defmethod cl-user::runloop-bindings-alist ((self platformer))
   `((*camera-x* . 250.0)
@@ -56,7 +56,10 @@
     (*last-player-left* . 0.0)
     (*last-player-right* . 0.0)
     (*last-player-bottom* . 0.0)
-    (*keys* . ,(make-hash-table :test 'eql))))
+    (*keys* . ,(make-hash-table :test 'eql))
+    (*font-22* . ,(xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
+    (*jewel-count* . 0)
+    (*jewel-count-label* . ,(make-output-string))))
 
 (defun key-down (k) (gethash k *keys*))
 (defun key-up (k) (null (key-down k)))
@@ -103,8 +106,7 @@
    (jump-power :accessor jump-power :initform 100.0)
    (jumping :accessor jumping :initform nil)
    (standing-on :accessor standing-on :initform nil)
-   (state :accessor state :initform nil :initarg :state)
-   (jewel-count :accessor jewel-count :initform 0)))
+   (state :accessor state :initform nil :initarg :state)))
 
 (defclass game-object ()
   ((x :reader x :initarg :x) ;; immutable
@@ -131,7 +133,7 @@
   (let ((object (game-object jewel)))
     (remove-from-parent jewel)
     (setf (sprite object) nil)
-    (incf (jewel-count player))))
+    (incf *jewel-count*)))
 
 (defstruct game-object-manager
   sprite-node
@@ -700,8 +702,7 @@
 
 (defmethod init-level ((self level) &key background-node tmx-file)
   (with-struct (level- root tmx tmx-node player
-                       tile-table background object-manager
-                       font-22)
+                       tile-table background object-manager)
       self
     (let* ((frame (get-frame "pickle.png")))
       (setf root (make-instance 'node)
@@ -716,7 +717,7 @@
                                   :sprite-frame frame
                                   :state 'standing)
             tile-table (tile-lookup-table-from-tmx-renderer tmx)
-            font-22 (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
+            )
       (let* ((width (xmas.tmx-renderer:tmx-renderer-width tmx))
              (height (xmas.tmx-renderer:tmx-renderer-height tmx))
              (x (/ width 2.0))
@@ -742,17 +743,12 @@
       (add-child root player))))
 
 (defmethod update ((self level) dt)
-  (with-struct (level- player object-manager jewel-count-label font-22) self
+  (with-struct (level- player object-manager ) self
     (set-state player (update-state player self dt))
     (move-player self dt)
     (update-object-manager self dt)
     (collide-player-with-objects self dt)
-    (move-camera self dt)
-    ;; (setf (fill-pointer jewel-count-label) 0)
-    ;; (with-output-to-string (s jewel-count-label)
-    ;;   (format s "~S jewels" (jewel-count player)))
-    ;; (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 460.0)
-    ))
+    (move-camera self dt)))
 
 (defmethod cl-user::contents-will-mount ((self platformer) display)
   (declare (ignore display))
@@ -771,11 +767,15 @@
 
 (defmethod cl-user::step-contents ((self platformer) dt)
   (with-struct (platformer- started root level) self
-   (unless started
-     (setf started t)
-     (on-enter root))
-   (update level dt)
-   (visit root)))
+    (unless started
+      (setf started t)
+      (on-enter root))
+    (update level dt)
+    (visit root)
+    (setf (fill-pointer *jewel-count-label*) 0)
+    (with-output-to-string (s *jewel-count-label*)
+      (format s "~S jewels" *jewel-count*))
+    (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)))
 
 (defmethod cl-user::handle-event ((self platformer) event)
   (let ((info (cdr event)))
