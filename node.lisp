@@ -39,7 +39,11 @@
    #:right
    #:left
    #:bottom
-   #:top))
+   #:top
+   #:content-height
+   #:content-width
+   #:anchor-y
+   #:anchor-x))
 (in-package :xmas.node)
 
 ;;; honestly, this should probably be a struct...
@@ -58,6 +62,11 @@
    (opacity              :accessor opacity              :initarg  :opacity)
    (visible              :accessor visible              :initarg  :visible)
 
+   (anchor-x             :reader anchor-x             :initarg  :anchor-x)
+   (anchor-y             :reader anchor-y             :initarg  :anchor-y)
+   (content-width        :reader content-width        :initarg  :content-width)
+   (content-height       :reader content-height       :initarg  :content-height)
+
    (parent               :accessor parent               :initform nil)
    (children             :accessor children             :initform nil)
    (xform                :accessor xform                :initform (xmas.matrix:make-matrix))
@@ -74,7 +83,9 @@
    :skew-x   0.0 :skew-y  0.0
    :rotation 0.0
    :color    (vector 1.0 1.0 1.0) :opacity 1.0
-   :visible  t))
+   :visible  t
+   :anchor-x 0.5 :anchor-y 0.5
+   :content-width 0.0 :content-height 0.0))
 
 (defun mark-as-dirty (node)
   (setf (xform-dirty-p node) t
@@ -88,8 +99,8 @@
                                (setf (slot-value object ',s) v))))))
   (declare-setf-marks-as-dirty
    ()
-   x y scale-x scale-y flip-x flip-y skew-x skew-y rotation))
-
+   x y scale-x scale-y flip-x flip-y skew-x skew-y rotation
+   anchor-x anchor-y content-width content-height))
 
 (defmethod node-transform ((self node))
   (when (xform-dirty-p self)
@@ -105,27 +116,6 @@
                  (- (scale-y self))
                  (scale-y self)))))
   (xform self))
-
-
-(defmethod node-to-parent-transform ((self node))
-  (when (parent-xform-dirty-p self)
-    (setf (parent-xform-dirty-p self) nil)
-    (let ((-r (- (rotation self)))
-          (sx (scale-x self))
-          (sy (scale-y self))
-          (-x (- (x self)))
-          (-y (- (y self)))  
-          (fx (flip-x self))
-          (fy (flip-y self)))
-      (let ((isx (if (zerop sx) 100.0 (/ 1.0 sx)))
-            (isy (if (zerop sy) 100.0 (/ 1.0 sy))))
-        (into-matrix ((parent-xform self))
-          (load-identity)
-          (scale (if fy (- isx) isx)
-                 (if fx (- isy) isy))
-          (rotate -r)
-          (translate -x -y)))))
-  (parent-xform self))
 
 (defmethod node-to-parent-transform ((self node))
   (when (parent-xform-dirty-p self)
@@ -159,34 +149,37 @@
       (left-cat-matrix (node-to-parent-transform self)))
     (copy-matrix (node-to-parent-transform self))))
 
-;;TODO: have a sensible definition for these for nodes.
 (defgeneric width (node))
 (defgeneric height (node))
 
-(defmethod width  ((self node)) 0)
-(defmethod height ((self node)) 0)
+(defmethod width  ((self node)) (* (scale-x self) (content-width self)))
+(defmethod height ((self node)) (* (scale-y self) (content-height self)))
 
+(defmethod anchor-x ((self t)) 0.5)
+(defmethod anchor-y ((self t)) 0.5)
+
+;;TODO: cache these?
 (defun right (node)
-  (+ (x node) (/ (width node) 2.0)))
+  (+ (x node) (* (width node) (- 1.0 (anchor-x node)))))
 
 (defun (setf right) (x node)
-  (setf (x node) (- x (/ (width node) 2.0))))
+  (setf (x node) (- x (* (width node) (- 1.0 (anchor-x node))))))
 
 (defun left (node)
-  (- (x node) (/ (width node) 2.0)))
+  (- (x node) (* (width node) (anchor-x node))))
 
 (defun (setf left) (x node)
-  (setf (x node) (+ x (/ (width node) 2.0))))
+  (setf (x node) (+ x (* (width node) (anchor-x node)))))
 
 (defun bottom (node)
-  (- (y node) (/ (height node) 2.0)))
+  (- (y node) (* (height node) (anchor-y node))))
 
 (defun (setf bottom) (y node)
-  (setf (y node) (+ y (/ (height node) 2.0))))
+  (setf (y node) (+ y (* (height node) (anchor-y node)))))
 
 (defun top (node)
-  (+ (y node) (/ (height node) 2.0)))
+  (+ (y node) (* (height node) (- 1.0 (anchor-y node)))))
 
 (defun (setf top) (y node)
-  (setf (y node) (- y (/ (height node) 2.0))))
+  (setf (y node) (- y (* (height node) (- 1.0 (anchor-y node))))))
 

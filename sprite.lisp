@@ -7,16 +7,20 @@
 (in-package :xmas.sprite)
 
 (defclass sprite (node)
-  ((sprite-frame :accessor sprite-frame :initarg :sprite-frame)))
+  ((sprite-frame :reader sprite-frame :initarg :sprite-frame))
+  (:default-initargs
+   :content-width nil :content-height nil))
 
-(defun sprite-width (sprite)
-  (* (scale-x sprite) (texture-frame-width (sprite-frame sprite))))
+(defmethod (setf sprite-frame) (v (self sprite))
+  (setf (slot-value self 'sprite-frame) v)
+  (setf (content-width self) (texture-frame-width v))
+  (setf (content-height self) (texture-frame-height v)))
 
-(defun sprite-height (sprite)
-  (* (scale-y sprite) (texture-frame-height (sprite-frame sprite))))
-
-(defmethod width ((self sprite))
-  (sprite-width self))
-
-(defmethod height ((self sprite))
-  (sprite-height self))
+(defmethod initialize-instance ((self sprite)
+                                &key sprite-frame content-width content-height
+                                  &allow-other-keys)
+  (call-next-method)
+  (unless content-width
+    (setf (content-width self) (texture-frame-width sprite-frame)))
+  (unless content-height
+    (setf (content-height self) (texture-frame-height sprite-frame))))
