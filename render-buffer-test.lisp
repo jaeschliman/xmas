@@ -732,16 +732,21 @@
 
 
 (defstruct test18
-  font)
+  font
+  font2)
 
 (defmethod cl-user::contents-will-mount ((self test18) display)
   (declare (ignore display))
-  (setf (test18-font self) (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont")))
+  (setf (test18-font self) (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont")
+         (test18-font2 self) (xmas.lfont-reader:lfont-from-file "./res/lfont/OpenSans-Light.lfont")))
 
 (defmethod cl-user::step-contents ((self test18) dt)
   (declare (ignore dt))
   (xmas.lfont-reader:lfont-draw-string (test18-font self)
                                        "Hello, world!"
-                                       50.0 50.0))
+                                       50.0 50.0)
+  (xmas.lfont-reader:lfont-draw-string (test18-font2 self)
+                                       "The quick brown fox jumped over the lazy dog."
+                                       10.0 150.0 :letter-spacing 0.0))
 
 (cl-user::display-contents (make-test18) :width 500 :height 500)

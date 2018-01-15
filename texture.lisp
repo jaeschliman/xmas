@@ -34,8 +34,8 @@
 
 (defun texture-frame (texture x y w h &key (flipped t) (rotated nil))
   (when rotated (rotatef w h))
-  (let* ((width (texture-width texture))
-         (height (texture-height texture))
+  (let* ((width (float (texture-width texture)))
+         (height (float (texture-height texture)))
          (y (if flipped (- h y) y)) ;; flip y coord
          (x2 (+ x w))
          (y2 (+ y h))

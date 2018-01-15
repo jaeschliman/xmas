@@ -34,11 +34,15 @@
              (setf (gethash char table) frame))))))
 
 
-(defun lfont-draw-string (lfont string x y)
+(defun lfont-draw-string (lfont string x y &key (letter-spacing 1.0))
   (let ((table (lfont-chars lfont))
         (left  x))
     (loop for char across string
        for frame = (gethash char table)
        when frame do
-         (draw-texture-frame frame left y)
-         (incf left (texture-frame-width frame)))))
+         (let ((width (texture-frame-width frame))
+               (height (texture-frame-height frame)))
+           (draw-texture-frame frame
+                               (+ left (/ width 2.0))
+                               (+ y (/ height 2.0)))
+           (incf left (+ letter-spacing width))))))

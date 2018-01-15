@@ -759,7 +759,7 @@
     (setf (fill-pointer jewel-count-label) 0)
     (with-output-to-string (s jewel-count-label)
       (format s "~S jewels" (jewel-count player)))
-    (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 470.0)))
+    (xmas.lfont-reader:lfont-draw-string font-22 jewel-count-label 20.0 460.0)))
 
 (defmethod cl-user::handle-event ((self pf) event)
   (let ((info (cdr event)) (keys (pf-keys self)))
