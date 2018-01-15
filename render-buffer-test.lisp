@@ -239,15 +239,29 @@
 
 (defmethod draw ((self xmas.sprite:sprite))
   (draw-node-color self)
-  (xmas.draw:draw-texture-frame (xmas.sprite:sprite-frame self) 0.0 0.0))
+  (let ((frame (xmas.sprite:sprite-frame self)))
+    (xmas.draw:draw-texture-frame-at
+     frame
+     0.0 0.0
+     (xmas.texture:texture-frame-width frame)
+     (xmas.texture:texture-frame-height frame))))
 
 ;; the fast method:
 (defmethod visit ((self xmas.node:node))
   (xmas.render-buffer::push-matrix)
-  (xmas.render-buffer::translate-scale-rotate
-   (xmas.node:x self) (xmas.node:y self)
-   (xmas.node:scale-x self) (xmas.node:scale-y self)
-   (xmas.node:rotation self))
+  (let ((ax (xmas.node:anchor-x self))
+        (ay (xmas.node:anchor-y self)))
+    (if (and (zerop ax) (zerop ay))
+        (xmas.render-buffer::translate-scale-rotate
+         (xmas.node:x self) (xmas.node:y self)
+         (xmas.node:scale-x self) (xmas.node:scale-y self)
+         (xmas.node:rotation self))
+      (xmas.render-buffer::translate-scale-rotate-translate
+         (xmas.node:x self) (xmas.node:y self)
+         (xmas.node:scale-x self) (xmas.node:scale-y self)
+         (xmas.node:rotation self)
+         (* -1.0 ax (xmas.node:content-width self))
+         (* -1.0 ay (xmas.node:content-width self)))))
   (draw self)
   (when (xmas.node:children self)
     (loop for child across (xmas.node:children self) do
@@ -639,7 +653,9 @@
                                :y 250
                                :scale-x 2.0
                                :scale-y 2.0
-                               :sprite-frame (xmas.texture:get-frame "pickle.png"))))
+                               :sprite-frame (xmas.texture:get-frame "pickle.png")
+                               :anchor-x 0.0
+                               :anchor-y 0.0)))
     (xmas.sprite:run-animation sprite 'cat :repeat :forever)
     (setf (xmas.node:rotation sprite) -15)
     (setf (test16-node self) sprite)))
@@ -749,4 +765,5 @@
                                        "The quick brown fox jumped over the lazy dog."
                                        10.0 150.0 :letter-spacing 0.0))
 
-(cl-user::display-contents (make-test18) :width 500 :height 500)
+(deftest text-rendering ()
+  (cl-user::display-contents (make-test18) :width 500 :height 500))

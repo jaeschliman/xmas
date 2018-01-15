@@ -9,7 +9,8 @@
 (defclass sprite (node)
   ((sprite-frame :reader sprite-frame :initarg :sprite-frame))
   (:default-initargs
-   :content-width nil :content-height nil))
+   :content-width nil :content-height nil
+   :anchor-x 0.5 :anchor-y 0.5))
 
 (defmethod (setf sprite-frame) (v (self sprite))
   (setf (slot-value self 'sprite-frame) v)

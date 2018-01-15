@@ -84,7 +84,7 @@
    :rotation 0.0
    :color    (vector 1.0 1.0 1.0) :opacity 1.0
    :visible  t
-   :anchor-x 0.5 :anchor-y 0.5
+   :anchor-x 0.0 :anchor-y 0.0
    :content-width 0.0 :content-height 0.0))
 
 (defun mark-as-dirty (node)
