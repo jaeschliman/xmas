@@ -4,6 +4,7 @@
   (gl:color r g b a))
 
 (definstr draw-rect (x y w h)
+  (gl:bind-texture :texture-2d 0)
   (gl:rect x y (+ x w) (+ y h)))
 
 (definstr simple-draw-gl-texture (id w h)
