@@ -102,6 +102,7 @@
    x y scale-x scale-y flip-x flip-y skew-x skew-y rotation
    anchor-x anchor-y content-width content-height))
 
+;;TODO: take anchor point into account
 (defmethod node-transform ((self node))
   (when (xform-dirty-p self)
     (setf (xform-dirty-p self) nil)
@@ -117,6 +118,7 @@
                  (scale-y self)))))
   (xform self))
 
+;;TODO: take anchor point into account
 (defmethod node-to-parent-transform ((self node))
   (when (parent-xform-dirty-p self)
     (setf (parent-xform-dirty-p self) nil)
@@ -155,6 +157,8 @@
 (defmethod width  ((self node)) (* (scale-x self) (content-width self)))
 (defmethod height ((self node)) (* (scale-y self) (content-height self)))
 
+;;TODO: yuck I don't like this. shouldn't need an anchor point to
+;;      get/set right/left etc.
 (defmethod anchor-x ((self t)) 0.5)
 (defmethod anchor-y ((self t)) 0.5)
 
