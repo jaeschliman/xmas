@@ -1,4 +1,17 @@
-(defpackage :xmas.render-buffer-tests (:use :cl :alexandria))
+(defpackage :xmas.render-buffer-tests (:use :cl :alexandria
+                                            :xmas.action
+                                            :xmas.animation-manager
+                                            :xmas.display
+                                            :xmas.draw
+                                            :xmas.lfont-reader
+                                            :xmas.matrix
+                                            :xmas.node
+                                            :xmas.qtree
+                                            :xmas.sprite
+                                            :xmas.texture
+                                            :xmas.texture-packer
+                                            :xmas.tmx-reader
+                                            :xmas.tmx-renderer))
 (in-package :xmas.render-buffer-tests)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -48,8 +61,8 @@
 
 (defmethod cl-user::contents-will-mount ((self test3) display)
   (with-slots (boxes width height) self
-    (setf width  (xmas.display:display-width display)
-          height (xmas.display:display-height display))
+    (setf width  (display-width display)
+          height (display-height display))
     (dolist (box boxes)
       (setf (bouncy-box-x box) (random (- width 20))
             (bouncy-box-y box) (random (- height 20))))))
@@ -82,27 +95,26 @@
                                :width 500
                                :height 500
                                :expandable t)))
-
 (defstruct test4
   alien)
 
 (defmethod cl-user::contents-will-mount ((self test4) display)
   (declare (ignorable display))
-  (let ((texture (xmas.texture:get-texture #P"./alien.png")))
-    (assert (xmas.texture:texture-width texture))
-    (assert (xmas.texture:texture-height texture))
+  (let ((texture (get-texture #P"./alien.png")))
+    (assert (texture-width texture))
+    (assert (texture-height texture))
     (setf (test4-alien self) texture))
   (unless (test4-alien self)
     (format t "missing texture!")))
 
 (defmethod cl-user::step-contents ((self test4) dt)
   (declare (ignorable dt))
-  (xmas.draw:draw-texture (test4-alien self)))
+  (draw-texture (test4-alien self)))
 
 (deftest draw-texture ()
   (cl-user::display-contents (make-test4)))
 
-(defstruct sprite
+(defstruct simple-sprite
   (x 0.0)
   (y 0.0)
   (sx 1.0)
@@ -130,11 +142,11 @@
 (defun draw-sprite (sprite)
   (xmas.render-buffer::push-matrix)
   (xmas.render-buffer::translate-scale-rotate
-   (sprite-x sprite) (sprite-y sprite)
-   (sprite-sx sprite) (sprite-sy sprite)
-   (sprite-r sprite))
+   (simple-sprite-x sprite) (simple-sprite-y sprite)
+   (simple-sprite-sx sprite) (simple-sprite-sy sprite)
+   (simple-sprite-r sprite))
   (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
-  (xmas.draw:draw-texture (sprite-texture sprite))
+  (draw-texture (simple-sprite-texture sprite))
   (xmas.render-buffer::pop-matrix))
 
 (defstruct test5
@@ -144,9 +156,9 @@
   sprites)
 
 (defmethod cl-user::contents-will-mount ((self test5) display)
-  (let ((width (xmas.display:display-width display))
-        (height (xmas.display:display-height display))
-        (texture (xmas.texture:get-texture #P"./alien.png")))
+  (let ((width (display-width display))
+        (height (display-height display))
+        (texture (get-texture #P"./alien.png")))
     (unless texture
       (format t "missing texture!"))
     (setf (test5-width self) width)
@@ -154,15 +166,15 @@
     (setf (test5-texture self) texture)
     (setf (test5-sprites self)
           (loop repeat 4000 collect
-               (make-sprite :x (random width)
-                            :y (random height)
-                            :dx (- (random 100) 50)
-                            :dy (- (random 100) 50)
-                            :r (random 360)
-                            :dr (- (random 100) 50)
-                            :sx 0.5
-                            :sy 0.5
-                            :texture texture)))))
+               (make-simple-sprite :x (random width)
+                                   :y (random height)
+                                   :dx (- (random 100) 50)
+                                   :dy (- (random 100) 50)
+                                   :r (random 360)
+                                   :dr (- (random 100) 50)
+                                   :sx 0.5
+                                   :sy 0.5
+                                   :texture texture)))))
 
 
 (defmethod cl-user::step-contents ((self test5) dt)
@@ -186,25 +198,25 @@
   (cl-user::display-contents (make-test5) :width 500 :height 500 :expandable t))
 
 (defstruct test6
-  (matrix (xmas.matrix:make-matrix))
-  (scratch-matrix (xmas.matrix:make-matrix)))
+  (matrix (make-matrix))
+  (scratch-matrix (make-matrix)))
 
 (defmethod cl-user::contents-will-mount ((self test6) display)
   (declare (ignorable display))
   (let ((m (test6-matrix self)))
-    (xmas.matrix:into-matrix (m)
-      (xmas.matrix:load-identity)
-      (xmas.matrix:translate 125.0 125.0))))
+    (into-matrix (m)
+      (load-identity)
+      (translate 125.0 125.0))))
 
 (defmethod cl-user::step-contents ((self test6) dt)
   (declare (ignorable dt))
-  (let ((xmas.matrix:*tmp-matrix* (test6-scratch-matrix self)))
-    (xmas.matrix:into-matrix ((test6-matrix self))
-      (xmas.matrix:rotate (* 40 dt))))
+  (let ((*tmp-matrix* (test6-scratch-matrix self)))
+    (into-matrix ((test6-matrix self))
+      (rotate (* 40 dt))))
   (xmas.render-buffer::set-color 0.0 1.0 0.0 0.5)
   (xmas.render-buffer::draw-rect 10.0 10.0 20.0 20.0)
   (xmas.render-buffer::push-matrix)
-  (xmas.render-buffer::mult-matrix (xmas.matrix:unwrap-matrix (test6-matrix self)))
+  (xmas.render-buffer::mult-matrix (unwrap-matrix (test6-matrix self)))
   (xmas.render-buffer::draw-rect 10.0 10.0 20.0 20.0)
   (xmas.render-buffer::draw-rect 30.0 30.0 20.0 20.0)
   (xmas.render-buffer::pop-matrix))
@@ -213,82 +225,82 @@
   (cl-user::display-contents (make-test6)))
 
 (defun draw-node-color (node)
-  (let ((c (xmas.node:color node)) (a (xmas.node:opacity node)))
+  (let ((c (color node)) (a (opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
-(defclass rect (xmas.node:node)
+(defclass rect (node)
   ()
   (:default-initargs :anchor-x 0.5 :anchor-y 0.5))
 
 (defmethod draw ((self rect))
   (draw-node-color self)
-  (xmas.render-buffer::draw-rect 0.0 0.0 (xmas.node:width self) (xmas.node:height self)))
+  (xmas.render-buffer::draw-rect 0.0 0.0 (width self) (height self)))
 
-(defmethod draw ((self xmas.node:node))
+(defmethod draw ((self node))
   (draw-node-color self)
   (xmas.render-buffer::draw-rect -20.0 -20.0 40.0 40.0))
 
-(defmethod draw ((self xmas.sprite:sprite))
+(defmethod draw ((self sprite))
   (draw-node-color self)
-  (let ((frame (xmas.sprite:sprite-frame self)))
-    (xmas.draw:draw-texture-frame-at
+  (let ((frame (sprite-frame self)))
+    (draw-texture-frame-at
      frame
      0.0 0.0
-     (xmas.texture:texture-frame-width frame)
-     (xmas.texture:texture-frame-height frame))))
+     (texture-frame-width frame)
+     (texture-frame-height frame))))
 
 ;; the fast method:
-(defmethod visit ((self xmas.node:node))
+(defmethod visit ((self node))
   (xmas.render-buffer::push-matrix)
-  (let ((ax (xmas.node:anchor-x self))
-        (ay (xmas.node:anchor-y self)))
+  (let ((ax (anchor-x self))
+        (ay (anchor-y self)))
     (if (and (zerop ax) (zerop ay))
         (xmas.render-buffer::translate-scale-rotate
-         (xmas.node:x self) (xmas.node:y self)
-         (xmas.node:scale-x self) (xmas.node:scale-y self)
-         (xmas.node:rotation self))
-      (xmas.render-buffer::translate-scale-rotate-translate
-         (xmas.node:x self) (xmas.node:y self)
-         (xmas.node:scale-x self) (xmas.node:scale-y self)
-         (xmas.node:rotation self)
-         (* -1.0 ax (xmas.node:content-width self))
-         (* -1.0 ay (xmas.node:content-width self)))))
+         (x self) (y self)
+         (scale-x self) (scale-y self)
+         (rotation self))
+        (xmas.render-buffer::translate-scale-rotate-translate
+         (x self) (y self)
+         (scale-x self) (scale-y self)
+         (rotation self)
+         (* -1.0 ax (content-width self))
+         (* -1.0 ay (content-width self)))))
   (draw self)
-  (when (xmas.node:children self)
-    (loop for child across (xmas.node:children self) do
+  (when (children self)
+    (loop for child across (children self) do
          (visit child)))
   (xmas.render-buffer::pop-matrix))
 
 ;; the also-fast method:
-;; (defmethod visit ((self xmas.node:node))
+;; (defmethod visit ((self node))
 ;;   (push-matrix)
-;;   (translate-scale-rotate (xmas.node:x self) (xmas.node:y self)
-;;                           (xmas.node:scale-x self) (xmas.node:scale-y self)
-;;                           (xmas.node:rotation self))
-;;   (xmas.node:node-transform self) ;; <- note this addition
+;;   (translate-scale-rotate (x self) (y self)
+;;                           (scale-x self) (scale-y self)
+;;                           (rotation self))
+;;   (node-transform self) ;; <- note this addition
 ;;   (draw self)
 ;;   (pop-matrix))
 
 ;; this method also performs fairly well (some minor stuttering),
 ;; seeming to indicate that the bottleneck is actually in
 ;; %gl:mult-matrix-f
-;; (defmethod visit ((self xmas.node:node))
+;; (defmethod visit ((self node))
 ;;   (push-matrix)
-;;   (translate-scale-rotate (xmas.node:x self) (xmas.node:y self)
-;;                           (xmas.node:scale-x self) (xmas.node:scale-y self)
-;;                           (xmas.node:rotation self))
-;;   (mult-matrix-noop (matrix:unwrap-matrix (xmas.node:node-transform self)))
+;;   (translate-scale-rotate (x self) (y self)
+;;                           (scale-x self) (scale-y self)
+;;                           (rotation self))
+;;   (mult-matrix-noop (matrix:unwrap-matrix (node-transform self)))
 ;;   (draw self)
 ;;   ;;visit children here.
 ;;   (pop-matrix))
 
 ;; the slow as sin method.
-;; (defmethod visit ((self xmas.node:node))
+;; (defmethod visit ((self node))
 ;;   (push-matrix)
-;;   (mult-matrix (matrix:unwrap-matrix (xmas.node:node-transform self)))
+;;   (mult-matrix (matrix:unwrap-matrix (node-transform self)))
 ;;   (draw self)
-;;   (when (xmas.node:children self)
-;;     (loop for child across (xmas.node:children self) do
+;;   (when (children self)
+;;     (loop for child across (children self) do
 ;;          (visit child)))
 ;;   (pop-matrix))
 
@@ -300,21 +312,21 @@
 
 (defmethod cl-user::contents-will-mount ((self test7) display)
   (with-slots (nodes width height root-node) self
-    (let* ((w (xmas.display:display-width display))
-           (h (xmas.display:display-height display))
+    (let* ((w (display-width display))
+           (h (display-height display))
            (w/2 (/ w 2))
            (h/2 (/ h 2))
            (diagonal (sqrt (+ (* w w) (* h h))))
            (d/2 (/ diagonal 2)))
       (setf width w
             height h
-            root-node (make-instance 'xmas.node:node
+            root-node (make-instance 'node
                                      :x w/2
                                      :y h/2)
             nodes
             (loop
                repeat 4000 collect
-                 (make-instance 'xmas.node:node
+                 (make-instance 'node
                                 :x (coerce (- (random diagonal) d/2) 'float)
                                 :y (coerce (- (random diagonal) d/2)'float)
                                 :rotation (coerce (random 360) 'float)
@@ -324,15 +336,15 @@
                                         (/ (random 100) 100.0))
                                 :opacity (/ (random 100) 100.0)))))
     (dolist (child nodes)
-      (xmas.node:add-child root-node child))))
+      (add-child root-node child))))
 
 (defmethod cl-user::step-contents ((self test7) dt)
   (declare (ignorable dt))
   (dolist (node (cons (test7-root-node self) (test7-nodes self)))
-    (let ((r (xmas.node:rotation node)))
+    (let ((r (rotation node)))
       (incf r (* dt 100))
       (setf r (mod r 360))
-      (setf (xmas.node:rotation node) r)))
+      (setf (rotation node) r)))
   (xmas.render-buffer::set-color 0.0 1.0 1.0 0.4)
   (visit (test7-root-node self)))
 
@@ -345,88 +357,88 @@
   started)
 
 (defmethod cl-user::contents-will-mount ((self test8) display)
-  (let ((node (make-instance 'xmas.node:node
-                             :x (/ (xmas.display:display-width display) 2)
-                             :y (/ (xmas.display:display-height display) 2)))
-        (node2 (make-instance 'xmas.node:node
+  (let ((node (make-instance 'node
+                             :x (/ (display-width display) 2)
+                             :y (/ (display-height display) 2)))
+        (node2 (make-instance 'node
                               :color (vector 0.0 1.0 1.0)
                               :opacity 0.4
                               :x 20.0
                               :y 20.0))
-        (node3 (make-instance 'xmas.node:node
+        (node3 (make-instance 'node
                               :color (vector 1.0 0.0 0.0)
                               :opacity 0.4
                               :x -20.0
                               :y -20.0))
-        (node4 (make-instance 'xmas.node:node
+        (node4 (make-instance 'node
                               :color (vector 0.0 1.0 0.0)
                               :opacity 0.4
                               :x  20.0
                               :y -20.0))
-        (node5 (make-instance 'xmas.node:node
+        (node5 (make-instance 'node
                               :color (vector 1.0 1.0 0.0)
                               :opacity 0.4
                               :x -20.0
                               :y  20.0)))
-    (xmas.node:run-action node
-                     (xmas.action:repeat-forever
-                      (xmas.action:run-sequence
-                       (xmas.action:delay 1.0)
-                       (xmas.action:ease-in-out-quad
-                        (xmas.action:rotate-by 1.5 180.0))
-                       (xmas.action:delay 1.0)
-                       (xmas.action:ease-in-out-sine
-                        (xmas.action:rotate-by 1.25 -90.0)))))
-    (xmas.node:run-action node2
-                     (xmas.action:repeat-forever
-                      (xmas.action:rotate-by 2.5 -360.0)))
-    (xmas.node:run-action node3
-                     (xmas.action:repeat-forever
-                      (xmas.action:run-sequence
-                       (xmas.action:rotate-by 0.25 -60.0)
-                       (xmas.action:rotate-by 0.25 60.0))))
-    (xmas.node:run-action node4
-                     (xmas.action:repeat-forever
-                      (xmas.action:run-sequence
-                       (xmas.action:rotate-by 0.5 -60.0)
-                       (xmas.action:rotate-by 0.25 -60.0)
-                       (xmas.action:rotate-by 0.25 60.0))))
-    (xmas.node:run-action node5
-                     (xmas.action:repeat-forever
-                      (xmas.action:run-sequence
-                       (xmas.action:rotate-by 0.5 -60.0)
-                       (xmas.action:rotate-by 0.5 60.0)
-                       (xmas.action:rotate-by 0.5 -360.0)
-                       (xmas.action:rotate-by 0.5 360.0))))
-    (xmas.node:add-child node node2)
-    (xmas.node:add-child node node3)
-    (xmas.node:add-child node node4)
-    (xmas.node:add-child node node5)
-    (xmas.node:run-action
+    (run-action node
+                (repeat-forever
+                 (run-sequence
+                  (delay 1.0)
+                  (ease-in-out-quad
+                   (rotate-by 1.5 180.0))
+                  (delay 1.0)
+                  (ease-in-out-sine
+                   (rotate-by 1.25 -90.0)))))
+    (run-action node2
+                (repeat-forever
+                 (rotate-by 2.5 -360.0)))
+    (run-action node3
+                (repeat-forever
+                 (run-sequence
+                  (rotate-by 0.25 -60.0)
+                  (rotate-by 0.25 60.0))))
+    (run-action node4
+                (repeat-forever
+                 (run-sequence
+                  (rotate-by 0.5 -60.0)
+                  (rotate-by 0.25 -60.0)
+                  (rotate-by 0.25 60.0))))
+    (run-action node5
+                (repeat-forever
+                 (run-sequence
+                  (rotate-by 0.5 -60.0)
+                  (rotate-by 0.5 60.0)
+                  (rotate-by 0.5 -360.0)
+                  (rotate-by 0.5 360.0))))
+    (add-child node node2)
+    (add-child node node3)
+    (add-child node node4)
+    (add-child node node5)
+    (run-action
      node
-     (xmas.action:repeat-forever
-      (xmas.action:run-sequence
-       (xmas.action:callfunc (lambda () (format t " tick! ")))
-       (xmas.action:delay 2.0))))
-    (xmas.node:run-action
+     (repeat-forever
+      (run-sequence
+       (callfunc (lambda () (format t " tick! ")))
+       (delay 2.0))))
+    (run-action
      node
-     (xmas.action:repeat-forever
-      (xmas.action:run-sequence
-       (xmas.action:delay 1.0)
-       (xmas.action:callfunc (lambda () (format t " tock! ")))
-       (xmas.action:delay 1.0))))
-    (xmas.node:run-action
+     (repeat-forever
+      (run-sequence
+       (delay 1.0)
+       (callfunc (lambda () (format t " tock! ")))
+       (delay 1.0))))
+    (run-action
      node
-     (xmas.action:run-sequence
-      (xmas.action:delay 3.0)
-      (xmas.action:callfunc (lambda () (xmas.node:remove-from-parent node2)))))
+     (run-sequence
+      (delay 3.0)
+      (callfunc (lambda () (remove-from-parent node2)))))
     (setf (test8-node self) node)))
 
 (defmethod cl-user::step-contents ((self test8) dt)
   (declare (ignorable dt))
   (unless (test8-started self)
     (setf (test8-started self) t)
-    (xmas.node:on-enter (test8-node self)))
+    (on-enter (test8-node self)))
   (visit (test8-node self)))
 
 (deftest node-actions ()
@@ -438,26 +450,26 @@
   started)
 
 (defun test9-add-node (self)
-  (let ((node (make-instance 'xmas.node:node))
+  (let ((node (make-instance 'node))
         (root (test9-node self)))
-    (xmas.node:run-action
+    (run-action
      node
-     (list (xmas.action:move-by 3.0 -250.0 -250.0)
-           (xmas.action:callfunc (lambda () (xmas.node:remove-from-parent node)))))
-    (xmas.node:run-action
+     (list (move-by 3.0 -250.0 -250.0)
+           (callfunc (lambda () (remove-from-parent node)))))
+    (run-action
      root
      (list
-      (xmas.action:delay 4.0)
-      (xmas.action:callfunc
+      (delay 4.0)
+      (callfunc
        (lambda ()
-         (xmas.node:add-child root node)
+         (add-child root node)
          (format t "~S ~%" (mod (/ (get-internal-real-time) (coerce internal-time-units-per-second 'float)) 60))
          (test9-add-node self)))))))
 
 (defmethod cl-user::contents-will-mount ((self test9) display)
-  (let ((node (make-instance 'xmas.node:node
-                             :x (/ (xmas.display:display-width display) 2)
-                             :y (/ (xmas.display:display-height display) 2))))
+  (let ((node (make-instance 'node
+                             :x (/ (display-width display) 2)
+                             :y (/ (display-height display) 2))))
     (setf (test9-node self) node)
     (test9-add-node self)))
 
@@ -465,7 +477,7 @@
   (declare (ignorable dt))
   (unless (test9-started self)
     (setf (test9-started self) t)
-    (xmas.node:on-enter (test9-node self)))
+    (on-enter (test9-node self)))
   (visit (test9-node self)))
 
 (deftest action-manager-test ()
@@ -477,20 +489,20 @@
 
 (defmethod cl-user::contents-will-mount ((self test10) display)
   (declare (ignore display))
-  (let ((tex (xmas.texture:get-texture "./bayarea.png")))
-    (setf (test10-a self) (xmas.texture:texture-frame tex 0.0 0.0 250.0 250.0))
-    (setf (test10-b self) (xmas.texture:texture-frame tex 0.0 250.0 250.0 250.0))
-    (setf (test10-c self) (xmas.texture:texture-frame tex 250.0 0.0 250.0 250.0))
-    (setf (test10-d self) (xmas.texture:texture-frame tex 250.0 250.0 250.0 250.0)) ))
+  (let ((tex (get-texture "./bayarea.png")))
+    (setf (test10-a self) (texture-frame tex 0.0 0.0 250.0 250.0))
+    (setf (test10-b self) (texture-frame tex 0.0 250.0 250.0 250.0))
+    (setf (test10-c self) (texture-frame tex 250.0 0.0 250.0 250.0))
+    (setf (test10-d self) (texture-frame tex 250.0 250.0 250.0 250.0)) ))
 
 
 (defmethod cl-user::step-contents ((self test10) dt)
   (declare (ignore dt))
   (xmas.render-buffer::push-matrix)
-  (xmas.draw:draw-texture-frame (test10-a self) 125.0 125.0)
-  (xmas.draw:draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
-  (xmas.draw:draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
-  (xmas.draw:draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
+  (draw-texture-frame (test10-a self) 125.0 125.0)
+  (draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
+  (draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
+  (draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
   (xmas.render-buffer::pop-matrix))
 
 (deftest texture-frame-test ()
@@ -501,21 +513,21 @@
 
 (defmethod cl-user::contents-will-mount ((self test11) display)
   (declare (ignore display))
-  (let ((packed (xmas.texture-packer:texture-packer-from-file "./res/test.json")))
+  (let ((packed (texture-packer-from-file "./res/test.json")))
     (assert (xmas.texture-packer::texture-packer-file-texture packed))
     (setf (test11-packer self) packed
-          (test11-normal-frame self) (xmas.texture-packer:texture-packer-get-frame
+          (test11-normal-frame self) (texture-packer-get-frame
                                       packed "pickle.png")
-          (test11-blink-frame self) (xmas.texture-packer:texture-packer-get-frame
+          (test11-blink-frame self) (texture-packer-get-frame
                                      packed "pickle blink.png")
-          (test11-jewel self) (xmas.texture-packer:texture-packer-get-frame
-                                     packed "jewel.png"))))
+          (test11-jewel self) (texture-packer-get-frame
+                               packed "jewel.png"))))
 
 (defmethod cl-user::step-contents ((self test11) dt)
   (declare (ignore dt))
-  (xmas.draw:draw-texture-frame (test11-normal-frame self) 125.0 250.0)
-  (xmas.draw:draw-texture-frame (test11-blink-frame self) 375.0 250.0)
-  (xmas.draw:draw-texture-frame (test11-jewel self) 250.0 250.0))
+  (draw-texture-frame (test11-normal-frame self) 125.0 250.0)
+  (draw-texture-frame (test11-blink-frame self) 375.0 250.0)
+  (draw-texture-frame (test11-jewel self) 250.0 250.0))
 
 (deftest texture-packer-test ()
   (cl-user::display-contents (make-test11) :width 500 :height 500))
@@ -526,9 +538,9 @@
 
 (defmethod cl-user::contents-will-mount ((self test12) display)
   (declare (ignore display))
-  (let* ((map (xmas.tmx-reader:read-tilemap "./res/test-tilemap.tmx"))
-         (tileset (first (xmas.tmx-reader:map-tilesets map)))
-         (frames (xmas.tmx-renderer:make-tileset-texture-frames tileset)))
+  (let* ((map (read-tilemap "./res/test-tilemap.tmx"))
+         (tileset (first (map-tilesets map)))
+         (frames (make-tileset-texture-frames tileset)))
     (setf (test12-tmx-map self) map
           (test12-frames self) frames)))
 
@@ -540,7 +552,7 @@
     (loop for frame across frames
        for i upfrom 0
        when frame
-       do (xmas.draw:draw-texture-frame frame (+ x (* i 50)) y))))
+       do (draw-texture-frame frame (+ x (* i 50)) y))))
 
 
 (deftest tilemap-test-0 ()
@@ -554,10 +566,10 @@
 
 (defmethod cl-user::contents-will-mount ((self test13) display)
   (declare (ignore display))
-  (let* ((map (xmas.tmx-reader:read-tilemap "./res/test-tilemap.tmx"))
-         (tileset (first (xmas.tmx-reader:map-tilesets map)))
-         (frames (xmas.tmx-renderer:make-tileset-texture-frames tileset))
-         (layer (first (xmas.tmx-reader:map-layers map))))
+  (let* ((map (read-tilemap "./res/test-tilemap.tmx"))
+         (tileset (first (map-tilesets map)))
+         (frames (make-tileset-texture-frames tileset))
+         (layer (first (map-layers map))))
     (setf (test13-tmx-map self) map
           (test13-tileset self) tileset
           (test13-frames self) frames
@@ -571,10 +583,10 @@
         (tileset (test13-tileset self))
         (frames (test13-frames self))
         (layer (test13-layer self)))
-    (xmas.tmx-renderer:draw-tmx-layer
+    (draw-tmx-layer
      x y
-     (xmas.tmx-reader:tileset-tile-width tileset)
-     (xmas.tmx-reader:tileset-tile-height tileset)
+     (tileset-tile-width tileset)
+     (tileset-tile-height tileset)
      layer
      frames)))
 
@@ -586,14 +598,14 @@
 
 (defmethod cl-user::contents-will-mount ((self test14) display)
   (declare (ignore display))
-  (setf (test14-renderer self) (xmas.tmx-renderer:tmx-renderer-from-file "./res/test-tilemap.tmx")))
+  (setf (test14-renderer self) (tmx-renderer-from-file "./res/test-tilemap.tmx")))
 
 (defmethod cl-user::step-contents ((self test14) dt)
   (declare (ignore dt))
   (let* ((r (test14-renderer self))
-         (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
-         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0)))
-    (xmas.tmx-renderer:draw-tmx-renderer x y r)))
+         (x (/ (tmx-renderer-width r) 2.0))
+         (y (/ (tmx-renderer-height r) 2.0)))
+    (draw-tmx-renderer x y r)))
 
 (deftest tmx-renderer ()
   (cl-user::display-contents (make-test14) :width 500 :height 500))
@@ -603,30 +615,30 @@
 
 (defmethod cl-user::contents-will-mount ((self test15) display)
   (declare (ignore display))
-  (let ((n (make-instance 'xmas.node:node :x 250 :y 250)))
+  (let ((n (make-instance 'node :x 250 :y 250)))
     (setf (test15-node self) n)
-    (xmas.node:run-action
+    (run-action
      n
      (list
-      (xmas.action:move-by 3.0 -100.0 0)
-      (xmas.action:move-by 3.0 100.0 0))
+      (move-by 3.0 -100.0 0)
+      (move-by 3.0 100.0 0))
      :repeat :forever :tag 'moving)
-    (xmas.node:run-action
+    (run-action
      n
-     (xmas.action:rotate-by 5.0 360.0)
+     (rotate-by 5.0 360.0)
      :repeat :forever :tag 'rotating)
-    (xmas.node:run-action
+    (run-action
      n
      (list
-      (xmas.action:delay 3.0)
-      (xmas.action:callfunc (lambda ()
-                         (xmas.node:stop-all-actions n :tag 'moving)))))))
+      (delay 3.0)
+      (callfunc (lambda ()
+                  (stop-all-actions n :tag 'moving)))))))
 
 (defmethod cl-user::step-contents ((self test15) dt)
   (declare (ignorable dt))
   (unless (test15-started self)
     (setf (test15-started self) t)
-    (xmas.node:on-enter (test15-node self)))
+    (on-enter (test15-node self)))
   (visit (test15-node self)))
 
 (deftest action-tags ()
@@ -637,25 +649,25 @@
 
 (defmethod cl-user::contents-will-mount ((self test16) display)
   (declare (ignore display))
-  (xmas.texture-packer:texture-packer-add-frames-from-file "./res/test.json")
-  (xmas.animation-manager:add-animation 'cat (/ 1.0 7.5) '("catwalk0.png" "catwalk1.png"))
-  (let ((sprite (make-instance 'xmas.sprite:sprite
+  (texture-packer-add-frames-from-file "./res/test.json")
+  (add-animation 'cat (/ 1.0 7.5) '("catwalk0.png" "catwalk1.png"))
+  (let ((sprite (make-instance 'sprite
                                :x 250
                                :y 250
                                :scale-x 2.0
                                :scale-y 2.0
-                               :sprite-frame (xmas.texture:get-frame "pickle.png")
+                               :sprite-frame (get-frame "pickle.png")
                                :anchor-x 0.0
                                :anchor-y 0.0)))
-    (xmas.sprite:run-animation sprite 'cat :repeat :forever)
-    (setf (xmas.node:rotation sprite) -15)
+    (run-animation sprite 'cat :repeat :forever)
+    (setf (rotation sprite) -15)
     (setf (test16-node self) sprite)))
 
 (defmethod cl-user::step-contents ((self test16) dt)
   (declare (ignorable dt))
   (unless (test16-started self)
     (setf (test16-started self) t)
-    (xmas.node:on-enter (test16-node self)))
+    (on-enter (test16-node self)))
   (visit (test16-node self)))
 
 (deftest animation ()
@@ -667,13 +679,13 @@
 
 (defstruct test17
   root started nodes
-  (qtree (xmas.qtree:qtree))
+  (qtree (qtree))
   (mouse-x 0.0)
   (mouse-y 0.0))
 
 (defmethod cl-user::contents-will-mount ((self test17) display)
   (declare (ignore display))
-  (setf (test17-root self) (make-instance 'xmas.node:node))
+  (setf (test17-root self) (make-instance 'node))
   (let (nodes)
     (loop repeat 100 do
          (let ((n (make-instance 'box
@@ -684,32 +696,32 @@
                                  :y (random 500)
                                  :vx (- (/ (random 100) 100.0) 0.5)
                                  :vy (- (/ (random 100) 100.0) 0.5))))
-           (xmas.node:add-child (test17-root self) n)
+           (add-child (test17-root self) n)
            (push n nodes)))
     (setf (test17-nodes self) nodes)))
 
 (defun draw-marker (rect)
-  (xmas.render-buffer::draw-rect (xmas.node:x rect)
-                                 (xmas.node:y rect)
+  (xmas.render-buffer::draw-rect (x rect)
+                                 (y rect)
                                  5.0 5.0))
 
 (defmethod cl-user::step-contents ((self test17) dt)
   (unless (test17-started self)
     (setf (test17-started self) t)
-    (xmas.node:on-enter (test17-root self)))
-  (xmas.qtree:qtree-reset (test17-qtree self) :x 250 :y 250 :width 500 :height 500)
+    (on-enter (test17-root self)))
+  (qtree-reset (test17-qtree self) :x 250 :y 250 :width 500 :height 500)
   (dolist (box (test17-nodes self))
-    (incf (xmas.node:x box) (* 100 dt (box-vx box)))
-    (incf (xmas.node:y box) (* 100 dt (box-vy box)))
-    (when (or (< (xmas.node:x box) 0.0) (> (xmas.node:x box) 500.0))
+    (incf (x box) (* 100 dt (box-vx box)))
+    (incf (y box) (* 100 dt (box-vy box)))
+    (when (or (< (x box) 0.0) (> (x box) 500.0))
       (setf (box-vx box) (* -1.0 (box-vx box)))
-      (clampf (xmas.node:x box) 0.0 500.0))
-    (when (or (< (xmas.node:y box) 0.0) (> (xmas.node:y box) 500.0))
+      (clampf (x box) 0.0 500.0))
+    (when (or (< (y box) 0.0) (> (y box) 500.0))
       (setf (box-vy box) (* -1.0 (box-vy box)))
-      (clampf (xmas.node:y box) 0.0 500.0))
-    (xmas.qtree:qtree-add (test17-qtree self) box))
+      (clampf (y box) 0.0 500.0))
+    (qtree-add (test17-qtree self) box))
   (xmas.render-buffer::set-color 1.0 1.0 1.0 0.1)
-  (xmas.qtree:qtree-map-nodes
+  (qtree-map-nodes
    (test17-qtree self)
    (lambda (x y w h items)
      (declare (ignore items))
@@ -723,10 +735,10 @@
   (let ((x (test17-mouse-x self))
         (y (test17-mouse-y self)))
     (xmas.render-buffer::set-color 0.0 1.0 0.0 1)
-    (xmas.qtree:qtree-query
+    (qtree-query
      (test17-qtree self) x y (+ x 5) (+ y 5) 'draw-marker)
     (xmas.render-buffer::set-color 0.0 0.0 1.0 1)
-    (xmas.qtree:qtree-query-collisions
+    (qtree-query-collisions
      (test17-qtree self) x y (+ x 5) (+ y 5) 'draw-marker)))
 
 (defmethod cl-user::handle-event ((self test17) event)
@@ -744,17 +756,17 @@
 
 (defmethod cl-user::contents-will-mount ((self test18) display)
   (declare (ignore display))
-  (setf (test18-font self) (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont")
-         (test18-font2 self) (xmas.lfont-reader:lfont-from-file "./res/lfont/OpenSans-Light.lfont")))
+  (setf (test18-font self) (lfont-from-file "./res/lfont/november.lfont")
+        (test18-font2 self) (lfont-from-file "./res/lfont/OpenSans-Light.lfont")))
 
 (defmethod cl-user::step-contents ((self test18) dt)
   (declare (ignore dt))
-  (xmas.lfont-reader:lfont-draw-string (test18-font self)
-                                       "Hello, world!"
-                                       50.0 50.0)
-  (xmas.lfont-reader:lfont-draw-string (test18-font2 self)
-                                       "The quick brown fox jumped over the lazy dog."
-                                       10.0 150.0 :letter-spacing 0.0))
+  (lfont-draw-string (test18-font self)
+                     "Hello, world!"
+                     50.0 50.0)
+  (lfont-draw-string (test18-font2 self)
+                     "The quick brown fox jumped over the lazy dog."
+                     10.0 150.0 :letter-spacing 0.0))
 
 (deftest text-rendering ()
   (cl-user::display-contents (make-test18) :width 500 :height 500))
@@ -769,21 +781,21 @@
     (flet ((make-rect (&optional (ax (/ (random 150) 100.0))
                                  (ay (/ (random 150) 100.0)))
              (let ((r (make-instance 'rect
-                                   :content-width 40
-                                   :content-height 40
-                                   :anchor-x ax
-                                   :anchor-y ay
-                                   :x 250
-                                   :y 250
-                                   :opacity 0.5)))
+                                     :content-width 40
+                                     :content-height 40
+                                     :anchor-x ax
+                                     :anchor-y ay
+                                     :x 250
+                                     :y 250
+                                     :opacity 0.5)))
                (prog1 r
-                 (xmas.node:add-child root r)
-                 (xmas.node:run-action r
-                                       (list
-                                        (xmas.action:delay 1.0)
-                                        (xmas.action:rotate-by 3.0 360))
-                                       :repeat :forever)))))
-      (setf root (make-instance 'xmas.node:node))
+                 (add-child root r)
+                 (run-action r
+                             (list
+                              (delay 1.0)
+                              (rotate-by 3.0 360))
+                             :repeat :forever)))))
+      (setf root (make-instance 'node))
       (let ((a (make-rect))
             (b (make-rect))
             (c (make-rect))
@@ -797,26 +809,26 @@
         ;; a b
         ;; c d 
         (setf
-         (xmas.node:left a) left
-              (xmas.node:left c) left
-              (xmas.node:top a) top
-              (xmas.node:top b) top
-              (xmas.node:right b) right
-              (xmas.node:right d) right
-              (xmas.node:bottom d) bottom
-              (xmas.node:bottom c) bottom
-              (xmas.node:x e) 250
-              (xmas.node:y e) 250
-              (xmas.node:x f) 250
-              (xmas.node:y f) 250
-              (xmas.node:rotation f) 0.0)))))
+         (left a) left
+         (left c) left
+         (top a) top
+         (top b) top
+         (right b) right
+         (right d) right
+         (bottom d) bottom
+         (bottom c) bottom
+         (x e) 250
+         (y e) 250
+         (x f) 250
+         (y f) 250
+         (rotation f) 0.0)))))
 
 (defmethod cl-user::step-contents ((self test19) dt)
   (declare (ignore dt))
   (with-struct (test19- root started) self
     (unless started
       (setf started t)
-      (xmas.node:on-enter root))
+      (on-enter root))
     (visit root)))
 
 (deftest anchor-point-test-0 ()
