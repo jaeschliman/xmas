@@ -134,7 +134,10 @@
   (let ((object (game-object jewel)))
     (remove-from-parent jewel)
     (setf (sprite object) nil)
-    (incf *jewel-count*)))
+    (incf *jewel-count*)
+    (setf (fill-pointer *jewel-count-label*) 0)
+    (with-output-to-string (s *jewel-count-label*)
+      (format s "~S jewels" *jewel-count*))))
 
 (defstruct game-object-manager
   sprite-node
@@ -804,12 +807,12 @@
   (with-struct (platformer- started root level) self
     (unless started
       (setf started t)
-      (on-enter root))
+      (on-enter root)
+      (setf (fill-pointer *jewel-count-label*) 0)
+      (with-output-to-string (s *jewel-count-label*)
+        (format s "~S jewels" *jewel-count*)))
     (update level dt)
     (visit root)
-    (setf (fill-pointer *jewel-count-label*) 0)
-    (with-output-to-string (s *jewel-count-label*)
-      (format s "~S jewels" *jewel-count*))
     (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)))
 
 (defmethod cl-user::handle-event ((self platformer) event)
