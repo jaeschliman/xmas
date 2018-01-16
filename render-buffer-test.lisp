@@ -217,21 +217,12 @@
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
 (defclass rect (xmas.node:node)
-  ((width :initarg :width)
-   (height :initarg :height)))
-
-(defmethod xmas.node:width ((self rect))
-  (slot-value self 'width))
-
-(defmethod xmas.node:height ((self rect))
-  (slot-value self 'height))
+  ()
+  (:default-initargs :anchor-x 0.5 :anchor-y 0.5))
 
 (defmethod draw ((self rect))
   (draw-node-color self)
-  (with-slots (width height) self
-    (xmas.render-buffer::draw-rect (- (/ width 2.0))
-                                   (- (/ height 2.0))
-                                   width height)))
+  (xmas.render-buffer::draw-rect 0.0 0.0 (xmas.node:width self) (xmas.node:height self)))
 
 (defmethod draw ((self xmas.node:node))
   (draw-node-color self)
@@ -686,8 +677,8 @@
   (let (nodes)
     (loop repeat 100 do
          (let ((n (make-instance 'box
-                                 :width 20
-                                 :height 20
+                                 :content-width 20
+                                 :content-height 20
                                  :opacity 0.5
                                  :x (random 500)
                                  :y (random 500)
@@ -767,3 +758,66 @@
 
 (deftest text-rendering ()
   (cl-user::display-contents (make-test18) :width 500 :height 500))
+
+
+(defstruct test19
+  started root)
+
+(defmethod cl-user::contents-will-mount ((self test19) display)
+  (declare (ignore display))
+  (with-struct (test19- root) self
+    (flet ((make-rect (&optional (ax (/ (random 150) 100.0))
+                                 (ay (/ (random 150) 100.0)))
+             (let ((r (make-instance 'rect
+                                   :content-width 40
+                                   :content-height 40
+                                   :anchor-x ax
+                                   :anchor-y ay
+                                   :x 250
+                                   :y 250
+                                   :opacity 0.5)))
+               (prog1 r
+                 (xmas.node:add-child root r)
+                 (xmas.node:run-action r
+                                       (list
+                                        (xmas.action:delay 1.0)
+                                        (xmas.action:rotate-by 3.0 360))
+                                       :repeat :forever)))))
+      (setf root (make-instance 'xmas.node:node))
+      (let ((a (make-rect))
+            (b (make-rect))
+            (c (make-rect))
+            (d (make-rect))
+            (e (make-rect 0.0 0.0))
+            (f (make-rect 0.5 0.5))
+            (top 450)
+            (left 50)
+            (bottom 50)
+            (right 450))
+        ;; a b
+        ;; c d 
+        (setf
+         (xmas.node:left a) left
+              (xmas.node:left c) left
+              (xmas.node:top a) top
+              (xmas.node:top b) top
+              (xmas.node:right b) right
+              (xmas.node:right d) right
+              (xmas.node:bottom d) bottom
+              (xmas.node:bottom c) bottom
+              (xmas.node:x e) 250
+              (xmas.node:y e) 250
+              (xmas.node:x f) 250
+              (xmas.node:y f) 250
+              (xmas.node:rotation f) 0.0)))))
+
+(defmethod cl-user::step-contents ((self test19) dt)
+  (declare (ignore dt))
+  (with-struct (test19- root started) self
+    (unless started
+      (setf started t)
+      (xmas.node:on-enter root))
+    (visit root)))
+
+(deftest anchor-point-test-0 ()
+  (cl-user::display-contents (make-test19) :width 500 :height 500))
