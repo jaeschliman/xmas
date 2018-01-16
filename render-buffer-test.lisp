@@ -251,12 +251,13 @@
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (let ((frame (sprite-frame self)))
+  (let* ((frame (sprite-frame self))
+         (width (texture-frame-width frame))
+         (height (texture-frame-height frame))
+         (offs-x (* 0.5 (- (content-width self) width)))
+         (offs-y (* 0.5 (- (content-height self) height))))
     (draw-texture-frame-at
-     frame
-     0.0 0.0
-     (texture-frame-width frame)
-     (texture-frame-height frame))))
+     frame offs-x offs-y width height)))
 
 ;; the fast method:
 (defmethod visit ((self node))
@@ -273,7 +274,7 @@
          (scale-x self) (scale-y self)
          (rotation self)
          (* -1.0 ax (content-width self))
-         (* -1.0 ay (content-width self)))))
+         (* -1.0 ay (content-height self)))))
   (draw self)
   (when (children self)
     (loop for child across (children self) do
@@ -805,16 +806,12 @@
                               (rotate-by 3.0 360))
                              :repeat :forever)))))
       (setf root (make-instance 'node))
-      (let ((a (make-rect))
-            (b (make-rect))
-            (c (make-rect))
-            (d (make-rect))
+      (let ((a (make-rect)) (b (make-rect))
+            (c (make-rect)) (d (make-rect))
             (e (make-rect 0.0 0.0))
             (f (make-rect 0.5 0.5))
-            (top 450)
-            (left 50)
-            (bottom 50)
-            (right 450))
+            (top 450) (left 50)
+            (bottom 50) (right 450))
         ;; a b
         ;; c d 
         (setf
@@ -843,4 +840,36 @@
 (deftest anchor-point-test-0 ()
   (cl-user::display-contents (make-test19) :width 500 :height 500))
 
-(run-all-tests)
+(defstruct test20
+  sprite1 sprite2 sprite3 started)
+
+(defmethod cl-user::contents-will-mount ((self test20) display)
+  (declare (ignore display))
+  (texture-packer-add-frames-from-file "./res/test.json")
+  (setf (test20-sprite1 self)
+        (make-instance 'sprite :x 150 :y 250
+                       :sprite-frame (get-frame "pickle.png"))
+        (test20-sprite2 self)
+        (make-instance 'sprite :x 250 :y 250
+                       :content-width 40
+                       :content-height 60
+                       :sprite-frame (get-frame "pickle.png"))
+        (test20-sprite3 self)
+        (make-instance 'sprite :x 400 :y 250
+                       :content-width 100
+                       :content-height 150
+                       :sprite-frame (get-frame "pickle.png"))))
+
+(defmethod cl-user::step-contents ((self test20) dt)
+  (declare (ignorable dt))
+  (flet ((draw-it (s)
+           (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
+           (xmas.render-buffer::draw-rect (left s) (bottom s) (width s) (height s))
+           (visit s)))
+    (draw-it (test20-sprite1 self))
+    (draw-it (test20-sprite2 self))
+    (draw-it (test20-sprite3 self))))
+
+(deftest anchor-point-test-1 ()
+  (cl-user::display-contents (make-test20) :width 500 :height 500))
+
