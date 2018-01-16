@@ -1,5 +1,7 @@
 (in-package :cl-user)
 
+(defvar *display-closed-hook* nil)
+
 (defgeneric handle-event (contents event)
   (:method (contents event) (declare (ignorable contents event))))
 
@@ -194,7 +196,9 @@
 
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
-  (cleanup-display (display self)))
+  (cleanup-display (display self))
+  (alexandria:when-let (hook (xmas.display:display-closed-hook (display self)))
+    (funcall hook)))
 
 (objc:defmethod (#/windowDidResize: :void) ((self my-window) notification)
   (declare (ignorable notification))
@@ -289,6 +293,11 @@
     (progmain ()
       (#/setNeedsDisplay: view #$YES))))
 
+(defun default-pixel-format ()
+  (#/defaultPixelFormat ns:ns-opengl-view))
+
+;; TODO: a working anti-aliased pixel format
+
 (defun display-contents (contents &key
                                     (width 250)
                                     (height 250)
@@ -305,7 +314,8 @@
                                 :size-to-fit size-to-fit
                                 :action-manager (xmas.action-manager:make-manager)
                                 :animation-manager (xmas.animation-manager:make-manager)
-                                :preserve-aspect-ratio preserve-aspect-ratio))
+                                :preserve-aspect-ratio preserve-aspect-ratio
+                                :closed-hook *display-closed-hook*))
          (texture-manager (xmas.texture:make-texture-manager :display result)))
     (setf (xmas.display:display-texture-manager result)
           texture-manager)
@@ -321,7 +331,7 @@
                                     :contents contents
                                     :display  result
                                     :with-frame w-frame
-                                    :pixel-format (#/defaultPixelFormat ns:ns-opengl-view))))
+                                    :pixel-format (default-pixel-format))))
         (#/setContentView: w glview)
         (#/setDelegate: w w)
         (#/setAcceptsMouseMovedEvents: w #$YES)
