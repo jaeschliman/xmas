@@ -242,15 +242,6 @@
 (defclass tmx-node (node)
   ((tmx :accessor tmx :initarg :tmx)))
 
-(defmethod width ((self player))
-  24.0
-  ;;(* 0.6 (sprite-width self))
-  )
-(defmethod height ((self player))
-  64
-  ;;(* 0.8 (sprite-height self))
-  )
-
 (defgeneric draw (node))
 (defmethod draw ((self node)))
 
@@ -264,7 +255,13 @@
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
-  (xmas.draw:draw-texture-frame (sprite-frame self) 0.0 0.0))
+  (let* ((frame (sprite-frame self))
+         (width (texture-frame-width frame))
+         (height (texture-frame-height frame))
+         (offs-x (* 0.5 (- (content-width self) width)))
+         (offs-y (* 0.5 (- (content-height self) height))))
+    (xmas.draw:draw-texture-frame-at
+     frame offs-x offs-y width height)))
 
 (defmethod draw ((self tmx-node))
   (let* ((r (tmx self))
@@ -283,11 +280,21 @@
   (when (not (visible self))
     (return-from visit))
   (xmas.render-buffer::push-matrix)
-  (xmas.render-buffer::translate-scale-rotate
-   (x self) (y self)
-   (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
-   (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
-   (rotation self))
+  (let ((ax (anchor-x self))
+        (ay (anchor-y self)))
+    (if (or nil (and (zerop ax) (zerop ay)))
+        (xmas.render-buffer::translate-scale-rotate
+         (x self) (y self)
+         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
+         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
+         (rotation self))
+        (xmas.render-buffer::translate-scale-rotate-translate
+         (x self) (y self)
+         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
+         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
+         (rotation self)
+         (* -1.0 ax (content-width self))
+         (* -1.0 ay (content-height self)))))
   (draw self)
   (when (children self)
     (loop for child across (children self) do
@@ -713,12 +720,15 @@
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
             player (make-instance 'player
-                                  :x 80.0
+                                  :x 50.0
                                   :acceleration-y -100.0
                                   :sprite-frame frame
+                                  :content-width 32.0
+                                  :content-height 60.0
+                                  ;; :anchor-x 0.5
+                                  ;; :anchor-y 0.5
                                   :state 'standing)
-            tile-table (tile-lookup-table-from-tmx-renderer tmx)
-            )
+            tile-table (tile-lookup-table-from-tmx-renderer tmx))
       (let* ((width (xmas.tmx-renderer:tmx-renderer-width tmx))
              (height (xmas.tmx-renderer:tmx-renderer-height tmx))
              (x (/ width 2.0))
@@ -737,6 +747,8 @@
               (game-object-manager-add-object object-manager object)))))
       (setf (bottom player) 32.0)
       ;;should have a 'move-player-to-ground' function
+      (setf (x player) 100.0)
+      (setf (y player) 100.0)
       (setf (standing-on player)
             (update-sprite-physics self player (/ 1.0 60.0)))
       (add-child root background)
