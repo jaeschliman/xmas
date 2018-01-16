@@ -29,6 +29,15 @@
   `(setf (gethash ',name *tests*) (lambda () ,@body)))
 
 (defun run-test (name) (funcall (gethash name *tests*)))
+(defun run-tests (list)
+  (labels ((next ()
+             (when-let (test (pop list))
+               (let ((cl-user::*display-closed-hook* #'next))
+                 (format t "RUNNING TEST: ~S~%" test)
+                 (run-test test)))))
+    (next)))
+(defun run-all-tests ()
+  (run-tests (hash-table-keys *tests*)))
 
 (defstruct bouncy-box
   (x (random 230))
@@ -833,3 +842,5 @@
 
 (deftest anchor-point-test-0 ()
   (cl-user::display-contents (make-test19) :width 500 :height 500))
+
+(run-all-tests)

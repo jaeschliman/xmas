@@ -17,7 +17,8 @@
              #:display-texture-manager
              #:size-to-fit
              #:preserve-aspect-ratio
-             #:display-animation-manager))
+             #:display-animation-manager
+             #:display-closed-hook))
 
 (in-package :xmas.display)
 
@@ -40,7 +41,9 @@
                    :initarg :action-manager)
    (texture-manager :accessor display-texture-manager)
    (animation-manager :accessor display-animation-manager
-                      :initarg :animation-manager)))
+                      :initarg :animation-manager)
+   (closed-hook :accessor display-closed-hook
+                :initarg :closed-hook)))
 
 (defun display-drain-gl-queue (display)
   (loop
