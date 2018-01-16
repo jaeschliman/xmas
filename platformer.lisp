@@ -141,7 +141,8 @@
   (objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
   (awake-objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
   (object-qtree (qtree))
-  (sprite-qtree (qtree)))
+  (sprite-qtree (qtree))
+  (points (make-hash-table :test 'eq)))
 
 (defmethod wake ((object game-object) manager)
   (setf (sleeping object) nil)
@@ -708,7 +709,32 @@
       (setf (game-object sprite) obj)
       obj)))
 
-(defmethod init-level ((self level) &key background-node tmx-file)
+(defun load-game-objects-from-tmx (tmx object-manager tile-table)
+  (let* ((map (xmas.tmx-renderer:tmx-renderer-map tmx))
+         (layers (xmas.tmx-reader:map-layers map))
+         (objects-layer (find :objects layers :key 'xmas.tmx-reader:layer-type))
+         (data (xmas.tmx-reader:layer-data objects-layer)))
+    (dolist (list data)
+      (let ((object-type (car list))
+            (plist (rest list)))
+        (case object-type
+          (:tile-sprite 
+           (let* ((tile (aref tile-table (getf plist :gid)))
+                  (type (tile-type tile))
+                  (initargs (rest (rest plist))))
+             (when-let (object (make-game-object-from-object-info type initargs))
+               (game-object-manager-add-object object-manager object))))
+          (:point
+           (let* ((*read-eval* nil)
+                  (name (read-from-string (getf plist :name))))
+             (setf (gethash name (game-object-manager-points object-manager))
+                   (list (getf plist :x) (getf plist :y)))))
+          (t (warn "unhandled object type: ~S~%" object-type)))))))
+
+(defmethod init-level ((self level) &key
+                                      background-node
+                                      tmx-file
+                                      start-position)
   (with-struct (level- root tmx tmx-node player
                        tile-table background object-manager)
       self
@@ -734,21 +760,16 @@
              (x (/ width 2.0))
              (y (/ height 2.0)))
         (game-object-manager-set-active-area object-manager x y width height))
-      (let* ((map (xmas.tmx-renderer:tmx-renderer-map tmx))
-             (layers (xmas.tmx-reader:map-layers map))
-             (objects-layer (find :objects layers :key 'xmas.tmx-reader:layer-type))
-             (data (xmas.tmx-reader:layer-data objects-layer)))
-        (dolist (plist data)
-          (let* ((tile (aref tile-table (getf plist :gid)))
-                 (type (tile-type tile))
-                 (initargs (rest (rest plist))))
-            (when-let (object (make-game-object-from-object-info type initargs))
-              (format t "built object for type: ~S ~A ~A ~%" type object (getf initargs :y))
-              (game-object-manager-add-object object-manager object)))))
-      (setf (bottom player) 32.0)
+      (load-game-objects-from-tmx tmx object-manager tile-table)
+      (if-let (start (gethash start-position (game-object-manager-points object-manager)))
+        (setf (x player) (first start)
+              (bottom player) (second start))
+        (progn
+          (warn "starting position not found!")
+          (setf (x player) 100.0)
+          (setf (y player) 100.0)))
+
       ;;should have a 'move-player-to-ground' function
-      (setf (x player) 100.0)
-      (setf (y player) 100.0)
       (setf (standing-on player)
             (update-sprite-physics self player (/ 1.0 60.0)))
       (add-child root background)
@@ -774,7 +795,8 @@
                 :background-node (make-instance
                                   'image :x 250 :y 250
                                   :texture (get-texture "./res/platformer/sky.png"))
-                :tmx-file "./res/platformer/dev.tmx")
+                :tmx-file "./res/platformer/dev.tmx"
+                :start-position 'start)
     (add-child root (level-root level))))
 
 
