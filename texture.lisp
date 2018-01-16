@@ -91,11 +91,14 @@
         (h (texture-height texture))
         (dat (#/bitmapData rep)))
     (let ((id (car (gl:gen-textures 1))))
+      (gl:enable :texture-2d)
       (gl:bind-texture :texture-2d id)
       (gl:tex-parameter :texture-2d :texture-min-filter :linear)
       (gl:tex-image-2d :texture-2d 0 :rgba
                        w h 0 format
                        :unsigned-byte dat)
+      (gl:disable :texture-2d)
+      (gl:bind-texture :texture-2d 0)
       (setf (texture-id texture) id))))
 
 (defun load-texture-on-display (display pathname)
