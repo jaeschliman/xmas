@@ -30,10 +30,8 @@
          (layer-height (xmas.tmx-reader:layer-height layer))
          (cols (- end-x start-x))
          (rows (- end-y start-y))
-         (origin-x (+ (- at-x (/ (* tile-width layer-width) 2.0))
-                      (/ tile-width 2.0)))
-         (origin-y (- (+ at-y (/ (* tile-height layer-height) 2.0))
-                      (/ tile-width 2.0))))
+         (origin-x (- at-x (/ (* tile-width layer-width) 2.0)))
+         (origin-y (- (+ at-y (/ (* tile-height layer-height) 2.0)) tile-width)))
     (dotimes (row rows)
       (dotimes (col cols)
         (when-let (frame (aref frames (xmas.tmx-reader:layer-gid-at
@@ -42,7 +40,7 @@
                                        (+ start-y row))))
           (let ((x (+ origin-x (* (+ start-x col) tile-width)))
                 (y (- origin-y (* (+ start-y row) tile-height))))
-            (xmas.draw:draw-texture-frame frame x y t)))))))
+            (xmas.draw:draw-texture-frame-at frame x y tile-width tile-height)))))))
 
 (defun make-tileset-texture-frames (tileset)
   (let* ((texture (xmas.texture:get-texture (xmas.tmx-reader:tileset-source tileset)))
