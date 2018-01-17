@@ -64,6 +64,7 @@
     (xmas.render-buffer::draw-rect x y 20 20)))
 
 (xmas.deftest:deftest bouncy-balls (:width 500 :height 500 :expandable t)
+  :tags draw-rect window events
   :init
   width  := (display-width display)
   height := (display-height display)
@@ -86,24 +87,14 @@
              height h)))
     (t (format t "got unhandled event: ~S~%" event))))
 
-(defstruct test4
-  alien)
-
-(defmethod cl-user::contents-will-mount ((self test4) display)
-  (declare (ignorable display))
-  (let ((texture (get-texture #P"./alien.png")))
-    (assert (texture-width texture))
-    (assert (texture-height texture))
-    (setf (test4-alien self) texture))
-  (unless (test4-alien self)
-    (format t "missing texture!")))
-
-(defmethod cl-user::step-contents ((self test4) dt)
-  (declare (ignorable dt))
-  (draw-texture (test4-alien self)))
-
-(deftest draw-texture ()
-  (cl-user::display-contents (make-test4)))
+(xmas.deftest:deftest draw-texture ()
+  :tags texture load-time draw-texture
+  :init
+  alien := (get-texture #P "./alien.png")
+  (assert (texture-width alien))
+  (assert (texture-height alien))
+  :update
+  (draw-texture alien))
 
 (defstruct simple-sprite
   (x 0.0)
