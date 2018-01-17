@@ -64,7 +64,7 @@
     (xmas.render-buffer::draw-rect x y 20 20)))
 
 (xmas.deftest:deftest bouncy-balls (:width 500 :height 500 :expandable t)
-  :tags draw-rect window events
+  :tags draw-rect window events draw-heavy
   :init
   width  := (display-width display)
   height := (display-height display)
@@ -131,23 +131,13 @@
   (draw-texture (simple-sprite-texture sprite))
   (xmas.render-buffer::pop-matrix))
 
-(defstruct test5
-  width
-  height
-  texture
-  sprites)
-
-(defmethod cl-user::contents-will-mount ((self test5) display)
-  (let ((width (display-width display))
-        (height (display-height display))
-        (texture (get-texture #P"./alien.png")))
-    (unless texture
-      (format t "missing texture!"))
-    (setf (test5-width self) width)
-    (setf (test5-height self) height)
-    (setf (test5-texture self) texture)
-    (setf (test5-sprites self)
-          (loop repeat 4000 collect
+(xmas.deftest:deftest draw-many-textures (:width 500 :height 500)
+  :tags draw-heavy texture
+  :init
+  width   := (display-width display)
+  height  := (display-height display)
+  texture := (get-texture #P"./alien.png")
+  sprites := (loop repeat 4000 collect
                (make-simple-sprite :x (random width)
                                    :y (random height)
                                    :dx (- (random 100) 50)
@@ -156,55 +146,34 @@
                                    :dr (- (random 100) 50)
                                    :sx 0.5
                                    :sy 0.5
-                                   :texture texture)))))
-
-
-(defmethod cl-user::step-contents ((self test5) dt)
-  (declare (ignorable dt))
-  (let ((maxx (test5-width self)) (maxy (test5-height self)))
-    (dolist (sprite (test5-sprites self))
-      (update-sprite sprite maxx maxy dt)))
-  (dolist (sprite (test5-sprites self))
+                                   :texture texture))
+  :update
+  (dolist (sprite sprites)
+    (update-sprite sprite width height dt))
+  (dolist (sprite sprites)
     (draw-sprite sprite)))
 
-(defmethod cl-user::handle-event ((self test5) event)
-  (case (car event)
-    (:resize
-     (let ((w (cadr event))
-           (h (cddr event)))
-       (setf (test5-width self) w
-             (test5-height self) h)))
-    (t (format t "got unhandled event: ~S~%" event))))
-
-(deftest draw-many-textures ()
-  (cl-user::display-contents (make-test5) :width 500 :height 500 :expandable t))
-
-(defstruct test6
-  (matrix (make-matrix))
-  (scratch-matrix (make-matrix)))
-
-(defmethod cl-user::contents-will-mount ((self test6) display)
-  (declare (ignorable display))
-  (let ((m (test6-matrix self)))
-    (into-matrix (m)
-      (load-identity)
-      (translate 125.0 125.0))))
-
-(defmethod cl-user::step-contents ((self test6) dt)
-  (declare (ignorable dt))
-  (let ((*tmp-matrix* (test6-scratch-matrix self)))
-    (into-matrix ((test6-matrix self))
+(xmas.deftest:deftest matrix-translation-rotation ()
+  :tags draw-rect matrix mult-matrix
+  :init
+  matrix := (make-matrix)
+  scratch := (make-matrix)
+  (into-matrix (matrix)
+    (load-identity)
+    (translate 125.0 125.0))
+  :update
+  (let ((*tmp-matrix* scratch))
+    (into-matrix (matrix)
       (rotate (* 40 dt))))
   (xmas.render-buffer::set-color 0.0 1.0 0.0 0.5)
   (xmas.render-buffer::draw-rect 10.0 10.0 20.0 20.0)
+  (xmas.render-buffer::draw-rect 115.0 115.0 20.0 20.0)
   (xmas.render-buffer::push-matrix)
-  (xmas.render-buffer::mult-matrix (unwrap-matrix (test6-matrix self)))
+  (xmas.render-buffer::mult-matrix (unwrap-matrix matrix))
+  (xmas.render-buffer::draw-rect -10.0 -10.0 20.0 20.0)
   (xmas.render-buffer::draw-rect 10.0 10.0 20.0 20.0)
   (xmas.render-buffer::draw-rect 30.0 30.0 20.0 20.0)
   (xmas.render-buffer::pop-matrix))
-
-(deftest matrix-translation ()
-  (cl-user::display-contents (make-test6)))
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
@@ -287,145 +256,106 @@
 ;;          (visit child)))
 ;;   (pop-matrix))
 
-(defstruct test7
-  nodes
-  width
-  height
-  root-node)
 
-(defmethod cl-user::contents-will-mount ((self test7) display)
-  (with-slots (nodes width height root-node) self
-    (let* ((w (display-width display))
-           (h (display-height display))
-           (w/2 (/ w 2))
-           (h/2 (/ h 2))
-           (diagonal (sqrt (+ (* w w) (* h h))))
-           (d/2 (/ diagonal 2)))
-      (setf width w
-            height h
-            root-node (make-instance 'node
-                                     :x w/2
-                                     :y h/2)
-            nodes
-            (loop
-               repeat 4000 collect
-                 (make-instance 'node
-                                :x (coerce (- (random diagonal) d/2) 'float)
-                                :y (coerce (- (random diagonal) d/2)'float)
-                                :rotation (coerce (random 360) 'float)
-                                :color (vector
-                                        (/ (random 100) 100.0)
-                                        (/ (random 100) 100.0)
-                                        (/ (random 100) 100.0))
-                                :opacity (/ (random 100) 100.0)))))
-    (dolist (child nodes)
-      (add-child root-node child))))
-
-(defmethod cl-user::step-contents ((self test7) dt)
-  (declare (ignorable dt))
-  (dolist (node (cons (test7-root-node self) (test7-nodes self)))
+(xmas.deftest:deftest visit-and-draw-many-nodes (:width 500 :height 500)
+  :tags node draw-heavy add-child rotation slow-start
+  :init
+  width     := (display-width display)
+  height    := (display-height display)
+  diagonal  := (sqrt (+ (* width width) (* height height)))
+  d/2       := (/ diagonal 2)
+  root-node := (make-instance 'node :x (/ width 2.0) :y (/ height 2.0))
+  nodes     := (loop repeat 4000 collect
+                    (make-instance 'node
+                                   :x (coerce (- (random diagonal) d/2) 'float)
+                                   :y (coerce (- (random diagonal) d/2)'float)
+                                   :rotation (coerce (random 360) 'float)
+                                   :color (vector
+                                           (/ (random 100) 100.0)
+                                           (/ (random 100) 100.0)
+                                           (/ (random 100) 100.0))
+                                   :opacity (/ (random 100) 100.0)))
+  (dolist (node nodes)
+    (add-child root-node node))
+  :update
+  (dolist (node (cons root-node nodes))
     (let ((r (rotation node)))
       (incf r (* dt 100))
       (setf r (mod r 360))
       (setf (rotation node) r)))
   (xmas.render-buffer::set-color 0.0 1.0 1.0 0.4)
-  (visit (test7-root-node self)))
+  (visit root-node))
 
-(deftest visit-and-draw-many-nodes ()
-  (cl-user::display-contents (make-test7) :width 500 :height 500))
+;; (xmas.deftest:run-test 'visit-and-draw-many-nodes)
 
+(xmas.deftest:deftest node-actions ()
+  :tags node actions run-action repeat easing callfunc remove-from-parent
+  :init
+  started := nil
+  node := (make-instance 'node
+                         :x (/ (display-width display) 2)
+                         :y (/ (display-height display) 2))
+  node2 := (make-instance 'node
+                          :color (vector 0.0 1.0 1.0)
+                          :opacity 0.4
+                          :x 20.0
+                          :y 20.0)
+  node3 := (make-instance 'node
+                          :color (vector 1.0 0.0 0.0)
+                          :opacity 0.4
+                          :x -20.0
+                          :y -20.0)
+  node4 := (make-instance 'node
+                          :color (vector 0.0 1.0 0.0)
+                          :opacity 0.4
+                          :x  20.0
+                          :y -20.0)
+  node5 := (make-instance 'node
+                          :color (vector 1.0 1.0 0.0)
+                          :opacity 0.4
+                          :x -20.0
+                          :y  20.0)
+  (run-action node (list (delay 1.0)
+                         (rotate-by 1.5 180.0 :ease :in-out-quad)
+                         (delay 1.0)
+                         (rotate-by 1.25 -90.0 :ease :in-out-sine))
+              :repeat :forever)
+  (run-action node2 (rotate-by 2.5 -360)
+              :repeat :forever)
+  (run-action node3 (list (rotate-by 0.25 -60.0) (rotate-by 0.25 60.0))
+              :repeat :forever)
+  (run-action node4 (list (rotate-by 0.5 -60.0)
+                          (rotate-by 0.25 -60.0)
+                          (rotate-by 0.25 60.0))
+              :repeat :forever)
+  (run-action node5 (list (rotate-by 0.5 -60.0)
+                          (rotate-by 0.5 60.0)
+                          (rotate-by 0.5 -360.0)
+                          (rotate-by 0.5 360.0))
+              :repeat :forever)
+  (add-child node node2)
+  (add-child node node3)
+  (add-child node node4)
+  (add-child node node5)
+  (run-action node (list
+                    (callfunc (lambda () (format t " tick! ")))
+                    (delay 2.0))
+              :repeat :forever)
+  (run-action node (list
+                    (delay 1.0)
+                    (callfunc (lambda () (format t " tock! ")))
+                    (delay 1.0))
+              :repeat :forever)
+  (run-action node (list
+                    (delay 3.0)
+                    (callfunc (lambda () (remove-from-parent node2)))))
+  :update
+  (unless started
+    (setf started t)
+    (on-enter node))
+  (visit node))
 
-(defstruct test8
-  node
-  started)
-
-(defmethod cl-user::contents-will-mount ((self test8) display)
-  (let ((node (make-instance 'node
-                             :x (/ (display-width display) 2)
-                             :y (/ (display-height display) 2)))
-        (node2 (make-instance 'node
-                              :color (vector 0.0 1.0 1.0)
-                              :opacity 0.4
-                              :x 20.0
-                              :y 20.0))
-        (node3 (make-instance 'node
-                              :color (vector 1.0 0.0 0.0)
-                              :opacity 0.4
-                              :x -20.0
-                              :y -20.0))
-        (node4 (make-instance 'node
-                              :color (vector 0.0 1.0 0.0)
-                              :opacity 0.4
-                              :x  20.0
-                              :y -20.0))
-        (node5 (make-instance 'node
-                              :color (vector 1.0 1.0 0.0)
-                              :opacity 0.4
-                              :x -20.0
-                              :y  20.0)))
-    (run-action node
-                (repeat-forever
-                 (run-sequence
-                  (delay 1.0)
-                  (ease-in-out-quad
-                   (rotate-by 1.5 180.0))
-                  (delay 1.0)
-                  (ease-in-out-sine
-                   (rotate-by 1.25 -90.0)))))
-    (run-action node2
-                (repeat-forever
-                 (rotate-by 2.5 -360.0)))
-    (run-action node3
-                (repeat-forever
-                 (run-sequence
-                  (rotate-by 0.25 -60.0)
-                  (rotate-by 0.25 60.0))))
-    (run-action node4
-                (repeat-forever
-                 (run-sequence
-                  (rotate-by 0.5 -60.0)
-                  (rotate-by 0.25 -60.0)
-                  (rotate-by 0.25 60.0))))
-    (run-action node5
-                (repeat-forever
-                 (run-sequence
-                  (rotate-by 0.5 -60.0)
-                  (rotate-by 0.5 60.0)
-                  (rotate-by 0.5 -360.0)
-                  (rotate-by 0.5 360.0))))
-    (add-child node node2)
-    (add-child node node3)
-    (add-child node node4)
-    (add-child node node5)
-    (run-action
-     node
-     (repeat-forever
-      (run-sequence
-       (callfunc (lambda () (format t " tick! ")))
-       (delay 2.0))))
-    (run-action
-     node
-     (repeat-forever
-      (run-sequence
-       (delay 1.0)
-       (callfunc (lambda () (format t " tock! ")))
-       (delay 1.0))))
-    (run-action
-     node
-     (run-sequence
-      (delay 3.0)
-      (callfunc (lambda () (remove-from-parent node2)))))
-    (setf (test8-node self) node)))
-
-(defmethod cl-user::step-contents ((self test8) dt)
-  (declare (ignorable dt))
-  (unless (test8-started self)
-    (setf (test8-started self) t)
-    (on-enter (test8-node self)))
-  (visit (test8-node self)))
-
-(deftest node-actions ()
-  (cl-user::display-contents (make-test8)))
+;; (xmas.deftest:run-test 'node-actions)
 
 
 (defstruct test9
