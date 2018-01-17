@@ -752,10 +752,8 @@
                                   :x 50.0
                                   :acceleration-y -100.0
                                   :sprite-frame frame
-                                  :content-width 32.0
+                                  :content-width 25.0
                                   :content-height 60.0
-                                  ;; :anchor-x 0.5
-                                  ;; :anchor-y 0.5
                                   :state 'standing)
             tile-table (tile-lookup-table-from-tmx-renderer tmx))
       (let* ((width (xmas.tmx-renderer:tmx-renderer-width tmx))
