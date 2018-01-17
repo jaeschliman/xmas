@@ -358,44 +358,33 @@
 ;; (xmas.deftest:run-test 'node-actions)
 
 
-(defstruct test9
-  node
-  started)
+(xmas.deftest:deftest action-manager-test ()
+  :tags node actions action-manager
+  :init
+  started := nil
+  root := (make-instance 'node
+                         :x (/ (display-width display) 2)
+                         :y (/ (display-height display) 2))
+  (labels ((add-node (&aux (node (make-instance 'node)))
+             (run-action
+              node
+              (list (move-by 3.0 -250 -250)
+                    (callfunc (lambda () (remove-from-parent node)))))
+             (run-action
+              root
+              (list (delay 4.0)
+                    (callfunc
+                     (lambda ()
+                       (add-child root node)
+                       (add-node)))))))
+    (add-node))
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (visit root))
 
-(defun test9-add-node (self)
-  (let ((node (make-instance 'node))
-        (root (test9-node self)))
-    (run-action
-     node
-     (list (move-by 3.0 -250.0 -250.0)
-           (callfunc (lambda () (remove-from-parent node)))))
-    (run-action
-     root
-     (list
-      (delay 4.0)
-      (callfunc
-       (lambda ()
-         (add-child root node)
-         (format t "~S ~%" (mod (/ (get-internal-real-time) (coerce internal-time-units-per-second 'float)) 60))
-         (test9-add-node self)))))))
-
-(defmethod cl-user::contents-will-mount ((self test9) display)
-  (let ((node (make-instance 'node
-                             :x (/ (display-width display) 2)
-                             :y (/ (display-height display) 2))))
-    (setf (test9-node self) node)
-    (test9-add-node self)))
-
-(defmethod cl-user::step-contents ((self test9) dt)
-  (declare (ignorable dt))
-  (unless (test9-started self)
-    (setf (test9-started self) t)
-    (on-enter (test9-node self)))
-  (visit (test9-node self)))
-
-(deftest action-manager-test ()
-  (cl-user::display-contents (make-test9)))
-
+;; (xmas.deftest:run-test 'action-manager-test)
 
 (defstruct test10
   a b c d)
