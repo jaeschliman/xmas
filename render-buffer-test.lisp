@@ -63,47 +63,29 @@
     (xmas.render-buffer::set-color r g b a)
     (xmas.render-buffer::draw-rect x y 20 20)))
 
-(defstruct test3
-  (boxes (loop repeat 4000 collect (make-bouncy-box)))
-  width
-  height)
-
-(defmethod cl-user::contents-will-mount ((self test3) display)
-  (with-slots (boxes width height) self
-    (setf width  (display-width display)
-          height (display-height display))
+(xmas.deftest:deftest bouncy-balls (:width 500 :height 500 :expandable t)
+  :init
+  width  := (display-width display)
+  height := (display-height display)
+  boxes  := (loop repeat 4000 collect (make-bouncy-box))
+  (dolist (box boxes)
+    (setf (bouncy-box-x box) (random (- width 20))
+          (bouncy-box-y box) (random (- height 20))))
+  :update
+  (let ((maxx (- width 20))
+        (maxy (- height 20)))
     (dolist (box boxes)
-      (setf (bouncy-box-x box) (random (- width 20))
-            (bouncy-box-y box) (random (- height 20))))))
-
-(defmethod cl-user::step-contents ((self test3) dt)
-  (with-slots (boxes width height) self
-    (let ((maxx (- width 20))
-          (maxy (- height 20)))
-      (dolist (box boxes)
-        (update-bouncing-box box maxx maxy dt)))
-    (map nil 'draw-bouncing-box boxes)))
-
-(defmethod cl-user::contents-will-unmount ((self test3) display)
-  (declare (ignorable self display)))
-
-(defmethod cl-user::handle-event ((self test3) event)
+      (update-bouncing-box box maxx maxy dt)))
+  (map nil 'draw-bouncing-box boxes)
+  :on-event
   (case (car event)
     (:resize
      (let ((w (cadr event))
            (h (cddr event)))
-       (setf (test3-width self) w
-             (test3-height self) h)))
+       (setf width w
+             height h)))
     (t (format t "got unhandled event: ~S~%" event))))
 
-(defvar *my-random-state* (make-random-state t))
-
-(deftest bouncy-balls ()
-  (let ((*random-state* *my-random-state*))
-    (cl-user::display-contents (make-test3)
-                               :width 500
-                               :height 500
-                               :expandable t)))
 (defstruct test4
   alien)
 
