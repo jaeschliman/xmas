@@ -483,73 +483,65 @@
 
 ;; (xmas.deftest:run-test 'action-tags)
 
-(defstruct test16
-  node started)
-
-(defmethod cl-user::contents-will-mount ((self test16) display)
-  (declare (ignore display))
+(xmas.deftest:deftest animation (:width 500 :height 500)
+  :tags file-format texture-packer animation anchor-point
+  :init
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'cat (/ 1.0 7.5) '("catwalk0.png" "catwalk1.png"))
-  (let ((sprite (make-instance 'sprite
-                               :x 250
-                               :y 250
-                               :scale-x 2.0
-                               :scale-y 2.0
-                               :sprite-frame (get-frame "pickle.png")
-                               :anchor-x 0.0
-                               :anchor-y 0.0)))
-    (run-animation sprite 'cat :repeat :forever)
-    (setf (rotation sprite) -15)
-    (setf (test16-node self) sprite)))
+  started := nil
+  sprite := (make-instance 'sprite
+                           :x 250
+                           :y 250
+                           :scale-x 2.0
+                           :scale-y 2.0
+                           :sprite-frame (get-frame "pickle.png")
+                           :anchor-x 0.0
+                           :anchor-y 0.0)
+  (run-animation sprite 'cat :repeat :forever)
+  (setf (rotation sprite) -15)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter sprite))
+  (visit sprite))
 
-(defmethod cl-user::step-contents ((self test16) dt)
-  (declare (ignorable dt))
-  (unless (test16-started self)
-    (setf (test16-started self) t)
-    (on-enter (test16-node self)))
-  (visit (test16-node self)))
-
-(deftest animation ()
-  (cl-user::display-contents (make-test16) :width 500 :height 500))
+;; (xmas.deftest:run-test 'animation)
 
 (defclass box (rect)
   ((vx :accessor box-vx :initarg :vx)
    (vy :accessor box-vy :initarg :vy)))
-
-(defstruct test17
-  root started nodes
-  (qtree (qtree))
-  (mouse-x 0.0)
-  (mouse-y 0.0))
-
-(defmethod cl-user::contents-will-mount ((self test17) display)
-  (declare (ignore display))
-  (setf (test17-root self) (make-instance 'node))
-  (let (nodes)
-    (loop repeat 100 do
-         (let ((n (make-instance 'box
-                                 :content-width 20
-                                 :content-height 20
-                                 :opacity 0.5
-                                 :x (random 500)
-                                 :y (random 500)
-                                 :vx (- (/ (random 100) 100.0) 0.5)
-                                 :vy (- (/ (random 100) 100.0) 0.5))))
-           (add-child (test17-root self) n)
-           (push n nodes)))
-    (setf (test17-nodes self) nodes)))
 
 (defun draw-marker (rect)
   (xmas.render-buffer::draw-rect (x rect)
                                  (y rect)
                                  5.0 5.0))
 
-(defmethod cl-user::step-contents ((self test17) dt)
-  (unless (test17-started self)
-    (setf (test17-started self) t)
-    (on-enter (test17-root self)))
-  (qtree-reset (test17-qtree self) :x 250 :y 250 :width 500 :height 500)
-  (dolist (box (test17-nodes self))
+(xmas.deftest:deftest quadtree (:width 500 :height 500)
+  :tags mouse quadtree draw-rect
+  :init
+  started := nil
+  qtree   := (qtree)
+  mouse-x := 0.0
+  mouse-y := 0.0
+  root    := (make-instance 'node)
+  nodes   := (loop repeat 100 collect
+                (let ((n (make-instance
+                          'box
+                          :content-width 20
+                          :content-height 20
+                          :opacity 0.5
+                          :x (random 500)
+                          :y (random 500)
+                          :vx (- (/ (random 100) 100.0) 0.5)
+                          :vy (- (/ (random 100) 100.0) 0.5))))
+                  (prog1 n
+                    (add-child root n))))
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (qtree-reset qtree :x 250 :y 250 :width 500 :height 500)
+  (dolist (box nodes)
     (incf (x box) (* 100 dt (box-vx box)))
     (incf (y box) (* 100 dt (box-vy box)))
     (when (or (< (x box) 0.0) (> (x box) 500.0))
@@ -558,36 +550,29 @@
     (when (or (< (y box) 0.0) (> (y box) 500.0))
       (setf (box-vy box) (* -1.0 (box-vy box)))
       (clampf (y box) 0.0 500.0))
-    (qtree-add (test17-qtree self) box))
+    (qtree-add qtree box))
   (xmas.render-buffer::set-color 1.0 1.0 1.0 0.1)
   (qtree-map-nodes
-   (test17-qtree self)
+   qtree
    (lambda (x y w h items)
      (declare (ignore items))
      (xmas.render-buffer::draw-rect
       (- x (/ w 2.0)) (- y (/ h 2.0)) (- w 4.0) (- h 4.0))))
-  (visit (test17-root self))
+  (visit root)
   (xmas.render-buffer::set-color 1.0 0.0 0.0 1)
-  (xmas.render-buffer::draw-rect (test17-mouse-x self)
-                                 (test17-mouse-y self)
-                                 5.0 5.0)
-  (let ((x (test17-mouse-x self))
-        (y (test17-mouse-y self)))
+  (xmas.render-buffer::draw-rect mouse-x mouse-y 5.0 5.0)
+  (let ((x mouse-x) (y mouse-y))
     (xmas.render-buffer::set-color 0.0 1.0 0.0 1)
-    (qtree-query
-     (test17-qtree self) x y (+ x 5) (+ y 5) 'draw-marker)
+    (qtree-query qtree x y (+ x 5) (+ y 5) 'draw-marker)
     (xmas.render-buffer::set-color 0.0 0.0 1.0 1)
     (qtree-query-collisions
-     (test17-qtree self) x y (+ x 5) (+ y 5) 'draw-marker)))
-
-(defmethod cl-user::handle-event ((self test17) event)
+     qtree x y (+ x 5) (+ y 5) 'draw-marker))
+  :on-event
   (when (eq (car event) :mousemove)
-    (setf (test17-mouse-x self) (cadr event)
-          (test17-mouse-y self) (cddr event))))
+    (setf mouse-x (cadr event)
+          mouse-y (cddr event))))
 
-(deftest quadtree-test ()
-  (cl-user::display-contents (make-test17) :width 500 :height 500))
-
+;; (xmas.deftest:run-test 'quadtree)
 
 (defstruct test18
   font
