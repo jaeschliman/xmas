@@ -23,22 +23,6 @@
 
 (define-modify-macro clampf (min max) clamp)
 
-(defvar *tests* (make-hash-table :test 'equal))
-
-(defmacro deftest (name (&key) &body body)
-  `(setf (gethash ',name *tests*) (lambda () ,@body)))
-
-(defun run-test (name) (funcall (gethash name *tests*)))
-(defun run-tests (list)
-  (labels ((next ()
-             (when-let (test (pop list))
-               (let ((cl-user::*display-closed-hook* #'next))
-                 (format t "RUNNING TEST: ~S~%" test)
-                 (run-test test)))))
-    (next)))
-(defun run-all-tests ()
-  (run-tests (hash-table-keys *tests*)))
-
 (defstruct bouncy-box
   (x (random 230))
   (y (random 230))
@@ -357,7 +341,6 @@
 
 ;; (xmas.deftest:run-test 'node-actions)
 
-
 (xmas.deftest:deftest action-manager-test ()
   :tags node actions action-manager
   :init
@@ -574,116 +557,91 @@
 
 ;; (xmas.deftest:run-test 'quadtree)
 
-(defstruct test18
-  font
-  font2)
-
-(defmethod cl-user::contents-will-mount ((self test18) display)
-  (declare (ignore display))
-  (setf (test18-font self) (lfont-from-file "./res/lfont/november.lfont")
-        (test18-font2 self) (lfont-from-file "./res/lfont/OpenSans-Light.lfont")))
-
-(defmethod cl-user::step-contents ((self test18) dt)
-  (declare (ignore dt))
-  (lfont-draw-string (test18-font self)
-                     "Hello, world!"
-                     50.0 50.0)
-  (lfont-draw-string (test18-font2 self)
+(xmas.deftest:deftest text-rendering (:width 500 :height 500)
+  :tags text font file-format lfont
+  :init
+  november  := (lfont-from-file "./res/lfont/november.lfont")
+  open-sans := (lfont-from-file "./res/lfont/OpenSans-Light.lfont")
+  :update
+  (lfont-draw-string november "Hello, world!" 50.0 50.0)
+  (lfont-draw-string open-sans
                      "The quick brown fox jumped over the lazy dog."
                      10.0 150.0 :letter-spacing 0.0))
 
-(deftest text-rendering ()
-  (cl-user::display-contents (make-test18) :width 500 :height 500))
+;; (xmas.deftest:run-test 'text-rendering)
 
+(xmas.deftest:deftest anchor-point-test-0 (:width 500 :height 500)
+  :tags node anchor-point
+  :init
+  root    := (make-instance 'node)
+  started := nil
+  (flet ((make-rect (&optional (ax (/ (random 150) 100.0))
+                               (ay (/ (random 150) 100.0)))
+           (let ((r (make-instance
+                     'rect
+                     :content-width 40
+                     :content-height 40
+                     :anchor-x ax
+                     :anchor-y ay
+                     :x 250
+                     :y 250
+                     :opacity 0.5)))
+             (prog1 r
+               (add-child root r)
+               (run-action r (list (delay 1.0)
+                                   (rotate-by 3.0 360))
+                           :repeat :forever)))))
+    (let ((a (make-rect)) (b (make-rect))
+          (c (make-rect)) (d (make-rect))
+          (e (make-rect 0.0 0.0))
+          (f (make-rect 0.5 0.5))
+          (top 450) (left 50)
+          (bottom 50) (right 450))
+      ;; a b
+      ;; c d 
+      (setf
+       (left a) left
+       (left c) left
+       (top a) top
+       (top b) top
+       (right b) right
+       (right d) right
+       (bottom d) bottom
+       (bottom c) bottom
+       (x e) 250
+       (y e) 250
+       (x f) 250
+       (y f) 250
+       (rotation f) 0.0)))
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (visit root))
 
-(defstruct test19
-  started root)
+;; (xmas.deftest:run-test 'anchor-point-test-0)
 
-(defmethod cl-user::contents-will-mount ((self test19) display)
-  (declare (ignore display))
-  (with-struct (test19- root) self
-    (flet ((make-rect (&optional (ax (/ (random 150) 100.0))
-                                 (ay (/ (random 150) 100.0)))
-             (let ((r (make-instance 'rect
-                                     :content-width 40
-                                     :content-height 40
-                                     :anchor-x ax
-                                     :anchor-y ay
-                                     :x 250
-                                     :y 250
-                                     :opacity 0.5)))
-               (prog1 r
-                 (add-child root r)
-                 (run-action r
-                             (list
-                              (delay 1.0)
-                              (rotate-by 3.0 360))
-                             :repeat :forever)))))
-      (setf root (make-instance 'node))
-      (let ((a (make-rect)) (b (make-rect))
-            (c (make-rect)) (d (make-rect))
-            (e (make-rect 0.0 0.0))
-            (f (make-rect 0.5 0.5))
-            (top 450) (left 50)
-            (bottom 50) (right 450))
-        ;; a b
-        ;; c d 
-        (setf
-         (left a) left
-         (left c) left
-         (top a) top
-         (top b) top
-         (right b) right
-         (right d) right
-         (bottom d) bottom
-         (bottom c) bottom
-         (x e) 250
-         (y e) 250
-         (x f) 250
-         (y f) 250
-         (rotation f) 0.0)))))
-
-(defmethod cl-user::step-contents ((self test19) dt)
-  (declare (ignore dt))
-  (with-struct (test19- root started) self
-    (unless started
-      (setf started t)
-      (on-enter root))
-    (visit root)))
-
-(deftest anchor-point-test-0 ()
-  (cl-user::display-contents (make-test19) :width 500 :height 500))
-
-(defstruct test20
-  sprite1 sprite2 sprite3 started)
-
-(defmethod cl-user::contents-will-mount ((self test20) display)
-  (declare (ignore display))
+(xmas.deftest:deftest anchor-point-test-1 (:width 500 :height 500)
+  :tags sprite node anchor-point content-size
+  :init
   (texture-packer-add-frames-from-file "./res/test.json")
-  (setf (test20-sprite1 self)
-        (make-instance 'sprite :x 150 :y 250
-                       :sprite-frame (get-frame "pickle.png"))
-        (test20-sprite2 self)
-        (make-instance 'sprite :x 250 :y 250
-                       :content-width 40
-                       :content-height 60
-                       :sprite-frame (get-frame "pickle.png"))
-        (test20-sprite3 self)
-        (make-instance 'sprite :x 400 :y 250
-                       :content-width 100
-                       :content-height 150
-                       :sprite-frame (get-frame "pickle.png"))))
-
-(defmethod cl-user::step-contents ((self test20) dt)
-  (declare (ignorable dt))
-  (flet ((draw-it (s)
+  sprite1 := (make-instance 'sprite :x 150 :y 250
+                            :sprite-frame (get-frame "pickle.png"))
+  sprite2 := (make-instance 'sprite :x 250 :y 250
+                            :content-width 40
+                            :content-height 60
+                            :sprite-frame (get-frame "pickle.png"))
+  sprite3 := (make-instance 'sprite :x 400 :y 250
+                            :content-width 100
+                            :content-height 150
+                            :sprite-frame (get-frame "pickle.png"))
+  :update
+ (flet ((draw-it (s)
            (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
            (xmas.render-buffer::draw-rect (left s) (bottom s) (width s) (height s))
            (visit s)))
-    (draw-it (test20-sprite1 self))
-    (draw-it (test20-sprite2 self))
-    (draw-it (test20-sprite3 self))))
+    (draw-it sprite1)
+    (draw-it sprite2)
+    (draw-it sprite3)))
 
-(deftest anchor-point-test-1 ()
-  (cl-user::display-contents (make-test20) :width 500 :height 500))
-
+;; (xmas.deftest:run-test 'anchor-point-test-1)

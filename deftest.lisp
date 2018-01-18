@@ -1,7 +1,8 @@
 (defpackage :xmas.deftest (:use :cl :alexandria)
             (:export
              #:deftest
-             #:run-test))
+             #:run-test
+             #:run-all-tests))
 (in-package :xmas.deftest)
 
 (defvar *tests* (make-hash-table :test 'eq))
@@ -59,3 +60,15 @@
 
 (defun run-test (name)
   (funcall (gethash name *tests*)))
+
+(defun run-tests (list)
+  (labels ((next ()
+             (when-let (test (pop list))
+               (let ((cl-user::*display-closed-hook* #'next))
+                 (format t "RUNNING TEST: ~S~%" test)
+                 (run-test test)))))
+    (next)))
+
+(defun run-all-tests ()
+  (run-tests (hash-table-keys *tests*)))
+
