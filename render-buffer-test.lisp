@@ -386,53 +386,38 @@
 
 ;; (xmas.deftest:run-test 'action-manager-test)
 
-(defstruct test10
-  a b c d)
-
-(defmethod cl-user::contents-will-mount ((self test10) display)
-  (declare (ignore display))
-  (let ((tex (get-texture "./bayarea.png")))
-    (setf (test10-a self) (texture-frame tex 0.0 0.0 250.0 250.0))
-    (setf (test10-b self) (texture-frame tex 0.0 250.0 250.0 250.0))
-    (setf (test10-c self) (texture-frame tex 250.0 0.0 250.0 250.0))
-    (setf (test10-d self) (texture-frame tex 250.0 250.0 250.0 250.0)) ))
-
-
-(defmethod cl-user::step-contents ((self test10) dt)
-  (declare (ignore dt))
+(xmas.deftest:deftest texture-frame-test (:width 500 :height 500)
+  :tags texture-frame edges
+  :init
+  tex := (get-texture "./bayarea.png")
+  a := (texture-frame tex 0.0 0.0 250.0 250.0)
+  b := (texture-frame tex 0.0 250.0 250.0 250.0)
+  c := (texture-frame tex 250.0 0.0 250.0 250.0)
+  d := (texture-frame tex 250.0 250.0 250.0 250.0)
+  :update
   (xmas.render-buffer::push-matrix)
-  (draw-texture-frame (test10-a self) 125.0 125.0)
-  (draw-texture-frame (test10-b self) 125.0 (+ 250.0 125.0))
-  (draw-texture-frame (test10-c self) (+ 250.0 125.0) 125.0)
-  (draw-texture-frame (test10-d self) (+ 250.0 125.0) (+ 250.0 125.0))
+  (draw-texture-frame a 125.0 125.0)
+  (draw-texture-frame b 125.0 (+ 250.0 125.0))
+  (draw-texture-frame c (+ 250.0 125.0) 125.0)
+  (draw-texture-frame d (+ 250.0 125.0) (+ 250.0 125.0))
   (xmas.render-buffer::pop-matrix))
 
-(deftest texture-frame-test ()
-  (cl-user::display-contents (make-test10) :width 500 :height 500))
+;; (xmas.deftest:run-test 'texture-frame-test)
 
-(defstruct test11
-  packer normal-frame blink-frame jewel)
+(xmas.deftest:deftest texture-packer-test (:width 500 :height 500)
+  :tags texture-packer texture texture-frame file-format
+  :init
+  packer := (texture-packer-from-file "./res/test.json")
+  (assert (xmas.texture-packer::texture-packer-file-texture packer))
+  normal-frame := (texture-packer-get-frame packer "pickle.png")
+  blink-frame  := (texture-packer-get-frame packer "pickle blink.png")
+  jewel        := (texture-packer-get-frame packer "jewel.png")
+  :update
+  (draw-texture-frame normal-frame 125.0 250.0)
+  (draw-texture-frame blink-frame 375.0 250.0)
+  (draw-texture-frame jewel 250.0 250.0))
 
-(defmethod cl-user::contents-will-mount ((self test11) display)
-  (declare (ignore display))
-  (let ((packed (texture-packer-from-file "./res/test.json")))
-    (assert (xmas.texture-packer::texture-packer-file-texture packed))
-    (setf (test11-packer self) packed
-          (test11-normal-frame self) (texture-packer-get-frame
-                                      packed "pickle.png")
-          (test11-blink-frame self) (texture-packer-get-frame
-                                     packed "pickle blink.png")
-          (test11-jewel self) (texture-packer-get-frame
-                               packed "jewel.png"))))
-
-(defmethod cl-user::step-contents ((self test11) dt)
-  (declare (ignore dt))
-  (draw-texture-frame (test11-normal-frame self) 125.0 250.0)
-  (draw-texture-frame (test11-blink-frame self) 375.0 250.0)
-  (draw-texture-frame (test11-jewel self) 250.0 250.0))
-
-(deftest texture-packer-test ()
-  (cl-user::display-contents (make-test11) :width 500 :height 500))
+;; (xmas.deftest:run-test 'texture-packer-test)
 
 (defstruct test12
   tmx-map
