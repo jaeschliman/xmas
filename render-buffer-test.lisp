@@ -419,117 +419,69 @@
 
 ;; (xmas.deftest:run-test 'texture-packer-test)
 
-(defstruct test12
-  tmx-map
-  frames)
+(xmas.deftest:deftest tilemap-test0 (:width 500 :height 500)
+  :tags tmx file-format
+  :init
+  map     := (read-tilemap "./res/test-tilemap.tmx")
+  tileset := (first (map-tilesets map))
+  frames  := (make-tileset-texture-frames tileset)
+  :update
+  (loop
+     with x = 100 with y = 250
+     for frame across frames
+     for i upfrom 0
+     when frame
+     do (draw-texture-frame frame (+ x (* i 50)) y)))
 
-(defmethod cl-user::contents-will-mount ((self test12) display)
-  (declare (ignore display))
-  (let* ((map (read-tilemap "./res/test-tilemap.tmx"))
-         (tileset (first (map-tilesets map)))
-         (frames (make-tileset-texture-frames tileset)))
-    (setf (test12-tmx-map self) map
-          (test12-frames self) frames)))
+;; (xmas.deftest:run-test 'tilemap-test0)
 
-(defmethod cl-user::step-contents ((self test12) dt)
-  (declare (ignore dt))
-  (let ((x 100)
-        (y 250)
-        (frames (test12-frames self)))
-    (loop for frame across frames
-       for i upfrom 0
-       when frame
-       do (draw-texture-frame frame (+ x (* i 50)) y))))
-
-
-(deftest tilemap-test-0 ()
-  (cl-user::display-contents (make-test12) :width 500 :height 500))
-
-(defstruct test13
-  tmx-map
-  tileset
-  frames
-  layer)
-
-(defmethod cl-user::contents-will-mount ((self test13) display)
-  (declare (ignore display))
-  (let* ((map (read-tilemap "./res/test-tilemap.tmx"))
-         (tileset (first (map-tilesets map)))
-         (frames (make-tileset-texture-frames tileset))
-         (layer (first (map-layers map))))
-    (setf (test13-tmx-map self) map
-          (test13-tileset self) tileset
-          (test13-frames self) frames
-          (test13-layer self) layer)))
-
-
-(defmethod cl-user::step-contents ((self test13) dt)
-  (declare (ignore dt))
-  (let ((x 250)
-        (y 250)
-        (tileset (test13-tileset self))
-        (frames (test13-frames self))
-        (layer (test13-layer self)))
-    (draw-tmx-layer
-     x y
+(xmas.deftest:deftest tilemap-test-1 (:width 500 :height 500)
+  :tags tmx file-format draw-tmx-layer
+  :init 
+  map     := (read-tilemap "./res/test-tilemap.tmx")
+  tileset := (first (map-tilesets map))
+  frames  := (make-tileset-texture-frames tileset)
+  layer   := (first (map-layers map))
+  :update
+  (draw-tmx-layer 250 250 
      (tileset-tile-width tileset)
      (tileset-tile-height tileset)
      layer
-     frames)))
+     frames))
 
-(deftest tilemap-test-1 ()
-  (cl-user::display-contents (make-test13) :width 500 :height 500))
+;; (xmas.deftest:run-test 'tilemap-test-1)
 
-(defstruct test14
-  renderer)
-
-(defmethod cl-user::contents-will-mount ((self test14) display)
-  (declare (ignore display))
-  (setf (test14-renderer self) (tmx-renderer-from-file "./res/test-tilemap.tmx")))
-
-(defmethod cl-user::step-contents ((self test14) dt)
-  (declare (ignore dt))
-  (let* ((r (test14-renderer self))
-         (x (/ (tmx-renderer-width r) 2.0))
+(xmas.deftest:deftest tmx-renderer-test (:width 500 :height 500)
+  :tags tmx file-format tmx-renderer
+  :init
+  r := (tmx-renderer-from-file "./res/test-tilemap.tmx")
+  :update
+  (let* ((x (/ (tmx-renderer-width r) 2.0))
          (y (/ (tmx-renderer-height r) 2.0)))
     (draw-tmx-renderer x y r)))
 
-(deftest tmx-renderer ()
-  (cl-user::display-contents (make-test14) :width 500 :height 500))
+;; (xmas.deftest:run-test 'tmx-renderer-test)
 
-(defstruct test15
-  node started)
+(xmas.deftest:deftest action-tags (:width 500 :height 500)
+  :tags node action-manager actions action-tags
+  :init
+  started := nil
+  n := (make-instance 'node :x 250 :y 250)
+  (run-action n (list (move-by 3.0 -100.0 0)
+                      (move-by 3.0 100.0 0))
+              :repeat :forever :tag 'moving)
+  (run-action n (rotate-by 5.0 360.0)
+              :repeat :forever :tag 'rotating)
+  (run-action n (list (delay 3.0)
+                      (callfunc (lambda ()
+                                  (stop-all-actions n :tag 'moving)))))
+  :update
+  (unless started
+    (setf started t)
+    (on-enter n))
+  (visit n))
 
-(defmethod cl-user::contents-will-mount ((self test15) display)
-  (declare (ignore display))
-  (let ((n (make-instance 'node :x 250 :y 250)))
-    (setf (test15-node self) n)
-    (run-action
-     n
-     (list
-      (move-by 3.0 -100.0 0)
-      (move-by 3.0 100.0 0))
-     :repeat :forever :tag 'moving)
-    (run-action
-     n
-     (rotate-by 5.0 360.0)
-     :repeat :forever :tag 'rotating)
-    (run-action
-     n
-     (list
-      (delay 3.0)
-      (callfunc (lambda ()
-                  (stop-all-actions n :tag 'moving)))))))
-
-(defmethod cl-user::step-contents ((self test15) dt)
-  (declare (ignorable dt))
-  (unless (test15-started self)
-    (setf (test15-started self) t)
-    (on-enter (test15-node self)))
-  (visit (test15-node self)))
-
-(deftest action-tags ()
-  (cl-user::display-contents (make-test15) :width 500 :height 500))
+;; (xmas.deftest:run-test 'action-tags)
 
 (defstruct test16
   node started)
