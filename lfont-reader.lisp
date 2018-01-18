@@ -42,7 +42,5 @@
        when frame do
          (let ((width (texture-frame-width frame))
                (height (texture-frame-height frame)))
-           (draw-texture-frame frame
-                               (+ left (/ width 2.0))
-                               (+ y (/ height 2.0)))
+           (draw-texture-frame-at frame left y width height)
            (incf left (+ letter-spacing width))))))
