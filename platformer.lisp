@@ -51,6 +51,7 @@
 (defrunvar *last-player-right* 0.0)
 (defrunvar *last-player-bottom* 0.0)
 (defrunvar *keys* (make-hash-table :test 'eql))
+(defrunvar *just-pressed* (make-hash-table :test 'eql))
 (defrunvar *font-22* (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
 (defrunvar *jewel-count* 0)
 (defrunvar *jewel-count-label* (make-output-string))
@@ -64,6 +65,7 @@
 
 (defun key-down (k) (gethash k *keys*))
 (defun key-up (k) (null (key-down k)))
+(defun just-pressed (k) (gethash k *just-pressed*))
 
 (defstruct tile
   shape
@@ -557,11 +559,12 @@
           (right (key-down :right))
           (fast (key-down #\a))
           (jump (key-down #\s))
+          (just-pressed-jump (just-pressed #\s))
           (on-ground (standing-on player)))
       (cond
         (on-ground
          (cond
-           (jump 'jumping)
+           (just-pressed-jump 'jumping)
            ((or left right) (if fast 'running 'walking))
            (t 'standing)))
         ((eq state 'jumping)
@@ -594,7 +597,7 @@
          (let ((initial-vel 275)
                (holding-gravity -200)
                (jump-power 0.5))
-           (when (and (key-down #\s) (can-jump player))
+           (when (and (just-pressed #\s) (can-jump player))
              (setf (can-jump player) nil
                    (jumping player) t
                    (jump-power player) jump-power)
@@ -810,13 +813,16 @@
       (with-output-to-string (s *jewel-count-label*)
         (format s "~S jewels" *jewel-count*)))
     (update level dt)
+    (clrhash *just-pressed*)
     (visit root)
     (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)))
 
 (defmethod cl-user::handle-event ((self platformer) event)
   (let ((info (cdr event)))
     (case (car event)
-      (:keydown (setf (gethash info *keys*) t))
+      (:keydown (unless (gethash info *keys*)
+                  (setf (gethash info *just-pressed*) t))
+                (setf (gethash info *keys*) t))
       (:keyup   (setf (gethash info *keys*) nil)))))
 
 (cl-user::display-contents (make-platformer) :width 500 :height 500
