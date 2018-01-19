@@ -103,6 +103,12 @@
 (defun children (it)
   (nthcdr 2 it))
 
+(defun parse-property (it)
+  ;;TODO: handle type attr
+  (let ((name (intern (string-upcase (get-attr it "name")) :keyword))
+        (value (get-attr it "value")))
+    (list name value)))
+
 (defun parse-tile-tileset (it path first-gid)
   (let* ((name (get-attr it "name"))
          (source (get-attr (first (children it)) "source"))
@@ -140,18 +146,12 @@
       ((string= name "image") (parse-tile-tileset it path first-gid))
       (t (assert nil)))))
 
-(defun parse-tileset-property (it)
-  ;;TODO: handle type attr
-  (let ((name (intern (string-upcase (get-attr it "name")) :keyword))
-        (value (get-attr it "value")))
-    (list name value)))
-
 (defun parse-tileset-tile (it)
   (let* ((id (parse-integer (get-attr it "id")))
          (type (get-attr it "type"))
          (first-child (first (children it)))
          (props (when (string= (tag-name first-child) "properties")
-                  (mapcan 'parse-tileset-property (children first-child)))))
+                  (mapcan 'parse-property (children first-child)))))
     (if type
         (values id (list* :type type props))
         (values id props))))
@@ -194,6 +194,11 @@
     ;; TODO: handle flip masks
     (values gid nil nil)))
 
+(defun try-parse-properties (it)
+  (when-let* ((ch (first (children it)))
+              (_  (string= "properties" (tag-name ch))))
+    (mapcan 'parse-property (children ch))))
+
 (defun parse-object (it height-in-pixels)
   (labels ((r (s) (let* ((*read-eval* nil)
                          (val (read-from-string (get-attr it s))))
@@ -202,10 +207,11 @@
            (parse-tile-sprite ()
              (let ((w (r "width"))
                    (h (r "height")))
-               (list :tile-sprite
-                     :gid (r "gid")
-                     :x (+ (/ w 2) (r "x"))
-                     :y (+ (/ h 2) (- height-in-pixels (r "y"))))))
+               (list* :tile-sprite
+                      :gid (r "gid")
+                      :x (+ (/ w 2) (r "x"))
+                      :y (+ (/ h 2) (- height-in-pixels (r "y")))
+                      (try-parse-properties it))))
            (parse-point ()
              (list :point
                    :name (get-attr it "name")
