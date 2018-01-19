@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="150" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="74">
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="150" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="76">
  <tileset firstgid="1" source="dev.tsx"/>
  <tileset firstgid="65" source="dev-objects.tsx"/>
  <layer name="Tile Layer 1" width="150" height="20">
@@ -72,6 +72,12 @@
   <object id="71" gid="65" x="4640" y="352" width="24" height="38"/>
   <object id="72" name="start" x="3168" y="416">
    <point/>
+  </object>
+  <object id="74" gid="68" x="2976" y="416" width="91" height="106">
+   <properties>
+    <property name="level" value="cave"/>
+    <property name="marker" value="start"/>
+   </properties>
   </object>
  </objectgroup>
 </map>

@@ -55,6 +55,7 @@
 (defrunvar *font-22* (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
 (defrunvar *jewel-count* 0)
 (defrunvar *jewel-count-label* (make-output-string))
+(defrunvar *next-level* nil)
 
 (defmethod cl-user::runloop-bindings-alist ((self platformer))
   (let (result)
@@ -132,6 +133,10 @@
 (defclass cat (game-sprite)
   ())
 
+(defclass door (game-sprite)
+  ((level :initarg :level)
+   (marker :initarg :marker)))
+
 (defmethod player-collision (player (jewel jewel))
   (let ((object (game-object jewel)))
     (remove-from-parent jewel)
@@ -140,6 +145,14 @@
     (setf (fill-pointer *jewel-count-label*) 0)
     (with-output-to-string (s *jewel-count-label*)
       (format s "~S jewels" *jewel-count*))))
+
+(defmethod player-collision (player (door door))
+  (with-slots (level marker) door
+    (when (and (just-pressed :up)
+               (> (left player) (left door))
+               (< (right player) (right door)))
+      (format t "let's go to level: ~S : ~S !~%" level marker)
+      (setf *next-level* level))))
 
 (defstruct game-object-manager
   sprite-node
@@ -320,7 +333,7 @@
   (declare (ignore self side tile)))
 
 (defun top-for-tile (sprite tile x y prev-y dt)
-  (case (tile-shape tile)
+  (ecase (tile-shape tile)
     (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
     (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
     (block (* 32.0 (+ 1.0 (floor y 32.0))))
@@ -710,7 +723,8 @@
 (defun make-node-from-object-info (type initargs)
   (when-let* ((path (case type
                       (jewel "jewel.png")
-                      (cat "throwcat.png")))
+                      (cat "throwcat.png")
+                      (door "door.png")))
               (frame (get-frame path)))
     (apply #'make-instance type :sprite-frame frame initargs)))
 
@@ -758,6 +772,7 @@
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
             player (make-instance 'player
+                                  :z-order 1
                                   :x 50.0
                                   :acceleration-y -100.0
                                   :sprite-frame frame
@@ -794,19 +809,35 @@
     (collide-player-with-objects self dt)
     (move-camera self dt)))
 
+(defun get-level (name &key (start-position 'start))
+  (when (stringp start-position)
+    (setf start-position (symbolicate (string-upcase start-position))))
+  (let ((level (make-level)))
+    (cond
+      ((string= name "dev")
+       (init-level level
+                :background-node (make-instance
+                                  'image :x 250 :y 250
+                                  :texture (get-texture "./res/platformer/sky.png"))
+                :tmx-file "./res/platformer/dev.tmx"
+                :start-position start-position))
+      ((string= name "cave")
+       (init-level level
+                :background-node (make-instance
+                                  'image :x 250 :y 250
+                                  :texture (get-texture "./res/platformer/sky.png"))
+                :tmx-file "./res/platformer/cave.tmx"
+                :start-position start-position)))
+    level))
+
+
 (defmethod cl-user::contents-will-mount ((self platformer) display)
   (declare (ignore display))
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
   (with-struct (platformer- level root) self
-    (setf level (make-level))
-    (init-level level
-                :background-node (make-instance
-                                  'image :x 250 :y 250
-                                  :texture (get-texture "./res/platformer/sky.png"))
-                :tmx-file "./res/platformer/dev.tmx"
-                :start-position 'start)
+    (setf level (get-level "cave"))
     (add-child root (level-root level))))
 
 
@@ -821,7 +852,12 @@
     (update level dt)
     (clrhash *just-pressed*)
     (visit root)
-    (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)))
+    (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)
+    (when *next-level*
+      (remove-from-parent (level-root level))
+      (setf level (get-level *next-level*))
+      (add-child root (level-root level))
+      (setf *next-level* nil))))
 
 (defmethod cl-user::handle-event ((self platformer) event)
   (let ((info (cdr event)))
