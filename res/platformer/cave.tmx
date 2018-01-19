@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="300" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="3">
+ <tileset firstgid="1" source="dev.tsx"/>
+ <tileset firstgid="65" source="dev-objects.tsx"/>
+ <layer name="Tile Layer 1" width="300" height="20">
+  <data encoding="base64" compression="zlib">
+   eJzt1KEOgDAQRMFDAKrw/39LZc1Jemkzkzy/aiMAAAAAAAAAAAAAAAAAAABgT2fvGrpr5wCkWu8ZemvnAKT8FbAKfwXMdBQGAAD84wOVngEQ
+  </data>
+ </layer>
+ <objectgroup name="Object Layer 1">
+  <object id="1" gid="68" x="4544" y="544" width="91" height="106">
+   <properties>
+    <property name="level" value="dev"/>
+    <property name="marker" value="start"/>
+   </properties>
+  </object>
+  <object id="2" name="start" x="4576" y="544">
+   <point/>
+  </object>
+ </objectgroup>
+</map>
