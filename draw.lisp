@@ -2,7 +2,8 @@
             (:export
              #:draw-texture-frame
              #:draw-texture
-             #:draw-texture-frame-at))
+             #:draw-texture-frame-at
+             #:draw-texture-at))
 (in-package xmas.draw)
 
 (defun draw-texture (texture)
@@ -11,6 +12,10 @@
      (texture-id texture)
      (texture-width texture)
      (texture-height texture))))
+
+(defun draw-texture-at (texture x y w h)
+  (when-let (id (texture-id texture))
+    (xmas.render-buffer::draw-gl-texture-at id x y w h))) 
 
 (defun draw-texture-frame (frame x y &optional outset)
   (when-let (id (texture-id (texture-frame-texture frame)))

@@ -40,6 +40,21 @@
       (gl:tex-coord 0  0)
       (gl:vertex    x  y2 0))))
 
+(definstr draw-gl-texture-at (id x y w h)
+  (gl:bind-texture :texture-2d id)
+  (let* ((x2 (+ x w))
+         (y2 (+ y h)))
+    (gl:with-primitive :quads
+      (gl:tex-coord 0  1)
+      (gl:vertex    x  y  0)
+      (gl:tex-coord 1  1)
+      (gl:vertex    x2 y  0)
+      (gl:tex-coord 1  0)
+      (gl:vertex    x2 y2 0)
+      (gl:tex-coord 0  0)
+      (gl:vertex    x  y2 0))))
+
+
 (definstr simple-draw-gl-with-tex-coords (id x y w h tx1 ty1 tx2 ty2)
   (gl:bind-texture :texture-2d id)
   (let* ((x (+ x (- (/ w 2))))
