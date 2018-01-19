@@ -170,11 +170,22 @@
   (sprite-qtree (qtree))
   (points (make-hash-table :test 'eq)))
 
+(defgeneric wake-sprite (sprite game-object)
+  (:method (sprite game-object)
+    (declare (ignore sprite game-object))))
+
+(defmethod wake-sprite ((cat cat) game-object)
+  (declare (ignore game-object))
+  (run-action cat (list (move-by 1.0 -20.0 0.0)
+                        (move-by 1.0 20.0 0.0))
+              :repeat :forever))
+
 (defmethod wake ((object game-object) manager)
   (setf (sleeping object) nil)
   (with-struct (game-object-manager- awake-objects sprite-node) manager
     (vector-push-extend object awake-objects)
     (when-let (sprite (sprite object))
+      (wake-sprite sprite object)
       (add-child sprite-node sprite))))
 
 (defmethod wake :around ((object game-object) manager)
