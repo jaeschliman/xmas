@@ -178,12 +178,15 @@
 (defmethod draw ((self sprite))
   (draw-node-color self)
   (let* ((frame (sprite-frame self))
-         (width (texture-frame-width frame))
-         (height (texture-frame-height frame))
+         (frame-width (texture-frame-width frame))
+         (frame-height (texture-frame-height frame))
+         (width
+          (if (texture-frame-rotated frame) frame-height frame-width))
+         (height
+          (if (texture-frame-rotated frame) frame-width frame-height))
          (offs-x (* 0.5 (- (content-width self) width)))
          (offs-y (* 0.5 (- (content-height self) height))))
-    (draw-texture-frame-at
-     frame offs-x offs-y width height)))
+    (draw-texture-frame-at frame offs-x offs-y frame-width frame-height)))
 
 ;; the fast method:
 (defmethod visit ((self node))

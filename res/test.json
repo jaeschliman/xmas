@@ -2,7 +2,7 @@
 
 {
 	"filename": "catwalk0.png",
-	"frame": {"x":1,"y":821,"w":50,"h":50},
+	"frame": {"x":1,"y":273,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -11,7 +11,7 @@
 },
 {
 	"filename": "catwalk1.png",
-	"frame": {"x":1,"y":873,"w":50,"h":50},
+	"frame": {"x":125,"y":249,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -19,9 +19,18 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
+	"filename": "door.png",
+	"frame": {"x":1,"y":1,"w":91,"h":106},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":91,"h":106},
+	"sourceSize": {"w":91,"h":106},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
 	"filename": "jewel.png",
-	"frame": {"x":1,"y":977,"w":24,"h":38},
-	"rotated": true,
+	"frame": {"x":63,"y":109,"w":24,"h":38},
+	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":38},
 	"sourceSize": {"w":24,"h":38},
@@ -29,7 +38,7 @@
 },
 {
 	"filename": "pickle blink.png",
-	"frame": {"x":1,"y":1,"w":60,"h":80},
+	"frame": {"x":1,"y":109,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -38,7 +47,7 @@
 },
 {
 	"filename": "pickle fall.png",
-	"frame": {"x":1,"y":83,"w":60,"h":80},
+	"frame": {"x":94,"y":1,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -47,8 +56,8 @@
 },
 {
 	"filename": "pickle float.png",
-	"frame": {"x":1,"y":165,"w":60,"h":80},
-	"rotated": false,
+	"frame": {"x":156,"y":1,"w":60,"h":80},
+	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
 	"sourceSize": {"w":60,"h":80},
@@ -56,8 +65,8 @@
 },
 {
 	"filename": "pickle jump.png",
-	"frame": {"x":1,"y":247,"w":60,"h":80},
-	"rotated": false,
+	"frame": {"x":156,"y":63,"w":60,"h":80},
+	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
 	"sourceSize": {"w":60,"h":80},
@@ -65,7 +74,7 @@
 },
 {
 	"filename": "pickle mad.png",
-	"frame": {"x":1,"y":329,"w":60,"h":80},
+	"frame": {"x":1,"y":191,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -74,7 +83,7 @@
 },
 {
 	"filename": "pickle walk0.png",
-	"frame": {"x":1,"y":411,"w":60,"h":80},
+	"frame": {"x":94,"y":83,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -83,8 +92,8 @@
 },
 {
 	"filename": "pickle walk1.png",
-	"frame": {"x":1,"y":493,"w":60,"h":80},
-	"rotated": false,
+	"frame": {"x":156,"y":125,"w":60,"h":80},
+	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
 	"sourceSize": {"w":60,"h":80},
@@ -92,7 +101,7 @@
 },
 {
 	"filename": "pickle.png",
-	"frame": {"x":1,"y":575,"w":60,"h":80},
+	"frame": {"x":63,"y":165,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -101,7 +110,7 @@
 },
 {
 	"filename": "throwcat.png",
-	"frame": {"x":1,"y":925,"w":50,"h":50},
+	"frame": {"x":177,"y":249,"w":50,"h":50},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":50,"h":50},
@@ -110,7 +119,7 @@
 },
 {
 	"filename": "tomato chunk 1.png",
-	"frame": {"x":41,"y":977,"w":16,"h":16},
+	"frame": {"x":125,"y":165,"w":16,"h":16},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":16,"h":16},
@@ -119,8 +128,8 @@
 },
 {
 	"filename": "tomato chunk 2.png",
-	"frame": {"x":41,"y":995,"w":13,"h":16},
-	"rotated": true,
+	"frame": {"x":125,"y":301,"w":13,"h":16},
+	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":13,"h":16},
 	"sourceSize": {"w":13,"h":16},
@@ -128,8 +137,8 @@
 },
 {
 	"filename": "tomato splat.png",
-	"frame": {"x":1,"y":657,"w":60,"h":80},
-	"rotated": false,
+	"frame": {"x":125,"y":187,"w":60,"h":80},
+	"rotated": true,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
 	"sourceSize": {"w":60,"h":80},
@@ -137,7 +146,7 @@
 },
 {
 	"filename": "tomato.png",
-	"frame": {"x":1,"y":739,"w":60,"h":80},
+	"frame": {"x":63,"y":247,"w":60,"h":80},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":60,"h":80},
@@ -149,8 +158,8 @@
 	"version": "1.0",
 	"image": "test.png",
 	"format": "RGBA8888",
-	"size": {"w":62,"h":1009},
+	"size": {"w":237,"h":328},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:6f2441624ed79db7451b7f1457563b47:a637322bf2fed30b079ccb04299f038d:02ab132358d6d8b512e80119463a8329$"
+	"smartupdate": "$TexturePacker:SmartUpdate:ef7f8c73e67605ab34d37104160c1cdd:0d833cf2aa564887485a50aaeaa4bc9b:02ab132358d6d8b512e80119463a8329$"
 }
 }
