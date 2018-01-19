@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="150" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="76">
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="150" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="77">
  <tileset firstgid="1" source="dev.tsx"/>
  <tileset firstgid="65" source="dev-objects.tsx"/>
  <layer name="Tile Layer 1" width="150" height="20">
@@ -78,6 +78,9 @@
     <property name="level" value="cave"/>
     <property name="marker" value="start"/>
    </properties>
+  </object>
+  <object id="76" name="ice-door" x="3008" y="416">
+   <point/>
   </object>
  </objectgroup>
 </map>

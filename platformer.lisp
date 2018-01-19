@@ -152,7 +152,7 @@
                (> (left player) (left door))
                (< (right player) (right door)))
       (format t "let's go to level: ~S : ~S !~%" level marker)
-      (setf *next-level* level))))
+      (setf *next-level* (list level :start-position marker)))))
 
 (defstruct game-object-manager
   sprite-node
@@ -855,7 +855,7 @@
     (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)
     (when *next-level*
       (remove-from-parent (level-root level))
-      (setf level (get-level *next-level*))
+      (setf level (apply #'get-level *next-level*))
       (add-child root (level-root level))
       (setf *next-level* nil))))
 

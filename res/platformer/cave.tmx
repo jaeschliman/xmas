@@ -11,7 +11,7 @@
   <object id="1" gid="68" x="4544" y="544" width="91" height="106">
    <properties>
     <property name="level" value="dev"/>
-    <property name="marker" value="start"/>
+    <property name="marker" value="ice-door"/>
    </properties>
   </object>
   <object id="2" name="start" x="4576" y="544">
