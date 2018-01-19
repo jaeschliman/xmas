@@ -26,7 +26,8 @@
 (defstruct platformer
   started
   level
-  (root (make-instance 'node)))
+  (root (make-instance 'node))
+  initial-level)
 
 (defstruct level
   root
@@ -35,7 +36,8 @@
   tmx
   tmx-node
   tile-table
-  object-manager)
+  object-manager
+  name)
 
 (defvar *runloop-bindings* (make-hash-table :test 'eq))
 
@@ -56,6 +58,7 @@
 (defrunvar *jewel-count* 0)
 (defrunvar *jewel-count-label* (make-output-string))
 (defrunvar *next-level* nil)
+(defrunvar *level-states* (make-hash-table :test 'equal))
 
 (defmethod cl-user::runloop-bindings-alist ((self platformer))
   (let (result)
@@ -156,6 +159,7 @@
                (> (left player) (left door))
                (< (right player) (right door)))
       (format t "let's go to level: ~S : ~S !~%" level marker)
+      ;; should really be called *next-room* at this point
       (setf *next-level* (list level :start-position marker)))))
 
 (defstruct game-object-manager
@@ -198,6 +202,10 @@
   (with-struct (game-object-manager- objects object-qtree) manager
     (vector-push-extend object objects)
     (qtree-add object-qtree object)))
+
+(defun game-object-manager-sleep-all (manager)
+  (map 'nil (lambda (object) (to-sleep object manager))
+       (copy-seq (game-object-manager-awake-objects manager))))
 
 (defun should-sleep? (object manager left bottom right top)
   (declare (ignorable manager))
@@ -776,13 +784,17 @@
 (defmethod init-level ((self level) &key
                                       background-node
                                       tmx-file
-                                      start-position)
+                                      start-position
+                                      game-object-manager)
   (with-struct (level- root tmx tmx-node player
                        tile-table background object-manager)
       self
-    (let* ((frame (get-frame "pickle.png")))
+    (let* ((frame (get-frame "pickle.png"))
+           (already-loaded-objects (not (null game-object-manager))))
       (setf root (make-instance 'node)
-            object-manager (make-game-object-manager :sprite-node root)
+            object-manager (or game-object-manager
+                               (make-game-object-manager))
+            (game-object-manager-sprite-node object-manager) root
             background background-node
             tmx (xmas.tmx-renderer:tmx-renderer-from-file tmx-file)
             tmx-node (make-instance 'tmx-node
@@ -800,8 +812,9 @@
              (height (xmas.tmx-renderer:tmx-renderer-height tmx))
              (x (/ width 2.0))
              (y (/ height 2.0)))
-        (game-object-manager-set-active-area object-manager x y width height))
-      (load-game-objects-from-tmx tmx object-manager tile-table)
+        (unless already-loaded-objects
+          (game-object-manager-set-active-area object-manager x y width height)
+          (load-game-objects-from-tmx tmx object-manager tile-table)))
       (if-let (start (gethash start-position (game-object-manager-points object-manager)))
         (setf (x player) (first start)
               (bottom player) (second start))
@@ -828,7 +841,9 @@
 (defun get-level (name &key (start-position 'start))
   (when (stringp start-position)
     (setf start-position (symbolicate (string-upcase start-position))))
-  (let ((level (make-level)))
+  (let ((level (make-level :name name))
+        (manager (when (boundp '*level-states*)
+                   (gethash name *level-states*))))
     (cond
       ((string= name "dev")
        (init-level level
@@ -836,7 +851,8 @@
                                   'image :x 250 :y 250
                                   :texture (get-texture "./res/platformer/sky.png"))
                 :tmx-file "./res/platformer/dev.tmx"
-                :start-position start-position))
+                :start-position start-position
+                :game-object-manager manager))
       ((string= name "cave")
        (init-level level
                    :background-node
@@ -846,14 +862,16 @@
                     :speed 0.5
                     :texture (get-texture "./res/platformer/cave.png"))
                 :tmx-file "./res/platformer/cave.tmx"
-                :start-position start-position))
+                :start-position start-position
+                :game-object-manager manager))
       ((string= name "infinite")
        (init-level level
                 :background-node (make-instance
                                   'image :x 250 :y 250
                                   :texture (get-texture "./res/platformer/sky.png"))
                 :tmx-file "./res/platformer/infinite.tmx"
-                :start-position start-position)))
+                :start-position start-position
+                :game-object-manager manager)))
     level))
 
 
@@ -862,8 +880,8 @@
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
-  (with-struct (platformer- level root) self
-    (setf level (get-level "cave"))
+  (with-struct (platformer- level root initial-level) self
+    (setf level (get-level initial-level))
     (add-child root (level-root level))))
 
 
@@ -880,6 +898,9 @@
     (visit root)
     (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)
     (when *next-level*
+      (let ((mgr (level-object-manager level)))
+        (setf (gethash (level-name level) *level-states*) mgr)
+        (game-object-manager-sleep-all mgr))
       (remove-from-parent (level-root level))
       (setf level (apply #'get-level *next-level*))
       (add-child root (level-root level))
@@ -893,6 +914,7 @@
                 (setf (gethash info *keys*) t))
       (:keyup   (setf (gethash info *keys*) nil)))))
 
-(cl-user::display-contents (make-platformer) :width 500 :height 500
+(cl-user::display-contents (make-platformer :initial-level "dev")
+                           :width 500 :height 500
                            :expandable t
                            :preserve-aspect-ratio t)
