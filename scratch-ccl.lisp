@@ -23,7 +23,8 @@
     (let ((scratch-matrix (xmas.display:display-scratch-matrix display))
           (texture-manager (xmas.display:display-texture-manager display))
           (action-manager (xmas.display:display-action-manager display))
-          (animation-manager (xmas.display:display-animation-manager display)))
+          (animation-manager (xmas.display:display-animation-manager display))
+          (package *package*))
       (setf (xmas.display:display-runloop display)
             (xmas.runloop:make-runloop
              :name "runloop"
@@ -31,7 +32,8 @@
              :bindings (runloop-bindings-alist contents)
              :function
              (lambda (dt)
-               (let ((xmas.matrix:*tmp-matrix* scratch-matrix)
+               (let ((*package* package)
+                     (xmas.matrix:*tmp-matrix* scratch-matrix)
                      (xmas.texture:*texture-manager* texture-manager)
                      (xmas.action-manager:*action-manager* action-manager)
                      (xmas.animation-manager:*animation-manager* animation-manager)
@@ -45,7 +47,8 @@
                  (call-with-contents contents loop-body)))
              :event-handler
              (lambda (event)
-               (let ((xmas.matrix:*tmp-matrix* scratch-matrix)
+               (let ((*package* package)
+                     (xmas.matrix:*tmp-matrix* scratch-matrix)
                      (xmas.texture:*texture-manager* texture-manager)
                      (xmas.action-manager:*action-manager* action-manager)
                      (xmas.animation-manager:*animation-manager* animation-manager))
