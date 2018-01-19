@@ -181,6 +181,23 @@
     (assert (string= encoding "base64"))
     (expand-tile-data string)))
 
+(defstruct chunk
+  x y width height data)
+
+(defun parse-chunk (it)
+  (flet ((r (attr) (parse-integer (get-attr it attr))))
+    (let ((string (first (children it))))
+      (make-chunk :x (r "x") :y (r "y")
+                  :width (r "width") :height (r "height")
+                  :data (expand-tile-data string)))))
+
+(defun parse-chunked-data (it)
+  (let* ((compression (get-attr it "compression"))
+         (encoding (get-attr it "encoding")))
+    (assert (string= compression "zlib"))
+    (assert (string= encoding "base64"))
+    (map 'list 'parse-chunk (children it))))
+
 (defun parse-layer (it path)
   (declare (ignore path))
   (let* ((name (get-attr it "name"))
@@ -199,7 +216,7 @@
               (_  (string= "properties" (tag-name ch))))
     (mapcan 'parse-property (children ch))))
 
-(defun parse-object (it height-in-pixels)
+(defun parse-object (it)
   (labels ((r (s) (let* ((*read-eval* nil)
                          (val (read-from-string (get-attr it s))))
                     (check-type val number)
@@ -209,13 +226,13 @@
                    (h (r "height")))
                (list* :tile-sprite
                       :gid (r "gid")
-                      :x (+ (/ w 2) (r "x"))
-                      :y (+ (/ h 2) (- height-in-pixels (r "y")))
+                      :x (+ (* w  0.5) (r "x"))
+                      :y (+ (* h -0.5) (r "y"))
                       (try-parse-properties it))))
            (parse-point ()
              (list :point
                    :name (get-attr it "name")
-                   :x (r "x") :y (- height-in-pixels (r "y")))))
+                   :x (r "x") :y (r "y"))))
     (cond
       ((get-attr it "gid") (parse-tile-sprite))
       ((when-let (child (first (children it)))
@@ -223,10 +240,40 @@
        (parse-point))
       (t (error "unable to parse object")))))
 
-(defun parse-object-group (it height-in-pixels)
+(defun parse-object-group (it)
   (let ((name (get-attr it "name"))
-        (data (mapcar (lambda (ch) (parse-object ch height-in-pixels)) (children it))))
+        (data (mapcar (lambda (ch) (parse-object ch)) (children it))))
     (make-layer :name name :width nil :height nil :data data :type :objects)))
+
+(defun parse-infinite-layer (it path)
+  (declare (ignore path))
+  (let* ((name (get-attr it "name"))
+         width height offs-x offs-y
+         (chunks (parse-chunked-data (first (children it))))
+         data)
+    (loop for ch in chunks
+       for x = (chunk-x ch) for y = (chunk-y ch)
+       for w = (chunk-width ch) for h = (chunk-height ch)
+       minimizing x into left
+       maximizing (+ x w) into right
+       minimizing y into bottom
+       maximizing (+ y h) into top
+       finally (setf width (- right left)
+                     height (- top bottom)
+                     offs-x (- left)
+                     offs-y (- bottom)))
+    (setf data (make-array (* width height) :initial-element 0))
+    (loop for ch in chunks
+       for w = (chunk-width ch) for h = (chunk-height ch) do
+         (loop for x below w do
+              (loop for y below h
+                 for gid = (aref (chunk-data ch) (+ x (* w y)))
+                 for x1 = (+ x (chunk-x ch) offs-x)
+                 for y1 = (+ y (chunk-y ch) offs-y)
+                 do (setf (aref data (+ x1 (* y1 width))) gid))))
+    (values
+     (make-layer :name name :width width :height height :data data :type :tiles)
+     offs-x offs-y)))
 
 (defun parse-map (it path)
   (assert (string= "orthogonal" (get-attr it "orientation")))
@@ -234,18 +281,41 @@
          (tile-height (parse-integer (get-attr it "tileheight")))
          (width (parse-integer (get-attr it "width")))
          (height (parse-integer (get-attr it "height")))
+         (infinite? (equal "1" (get-attr it "infinite")))
          (tilesets nil)
          (layers nil)
          (tileset-properties nil)
-         (height-in-pixels (* height tile-height)))
+         (height-in-pixels (* height tile-height))
+         (offs-x 0)
+         (offs-y 0))
     (dolist (ch (children it))
       (cond ((string= "tileset" (tag-name ch))
              (push (parse-tileset ch path) tilesets))
             ((string= "layer" (tag-name ch))
-             (push (parse-layer ch path) layers))
+             (if infinite?
+                 (multiple-value-bind (layer tile-offs-x tile-offs-y)
+                     (parse-infinite-layer ch path)
+                   ;;XXX HACK incomplete
+                   ;; this assumes only one tile layer,
+                   ;; and that it always comes before the object layer
+                   (maxf width (layer-width layer))
+                   (maxf height (layer-height layer))
+                   (maxf height-in-pixels (* height tile-height))
+                   (setf offs-x (* tile-width tile-offs-x)
+                         offs-y (* tile-height tile-offs-y))
+                   (push layer layers))
+                 (push (parse-layer ch path) layers)))
             ((string= "objectgroup" (tag-name ch))
-             (push (parse-object-group ch height-in-pixels) layers))
+             (push (parse-object-group ch) layers))
             (t (error "~S tag is unimplmented" (tag-name ch)))))
+    (dolist (layer layers)
+      (when (eq (layer-type layer) :objects)
+        (dolist (data (layer-data layer))
+          (let* ((obj (rest data))
+                 (x (getf obj :x))
+                 (y (getf obj :y)))
+            (setf (getf obj :x) (+ offs-x x)
+                  (getf obj :y) (- height-in-pixels (+ offs-y y)))))))
     (let* ((total-tile-count
             (reduce (lambda (count tileset)
                       (+ count (tileset-tile-count tileset)))
