@@ -96,6 +96,10 @@
 (defclass image (node)
   ((texture :accessor texture :initarg :texture)))
 
+(defclass horizontal-scroller-image (image)
+  ((speed :initarg :speed))
+  (:default-initargs :speed 1.0))
+
 (defclass physics ()
   ((velocity-x :accessor velocity-x :initarg :velocity-x)
    (velocity-y :accessor velocity-y :initarg :velocity-y)
@@ -271,6 +275,18 @@
 (defmethod draw ((self image))
   (draw-node-color self)
   (xmas.draw:draw-texture (texture self)))
+
+(defmethod draw ((self horizontal-scroller-image))
+  (draw-node-color self)
+  (let* ((texture (texture self))
+         (width (texture-width texture))
+         (height (texture-height texture))
+         (speed (slot-value self 'speed))
+         (offs-y (* height -0.5))
+         (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
+    (xmas.draw:draw-texture-at texture (- offs-x width) offs-y width height)
+    (xmas.draw:draw-texture-at texture offs-x offs-y width height)
+    (xmas.draw:draw-texture-at texture (+ offs-x width) offs-y width height)))
 
 (defmethod draw ((self sprite))
   (draw-node-color self)
@@ -823,9 +839,12 @@
                 :start-position start-position))
       ((string= name "cave")
        (init-level level
-                :background-node (make-instance
-                                  'image :x 250 :y 250
-                                  :texture (get-texture "./res/platformer/sky.png"))
+                   :background-node
+                   (make-instance
+                    'horizontal-scroller-image
+                    :x 250 :y 250
+                    :speed 0.5
+                    :texture (get-texture "./res/platformer/cave.png"))
                 :tmx-file "./res/platformer/cave.tmx"
                 :start-position start-position))
       ((string= name "infinite")
@@ -844,7 +863,7 @@
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
   (with-struct (platformer- level root) self
-    (setf level (get-level "infinite"))
+    (setf level (get-level "cave"))
     (add-child root (level-root level))))
 
 
