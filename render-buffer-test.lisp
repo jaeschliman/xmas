@@ -648,3 +648,6 @@
     (draw-it sprite3)))
 
 ;; (xmas.deftest:run-test 'anchor-point-test-1)
+
+(read-tilemap "./res/platformer/infinite.tmx")
+(read-tilemap "./res/platformer/dev.tmx")

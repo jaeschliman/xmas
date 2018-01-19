@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="300" height="20" tilewidth="32" tileheight="32" infinite="1" nextobjectid="3">
+ <tileset firstgid="1" source="dev.tsx"/>
+ <tileset firstgid="65" source="dev-objects.tsx"/>
+ <layer name="Tile Layer 1" width="300" height="20">
+  <data encoding="base64" compression="zlib">
+   <chunk x="16" y="-32" width="16" height="16">
+   eJxjYBgFo2AUDEXAhEeOkwi9jEAMAAYEAA8=
+  </chunk>
+   <chunk x="32" y="-32" width="16" height="16">
+   eJxjYBgFo2BkAyYgZsSDidFLLqBELzUAAA8oAA4=
+  </chunk>
+   <chunk x="0" y="-16" width="16" height="16">
+   eJxjYBgFo4C+gHOgHUBnQCv/MlGolxGIARgEABg=
+  </chunk>
+   <chunk x="16" y="-16" width="16" height="16">
+   eJxjYCAdMAExIxn6COnlHCB7KdE7FN08qndw6GWgUC81AACbmAA+
+  </chunk>
+   <chunk x="-16" y="0" width="16" height="16">
+   eJxjYBgFtAaMePAoGAUDCQAV8AAI
+  </chunk>
+   <chunk x="0" y="0" width="16" height="16">
+   eJxjYCAdMAExIxn6hqNeRiLxKBgFgxEAAFCkABo=
+  </chunk>
+  </data>
+ </layer>
+ <objectgroup name="Object Layer 1">
+  <object id="2" gid="68" x="0" y="160" width="91" height="106"/>
+  <object id="1" name="start" x="32" y="160">
+   <point/>
+  </object>
+ </objectgroup>
+</map>

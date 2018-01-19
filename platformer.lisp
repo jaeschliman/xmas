@@ -827,6 +827,13 @@
                                   'image :x 250 :y 250
                                   :texture (get-texture "./res/platformer/sky.png"))
                 :tmx-file "./res/platformer/cave.tmx"
+                :start-position start-position))
+      ((string= name "infinite")
+       (init-level level
+                :background-node (make-instance
+                                  'image :x 250 :y 250
+                                  :texture (get-texture "./res/platformer/sky.png"))
+                :tmx-file "./res/platformer/infinite.tmx"
                 :start-position start-position)))
     level))
 
@@ -837,7 +844,7 @@
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
   (with-struct (platformer- level root) self
-    (setf level (get-level "cave"))
+    (setf level (get-level "infinite"))
     (add-child root (level-root level))))
 
 
