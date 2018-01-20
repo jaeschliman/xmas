@@ -27,9 +27,7 @@
   started
   level
   (root (make-instance 'node))
-  initial-level
-  display-width
-  display-height)
+  initial-level)
 
 (defstruct level
   root
@@ -737,32 +735,34 @@
 (defun move-camera (level dt)
   (declare (ignore dt))
   (with-struct (level- root player background) level
-    (let* ((w/2 (* 0.5 *display-width*))
-           (h/2 (* 0.5 *display-height*))
-           (center-x (+ (- (x root)) w/2))
-           (right-edge (+ center-x 100))
-           (left-edge (- center-x 100))
-           (center-y (+ (- (y root)) h/2))
-           (top-edge (+ center-y 100))
-           (bottom-edge (- center-y 50)))
-      (cond
-        ((> (x player) right-edge)
-         (decf (x root) (- (x player) right-edge)))
-        ((and t (< (x player) left-edge))
-         (incf (x root) (- left-edge (x player)))))
-      (when (> (x root) 0.0)
-        (setf (x root) 0.0))
-      (cond
-        ((> (y player) top-edge)
-         (decf (y root) (- (y player) top-edge)))
-        ((and t (< (y player) bottom-edge))
-         (incf (y root) (- bottom-edge (y player)))))
-      (when (> (y root) 0.0)
-        (setf (y root) 0.0))
-      (setf *camera-x* (+ (- (x root)) w/2)
-            *camera-y* (+ (- (y root)) h/2))
-      (setf (y background) (+ (- (y root)) h/2))
-      (setf (x background) (+ (- (x root)) w/2)))))
+    (let ((w/2 (* 0.5 *display-width*))
+          (h/2 (* 0.5 *display-height*)))
+      (setf (x root) (- (- *camera-x* w/2))
+            (y root) (- (- *camera-y* h/2)))
+      (let* ((center-x *camera-x*)
+             (right-edge (+ center-x 100))
+             (left-edge (- center-x 100))
+             (center-y *camera-y*)
+             (top-edge (+ center-y 100))
+             (bottom-edge (- center-y 50)))
+        (cond
+          ((> (x player) right-edge)
+           (decf (x root) (- (x player) right-edge)))
+          ((and t (< (x player) left-edge))
+           (incf (x root) (- left-edge (x player)))))
+        (when (> (x root) 0.0)
+          (setf (x root) 0.0))
+        (cond
+          ((> (y player) top-edge)
+           (decf (y root) (- (y player) top-edge)))
+          ((and t (< (y player) bottom-edge))
+           (incf (y root) (- bottom-edge (y player)))))
+        (when (> (y root) 0.0)
+          (setf (y root) 0.0))
+        (setf *camera-x* (+ (- (x root)) w/2)
+              *camera-y* (+ (- (y root)) h/2))
+        (setf (x background) (+ (- (x root)) w/2))
+        (setf (y background) (+ (- (y root)) h/2))))))
 
 (defun make-node-from-object-info (type initargs)
   (when-let* ((path (case type
@@ -846,6 +846,8 @@
       ;;should have a 'move-player-to-ground' function
       (setf (standing-on player)
             (update-sprite-physics self player (/ 1.0 60.0)))
+      (setf *camera-x* (+ (x player) 200)
+            *camera-y*  (+ (top player) 300))
       (add-child root background)
       (add-child root tmx-node)
       (add-child root player))))
@@ -904,12 +906,9 @@
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
-  (with-struct (platformer- level root initial-level
-                            display-width display-height)
+  (with-struct (platformer- level root initial-level)
       self
-    (setf level (get-level initial-level)
-          display-width (display-width display)
-          display-height (display-height display))
+    (setf level (get-level initial-level))
     (add-child root (level-root level))))
 
 
