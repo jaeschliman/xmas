@@ -18,7 +18,8 @@
              #:size-to-fit
              #:preserve-aspect-ratio
              #:display-animation-manager
-             #:display-closed-hook))
+             #:display-closed-hook
+             #:display-runloop-bindings))
 
 (in-package :xmas.display)
 
@@ -43,7 +44,8 @@
    (animation-manager :accessor display-animation-manager
                       :initarg :animation-manager)
    (closed-hook :accessor display-closed-hook
-                :initarg :closed-hook)))
+                :initarg :closed-hook)
+   (runloop-bindings :accessor display-runloop-bindings)))
 
 (defun display-drain-gl-queue (display)
   (loop

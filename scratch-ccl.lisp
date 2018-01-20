@@ -29,7 +29,7 @@
             (xmas.runloop:make-runloop
              :name "runloop"
              :step (xmas.display:display-fps display)
-             :bindings (runloop-bindings-alist contents)
+             :bindings (xmas.display:display-runloop-bindings display)
              :function
              (lambda (dt)
                (let ((*package* package)
@@ -346,11 +346,16 @@
               (xmas.texture:*texture-manager* (xmas.display:display-texture-manager result))
               (xmas.action-manager:*action-manager* (xmas.display:display-action-manager result))
               (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager result)))
-          (call-with-contents
-           contents
-           (lambda ()
-             (contents-will-mount contents result)
-             (mount-contents contents result))))
+          (let ((bindings (copy-alist (runloop-bindings-alist contents))))
+            (setf (xmas.display:display-runloop-bindings result) bindings)
+            (progv (mapcar 'car bindings) (mapcar 'cdr bindings)
+              (call-with-contents
+               contents
+               (lambda ()
+                 (contents-will-mount contents result)
+                 (mount-contents contents result)))
+              (loop for cons in bindings do
+                   (setf (cdr cons) (symbol-value (car cons)))))))
         (#/setLevel: w 100)
         (#/makeFirstResponder: w glview)
         (#/makeKeyAndOrderFront: w nil)))
