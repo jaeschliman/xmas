@@ -43,7 +43,11 @@
    #:content-height
    #:content-width
    #:anchor-y
-   #:anchor-x))
+   #:anchor-x
+   #:right-for-x
+   #:left-for-x
+   #:bottom-for-y
+   #:top-for-y))
 (in-package :xmas.node)
 
 ;;; honestly, this should probably be a struct...
@@ -163,26 +167,39 @@
 (defmethod anchor-y ((self t)) 0.5)
 
 ;;TODO: cache these?
+
+(defun right-for-x (node x)
+  (+ x (* (width node) (- 1.0 (anchor-x node)))))
+
 (defun right (node)
-  (+ (x node) (* (width node) (- 1.0 (anchor-x node)))))
+  (right-for-x node (x node)))
 
 (defun (setf right) (x node)
   (setf (x node) (- x (* (width node) (- 1.0 (anchor-x node))))))
 
+(defun left-for-x (node x)
+  (- x (* (width node) (anchor-x node))))
+
 (defun left (node)
-  (- (x node) (* (width node) (anchor-x node))))
+  (left-for-x node (x node)))
 
 (defun (setf left) (x node)
   (setf (x node) (+ x (* (width node) (anchor-x node)))))
 
+(defun bottom-for-y (node y)
+  (- y (* (height node) (anchor-y node))))
+
 (defun bottom (node)
-  (- (y node) (* (height node) (anchor-y node))))
+  (bottom-for-y node (y node)))
 
 (defun (setf bottom) (y node)
   (setf (y node) (+ y (* (height node) (anchor-y node)))))
 
+(defun top-for-y (node y)
+  (+ y (* (height node) (- 1.0 (anchor-y node)))))
+
 (defun top (node)
-  (+ (y node) (* (height node) (- 1.0 (anchor-y node)))))
+  (top-for-y node (y node)))
 
 (defun (setf top) (y node)
   (setf (y node) (- y (* (height node) (- 1.0 (anchor-y node))))))
