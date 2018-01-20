@@ -896,6 +896,11 @@
 
 
 (defmethod cl-user::contents-will-mount ((self platformer) display)
+  (setf *display-width*  (display-width display)
+        *display-height* (display-height display))
+  (setf (fill-pointer *jewel-count-label*) 0)
+  (with-output-to-string (s *jewel-count-label*)
+    (format s "~S jewels" *jewel-count*))
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
@@ -912,16 +917,11 @@
   (with-struct (platformer- started root level) self
     (unless started
       (setf started t)
-      (setf *display-width*  (platformer-display-width self)
-            *display-height* (platformer-display-height self))
-      (on-enter root)
-      (setf (fill-pointer *jewel-count-label*) 0)
-      (with-output-to-string (s *jewel-count-label*)
-        (format s "~S jewels" *jewel-count*)))
+      (on-enter root))
     (update level dt)
     (clrhash *just-pressed*)
     (visit root)
-    (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 460.0)
+    (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 360.0)
     (when *next-level*
       (let ((mgr (level-object-manager level)))
         (setf (gethash (level-name level) *level-states*) mgr)
@@ -940,6 +940,7 @@
       (:keyup   (setf (gethash info *keys*) nil)))))
 
 (cl-user::display-contents (make-platformer :initial-level "dev")
-                           :width 890 :height 500
+                           :width (* 1920 0.4)  ;;was: 890
+                           :height (* 1080 0.4) ;;was: 500
                            :expandable t
                            :preserve-aspect-ratio t)

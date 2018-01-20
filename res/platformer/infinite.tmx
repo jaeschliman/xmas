@@ -25,7 +25,12 @@
   </data>
  </layer>
  <objectgroup name="Object Layer 1">
-  <object id="2" gid="68" x="0" y="160" width="91" height="106"/>
+  <object id="2" gid="68" x="0" y="160" width="91" height="106">
+   <properties>
+    <property name="level" value="cave"/>
+    <property name="marker" value="infinite-door"/>
+   </properties>
+  </object>
   <object id="1" name="start" x="32" y="160">
    <point/>
   </object>

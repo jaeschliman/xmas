@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="300" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="3">
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="300" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="5">
  <tileset firstgid="1" source="dev.tsx"/>
  <tileset firstgid="65" source="dev-objects.tsx"/>
  <layer name="Tile Layer 1" width="300" height="20">
@@ -15,6 +15,15 @@
    </properties>
   </object>
   <object id="2" name="start" x="4576" y="544">
+   <point/>
+  </object>
+  <object id="3" gid="68" x="5728" y="544" width="91" height="106">
+   <properties>
+    <property name="level" value="infinite"/>
+    <property name="marker" value="start"/>
+   </properties>
+  </object>
+  <object id="4" name="infinite-door" x="5760" y="544">
    <point/>
   </object>
  </objectgroup>
