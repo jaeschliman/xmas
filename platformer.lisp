@@ -48,10 +48,8 @@
 
 (defrunvar *camera-x* 250.0)
 (defrunvar *camera-y* 250.0)
-(defrunvar *last-player-top* 0.0)
-(defrunvar *last-player-left* 0.0)
-(defrunvar *last-player-right* 0.0)
-(defrunvar *last-player-bottom* 0.0)
+(defrunvar *last-player-x* 0.0)
+(defrunvar *last-player-y* 0.0)
 (defrunvar *keys* (make-hash-table :test 'eql))
 (defrunvar *just-pressed* (make-hash-table :test 'eql))
 (defrunvar *font-22* (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
@@ -142,6 +140,9 @@
 (defclass cat (game-sprite)
   ())
 
+(defclass platform (game-sprite)
+  ())
+
 (defclass door (game-sprite)
   ((level :initarg :level)
    (marker :initarg :marker)))
@@ -163,6 +164,15 @@
       (format t "let's go to level: ~S : ~S !~%" level marker)
       ;; should really be called *next-room* at this point
       (setf *next-level* (list level :start-position marker)))))
+
+(defmethod player-collision (player (platform platform))
+  (when (and (< (velocity-y player) 0.0)
+             (>= (bottom-for-y player *last-player-y*)
+                 (top platform)))
+    (setf (bottom player) (top platform)
+          (velocity-y player) 0.0
+          (standing-on player) platform
+          (can-jump player) t)))
 
 (defstruct game-object-manager
   sprite-node
@@ -514,8 +524,6 @@
     (if (> (velocity-x sprite) 0)
         (move-sprite-left-if-hitting-tiles-on-right level sprite dt)
         (move-sprite-right-if-hitting-tiles-on-left level sprite dt))
-    (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
-    (clampf (velocity-x sprite) -1000 1000)
 
     (let ((prev-bottom (bottom sprite)))
       (incf (y sprite) (* dt (velocity-y sprite)))
@@ -523,8 +531,6 @@
             (if (> (velocity-y sprite) 0)
                 (prog1 nil (move-sprite-down-if-hitting-tiles-on-top level sprite dt))
                 (move-sprite-up-if-hitting-tiles-on-bottom level sprite prev-bottom dt))))
-    (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
-    (clampf (velocity-y sprite) -1000 1000)
     standing-on))
 
 (defmethod collide-with-tile ((self player) side tile)
@@ -598,17 +604,22 @@
       (t
        (set-frame "pickle.png")))))
 
-(defun hz-accel-rate-for-tile (tile)
-  (case (tile-material tile)
+(defun hz-accel-rate-for-material (material)
+  (case material
     (brick 300.0)
     (ice   150.0)
     (t 300.0)))
 
-(defun hz-decel-rate-for-tile (tile)
-  (case (tile-material tile)
+(defun hz-decel-rate-for-material (material)
+  (case material
     (brick (* 300.0 2.25))
     (ice   (* 300.0 0.05))
     (t     (* 300.0 2.25))))
+
+(defun material-for-thing (it)
+  (if (tile-p it)
+      (tile-material it)
+      'brick))
 
 (defun update-state (player level dt)
   (declare (ignore dt))
@@ -672,10 +683,8 @@
          (fall-gravity -1200.0)
          (hz-max-vel 200.0))
     (with-struct (level- player tmx) level
-      (setf *last-player-top* (top player))
-      (setf *last-player-left* (left player))
-      (setf *last-player-bottom* (bottom player))
-      (setf *last-player-right* (right player))
+      (setf *last-player-x* (x player))
+      (setf *last-player-y* (y player))
 
       ;;use faster gravity for falling
       (if (> (velocity-y player) 0.0)
@@ -687,10 +696,11 @@
       (maybe-jump-player level dt)
 
       ;;horizontal motion
-      (let ((tile (standing-on player)))
-        (cond (tile ;;on the ground
-               (let* ((hz-accel-rate (hz-accel-rate-for-tile tile))
-                      (hz-decel-rate (hz-decel-rate-for-tile tile)))
+      (let ((thing (standing-on player)))
+        (cond (thing ;;standing on something
+               (let* ((material (material-for-thing thing))
+                      (hz-accel-rate (hz-accel-rate-for-material material))
+                      (hz-decel-rate (hz-decel-rate-for-material material)))
                  (when (key-down #\a)
                    (setf hz-max-vel (* 2.0 hz-max-vel)
                          hz-accel-rate (* 2.0 hz-accel-rate)))
@@ -732,6 +742,12 @@
       (clampf (x player) 0.0 15000)
       (clampf (y player) 0.0 1500))))
 
+(defun update-sprite-velocity (sprite dt)
+    (incf (velocity-x sprite) (* dt (acceleration-x sprite)))
+    (clampf (velocity-x sprite) -1000 1000)
+    (incf (velocity-y sprite) (* dt (acceleration-y sprite)))
+    (clampf (velocity-y sprite) -1000 1000))
+
 (defun move-camera (level dt)
   (declare (ignore dt))
   (with-struct (level- root player background) level
@@ -761,14 +777,15 @@
           (setf (y root) 0.0))
         (setf *camera-x* (+ (- (x root)) w/2)
               *camera-y* (+ (- (y root)) h/2))
-        (setf (x background) (+ (- (x root)) w/2))
-        (setf (y background) (+ (- (y root)) h/2))))))
+        (setf (x background) *camera-x*)
+        (setf (y background) *camera-y*)))))
 
 (defun make-node-from-object-info (type initargs)
   (when-let* ((path (case type
                       (jewel "jewel.png")
                       (cat "throwcat.png")
-                      (door "door.png")))
+                      (door "door.png")
+                      (platform "platform.png")))
               (frame (get-frame path)))
     (apply #'make-instance type :sprite-frame frame initargs)))
 
@@ -858,6 +875,7 @@
     (move-player self dt)
     (update-object-manager self dt)
     (collide-player-with-objects self dt)
+    (update-sprite-velocity player dt)
     (move-camera self dt)))
 
 (defun get-level (name &key (start-position 'start))
