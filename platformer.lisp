@@ -27,7 +27,9 @@
   started
   level
   (root (make-instance 'node))
-  initial-level)
+  initial-level
+  display-width
+  display-height)
 
 (defstruct level
   root
@@ -59,6 +61,8 @@
 (defrunvar *jewel-count-label* (make-output-string))
 (defrunvar *next-level* nil)
 (defrunvar *level-states* (make-hash-table :test 'equal))
+(defrunvar *display-width* 0)
+(defrunvar *display-height* 0)
 
 (defmethod cl-user::runloop-bindings-alist ((self platformer))
   (let (result)
@@ -235,13 +239,14 @@
   (declare (ignorable dt))
   (with-struct (level- player object-manager) level
     (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree) object-manager
-      (let* ((outset 300.0)
+      (let* ((offs-x (* *display-width* 0.75))
+             (offs-y (* *display-height* 0.75))
              (x *camera-x*)
              (y *camera-y*)
-             (left (- x outset))
-             (bottom (- y outset))
-             (right (+ x outset))
-             (top (+ y outset))
+             (left (- x offs-x))
+             (bottom (- y offs-y))
+             (right (+ x offs-x))
+             (top (+ y offs-y))
              (wake (lambda (object) (wake object object-manager))))
         (declare (dynamic-extent wake))
         (qtree-query-collisions object-qtree left bottom right top wake)
@@ -253,7 +258,7 @@
              (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))
         (qtree-reset sprite-qtree
                      :x x :y y
-                     :width (* 2.0 outset) :height (* 2.0 outset))
+                     :width (* 2.0 offs-x) :height (* 2.0 offs-y))
         (loop for object across awake-objects do
              (when-let (s (sprite object))
                (qtree-add sprite-qtree s)))))))
@@ -327,10 +332,12 @@
   (let* ((r (tmx self))
          (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
          (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0))
-         (x1 (- *camera-x* 300))
-         (x2 (+ *camera-x* 300))
-         (y1 (- *camera-y* 300))
-         (y2 (+ *camera-y* 300)))
+         (x-offs (* *display-width* 0.6))
+         (y-offs (* *display-height* 0.6))
+         (x1 (- *camera-x* x-offs))
+         (x2 (+ *camera-x* x-offs))
+         (y1 (- *camera-y* y-offs))
+         (y2 (+ *camera-y* y-offs)))
     (xmas.tmx-renderer:draw-tmx-renderer-windowed
      x y r
      x1 y1
@@ -730,10 +737,12 @@
 (defun move-camera (level dt)
   (declare (ignore dt))
   (with-struct (level- root player background) level
-    (let* ((center-x (+ (- (x root)) 250))
+    (let* ((w/2 (* 0.5 *display-width*))
+           (h/2 (* 0.5 *display-height*))
+           (center-x (+ (- (x root)) w/2))
            (right-edge (+ center-x 100))
            (left-edge (- center-x 100))
-           (center-y (+ (- (y root)) 250))
+           (center-y (+ (- (y root)) h/2))
            (top-edge (+ center-y 100))
            (bottom-edge (- center-y 50)))
       (cond
@@ -750,10 +759,10 @@
          (incf (y root) (- bottom-edge (y player)))))
       (when (> (y root) 0.0)
         (setf (y root) 0.0))
-      (setf *camera-x* (+ (- (x root)) 250)
-            *camera-y* (+ (- (y root)) 250))
-      (setf (y background) (+ (- (y root)) 250))
-      (setf (x background) (+ (- (x root)) 250)))))
+      (setf *camera-x* (+ (- (x root)) w/2)
+            *camera-y* (+ (- (y root)) h/2))
+      (setf (y background) (+ (- (y root)) h/2))
+      (setf (x background) (+ (- (x root)) w/2)))))
 
 (defun make-node-from-object-info (type initargs)
   (when-let* ((path (case type
@@ -887,12 +896,15 @@
 
 
 (defmethod cl-user::contents-will-mount ((self platformer) display)
-  (declare (ignore display))
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
-  (with-struct (platformer- level root initial-level) self
-    (setf level (get-level initial-level))
+  (with-struct (platformer- level root initial-level
+                            display-width display-height)
+      self
+    (setf level (get-level initial-level)
+          display-width (display-width display)
+          display-height (display-height display))
     (add-child root (level-root level))))
 
 
@@ -900,6 +912,8 @@
   (with-struct (platformer- started root level) self
     (unless started
       (setf started t)
+      (setf *display-width*  (platformer-display-width self)
+            *display-height* (platformer-display-height self))
       (on-enter root)
       (setf (fill-pointer *jewel-count-label*) 0)
       (with-output-to-string (s *jewel-count-label*)
@@ -926,6 +940,6 @@
       (:keyup   (setf (gethash info *keys*) nil)))))
 
 (cl-user::display-contents (make-platformer :initial-level "dev")
-                           :width 500 :height 500
+                           :width 890 :height 500
                            :expandable t
                            :preserve-aspect-ratio t)
