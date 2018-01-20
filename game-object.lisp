@@ -15,7 +15,8 @@
              #:to-sleep
              #:game-object-manager-set-active-area
              #:game-object-manager-add-object
-             #:game-object-manager-sleep-all))
+             #:game-object-manager-sleep-all
+             #:game-object-manager-update))
 (in-package :xmas.game-object)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -89,3 +90,38 @@
 (defun game-object-manager-sleep-all (manager)
   (map 'nil (lambda (object) (to-sleep object manager))
        (copy-seq (game-object-manager-awake-objects manager))))
+
+(defun should-sleep? (object manager left bottom right top)
+  (declare (ignorable manager))
+  (flet ((outside (obj) (or
+                         (> (left obj) right)
+                         (> (bottom obj) top)
+                         (< (top obj) bottom)
+                         (< (right obj) left))))
+    (when (outside object)
+      (if-let (sprite (sprite object))
+        (when (outside sprite)
+          t)
+        t))))
+
+(defun game-object-manager-update (object-manager left bottom right top dt)
+  (declare (ignore dt))
+  (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree) object-manager
+    (let* ((wake (lambda (object) (wake object object-manager)))
+           (width (- right left))
+           (height (- top bottom))
+           (x (+ left (* width 0.5)))
+           (y (+ bottom (* height 0.5))))
+      (declare (dynamic-extent wake))
+      (qtree-query-collisions object-qtree left bottom right top wake)
+      (loop with sleepers = nil
+         for object across awake-objects do
+           (when (should-sleep? object object-manager left bottom right top)
+             (push object sleepers))
+         finally
+           (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))
+      (qtree-reset sprite-qtree
+                   :x x :y y :width width :height height)
+      (loop for object across awake-objects do
+           (when-let (s (sprite object))
+             (qtree-add sprite-qtree s))))))

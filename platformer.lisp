@@ -165,46 +165,18 @@
                         (move-by 1.0 20.0 0.0))
               :repeat :forever))
 
-(defun should-sleep? (object manager left bottom right top)
-  (declare (ignorable manager))
-  (flet ((outside (obj) (or
-                         (> (left obj) right)
-                         (> (bottom obj) top)
-                         (< (top obj) bottom)
-                         (< (right obj) left))))
-    (when (outside object)
-      (if-let (sprite (sprite object))
-        (when (outside sprite)
-          t)
-        t))))
-
 (defun update-object-manager (level dt)
   (declare (ignorable dt))
   (with-struct (level- player object-manager) level
-    (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree) object-manager
-      (let* ((offs-x (* *display-width* 0.75))
-             (offs-y (* *display-height* 0.75))
-             (x *camera-x*)
-             (y *camera-y*)
-             (left (- x offs-x))
-             (bottom (- y offs-y))
-             (right (+ x offs-x))
-             (top (+ y offs-y))
-             (wake (lambda (object) (wake object object-manager))))
-        (declare (dynamic-extent wake))
-        (qtree-query-collisions object-qtree left bottom right top wake)
-        (loop with sleepers = nil
-           for object across awake-objects do
-             (when (should-sleep? object object-manager left bottom right top)
-               (push object sleepers))
-           finally
-             (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))
-        (qtree-reset sprite-qtree
-                     :x x :y y
-                     :width (* 2.0 offs-x) :height (* 2.0 offs-y))
-        (loop for object across awake-objects do
-             (when-let (s (sprite object))
-               (qtree-add sprite-qtree s)))))))
+    (let* ((offs-x (* *display-width* 0.75))
+           (offs-y (* *display-height* 0.75))
+           (x *camera-x*)
+           (y *camera-y*)
+           (left (- x offs-x))
+           (bottom (- y offs-y))
+           (right (+ x offs-x))
+           (top (+ y offs-y)))
+      (game-object-manager-update object-manager left bottom right top dt))))
 
 (defgeneric player-collision (player object)
   (:method (player object)
@@ -699,14 +671,14 @@
         (cond
           ((> (x player) right-edge)
            (decf (x root) (- (x player) right-edge)))
-          ((and t (< (x player) left-edge))
+          ((< (x player) left-edge)
            (incf (x root) (- left-edge (x player)))))
         (when (> (x root) 0.0)
           (setf (x root) 0.0))
         (cond
           ((> (y player) top-edge)
            (decf (y root) (- (y player) top-edge)))
-          ((and t (< (y player) bottom-edge))
+          ((< (y player) bottom-edge)
            (incf (y root) (- bottom-edge (y player)))))
         (when (> (y root) 0.0)
           (setf (y root) 0.0))
@@ -849,7 +821,6 @@
                 :game-object-manager manager)))
     level))
 
-
 (defmethod cl-user::contents-will-mount ((self platformer) display)
   (setf *display-width*  (display-width display)
         *display-height* (display-height display))
@@ -863,7 +834,6 @@
       self
     (setf level (get-level initial-level))
     (add-child root (level-root level))))
-
 
 (defmethod cl-user::step-contents ((self platformer) dt)
   (with-struct (platformer- started root level) self
