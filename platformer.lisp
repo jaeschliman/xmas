@@ -1,4 +1,4 @@
-(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree))
+(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object))
 (in-package :xmas.platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -119,21 +119,6 @@
    (standing-on :accessor standing-on :initform nil)
    (state :accessor state :initform nil :initarg :state)))
 
-(defclass game-object ()
-  ((x :reader x :initarg :x) ;; immutable
-   (y :reader y :initarg :y) ;; immutable
-   (sprite :accessor sprite :initarg :sprite)
-   (sleeping :accessor sleeping :initform t)))
-
-(defmethod width  ((self game-object)) 0.0)
-(defmethod height ((self game-object)) 0.0)
-
-(defclass belongs-to-game-object ()
-  ((game-object :accessor game-object)))
-
-(defclass game-sprite (sprite belongs-to-game-object)
-  ())
-
 (defclass jewel (game-sprite)
   ())
 
@@ -174,61 +159,11 @@
           (standing-on player) platform
           (can-jump player) t)))
 
-(defstruct game-object-manager
-  sprite-node
-  (objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
-  (awake-objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
-  (object-qtree (qtree))
-  (sprite-qtree (qtree))
-  (points (make-hash-table :test 'eq)))
-
-(defgeneric wake-sprite (sprite game-object)
-  (:method (sprite game-object)
-    (declare (ignore sprite game-object))))
-
 (defmethod wake-sprite ((cat cat) game-object)
   (declare (ignore game-object))
   (run-action cat (list (move-by 1.0 -20.0 0.0)
                         (move-by 1.0 20.0 0.0))
               :repeat :forever))
-
-(defmethod wake ((object game-object) manager)
-  (setf (sleeping object) nil)
-  (with-struct (game-object-manager- awake-objects sprite-node) manager
-    (vector-push-extend object awake-objects)
-    (when-let (sprite (sprite object))
-      (wake-sprite sprite object)
-      (add-child sprite-node sprite))))
-
-(defmethod wake :around ((object game-object) manager)
-  (declare (ignore manager))
-  (when (sleeping object)
-    (call-next-method)))
-
-(defmethod to-sleep ((object game-object) manager)
-  (setf (sleeping object) t)
-  (with-struct (game-object-manager- awake-objects) manager
-    (setf awake-objects (delete object awake-objects))
-    (when-let (sprite (sprite object))
-      (remove-from-parent sprite))))
-
-(defmethod to-sleep :around ((object game-object) manager)
-  (declare (ignore manager))
-  (unless (sleeping object)
-    (call-next-method)))
-
-(defun game-object-manager-set-active-area (manager x y w h)
-  (with-struct (game-object-manager- object-qtree) manager
-      (qtree-reset object-qtree :x x :y y :width w :height h)))
-  
-(defun game-object-manager-add-object (manager object)
-  (with-struct (game-object-manager- objects object-qtree) manager
-    (vector-push-extend object objects)
-    (qtree-add object-qtree object)))
-
-(defun game-object-manager-sleep-all (manager)
-  (map 'nil (lambda (object) (to-sleep object manager))
-       (copy-seq (game-object-manager-awake-objects manager))))
 
 (defun should-sleep? (object manager left bottom right top)
   (declare (ignorable manager))
