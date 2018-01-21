@@ -114,7 +114,9 @@
    :acceleration-x 0.0 :acceleration-y 0.0))
 
 (defclass actor (physics game-sprite)
-  ((standing-on :accessor standing-on :initform nil)
+  ((prev-x :accessor prev-x :initform 0.0)
+   (prev-y :accessor prev-y :initform 0.0)
+   (standing-on :accessor standing-on :initform nil)
    (state :accessor state :initform nil :initarg :state)))
 
 (defclass player (actor)
@@ -164,7 +166,7 @@
 
 (defmethod player-collision (player (platform platform))
   (when (and (< (velocity-y player) 0.0)
-             (>= (bottom-for-y player *last-player-y*)
+             (>= (bottom-for-y player (prev-y player))
                  (top platform)))
     (setf (bottom player) (top platform)
           (velocity-y player) 0.0
@@ -353,7 +355,8 @@
 (defmethod collide-with-tile (self side tile)
   (declare (ignore self side tile)))
 
-(defun top-for-tile (sprite tile x y prev-y dt)
+(defun top-for-tile (sprite tile x y dt)
+  (declare (ignore dt))
   (ecase (tile-shape tile)
     (slope-left  (+ 1.0 (mod x 32.0) (* 32.0 (floor y 32.0))))
     (slope-right (+ 1.0 (- 32.0 (mod x 32.0)) (* 32.0 (floor y 32.0))))
@@ -363,7 +366,7 @@
             (vel (velocity-y sprite)))
        (cond
          ((and (<= vel 0.0)
-               (>= prev-y top)
+               (>= (bottom-for-y sprite (prev-y sprite)) top)
                (<= y top))
           top)
          (t y))))))
@@ -400,9 +403,10 @@
            (tile (aref tile-table gid)))
       (tile-shape tile))))
 
-(defun move-sprite-up-if-hitting-tiles-on-bottom  (level sprite prev-y dt)
+(defun move-sprite-up-if-hitting-tiles-on-bottom  (level sprite dt)
   (with-struct (level- tmx tile-table) level
-    (let ((y (bottom sprite)) (hit nil))
+    (let ((y (bottom sprite))
+          (hit nil))
       (labels
           ((check (x)
              (let* ((gid (tile-at-point tmx x y))
@@ -410,7 +414,7 @@
                (unless (null (tile-material tile))
                  ;; TODO: should really return a second value indicating whether
                  ;;       a hit was detected.
-                 (let ((new-y (top-for-tile sprite tile x y prev-y dt)))
+                 (let ((new-y (top-for-tile sprite tile x y dt)))
                    (unless (= new-y y)
                      (maxf y new-y)
                      (setf hit tile))))))
@@ -463,8 +467,9 @@
                  (setf hit tile))))
            (run-checks ()
              (check (y sprite))
-             (check (+ (y sprite) 10))
-             (check (- (y sprite) 10))
+             (when (> (height sprite) 32.0)
+               (check (+ (y sprite) 10))
+               (check (- (y sprite) 10)))
              (check (top sprite))
              (check (bottom sprite))))
         (prog ()
@@ -488,8 +493,9 @@
                      (setf hit tile))))
                (run-checks ()
                  (check (y sprite))
-                 (check (+ (y sprite) 10))
-                 (check (- (y sprite) 10))
+                 (when (> (height sprite) 32.0)
+                   (check (+ (y sprite) 10))
+                   (check (- (y sprite) 10)))
                  (check (top sprite))
                  (check (bottom sprite))))
         (prog ()
@@ -503,17 +509,18 @@
 
 (defun update-sprite-physics (level sprite dt)
   (let (standing-on)
+    (setf (prev-x sprite) (x sprite)
+          (prev-y sprite) (y sprite))
     (incf (x sprite) (* dt (velocity-x sprite)))
     (if (> (velocity-x sprite) 0)
         (move-sprite-left-if-hitting-tiles-on-right level sprite dt)
         (move-sprite-right-if-hitting-tiles-on-left level sprite dt))
 
-    (let ((prev-bottom (bottom sprite)))
-      (incf (y sprite) (* dt (velocity-y sprite)))
-      (setf standing-on 
-            (if (> (velocity-y sprite) 0)
-                (prog1 nil (move-sprite-down-if-hitting-tiles-on-top level sprite dt))
-                (move-sprite-up-if-hitting-tiles-on-bottom level sprite prev-bottom dt))))
+    (incf (y sprite) (* dt (velocity-y sprite)))
+    (setf standing-on 
+          (if (> (velocity-y sprite) 0)
+              (prog1 nil (move-sprite-down-if-hitting-tiles-on-top level sprite dt))
+              (move-sprite-up-if-hitting-tiles-on-bottom level sprite dt)))
     standing-on))
 
 (defmethod collide-with-tile ((actor actor) side tile)
@@ -898,7 +905,7 @@
       ((string= name "dev")
        (init-level level
                 :background-node (make-instance
-                                  'image :x 250 :y 250
+                                  'image
                                   :texture (get-texture "./res/platformer/sky.png"))
                 :tmx-file "./res/platformer/dev.tmx"
                 :start-position start-position
@@ -908,7 +915,6 @@
                    :background-node
                    (make-instance
                     'horizontal-scroller-image
-                    :x 250 :y 250
                     :speed 0.5
                     :texture (get-texture "./res/platformer/cave.png"))
                 :tmx-file "./res/platformer/cave.tmx"
@@ -917,7 +923,7 @@
       ((string= name "infinite")
        (init-level level
                 :background-node (make-instance
-                                  'image :x 250 :y 250
+                                  'image
                                   :texture (get-texture "./res/platformer/sky.png"))
                 :tmx-file "./res/platformer/infinite.tmx"
                 :start-position start-position
