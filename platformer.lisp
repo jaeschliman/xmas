@@ -112,17 +112,19 @@
    :velocity-x 0.0 :velocity-y 0.0
    :acceleration-x 0.0 :acceleration-y 0.0))
 
-(defclass player (physics sprite)
+(defclass actor (physics game-sprite)
+  ((standing-on :accessor standing-on :initform nil)
+   (state :accessor state :initform nil :initarg :state)))
+
+(defclass player (actor)
   ((can-jump :accessor can-jump :initform nil)
    (jump-power :accessor jump-power :initform 100.0)
-   (jumping :accessor jumping :initform nil)
-   (standing-on :accessor standing-on :initform nil)
-   (state :accessor state :initform nil :initarg :state)))
+   (jumping :accessor jumping :initform nil)))
 
 (defclass jewel (game-sprite)
   ())
 
-(defclass cat (game-sprite)
+(defclass cat (actor)
   ())
 
 (defclass platform (game-sprite)
@@ -160,10 +162,29 @@
           (can-jump player) t)))
 
 (defmethod wake-sprite ((cat cat) game-object)
-  (declare (ignore game-object))
-  (run-action cat (list (move-by 1.0 -20.0 0.0)
-                        (move-by 1.0 20.0 0.0))
+  (setf (x cat) (x game-object)
+        (y cat) (y game-object)
+        (flip-x cat) t
+        (velocity-x cat) -100.0
+        (velocity-y cat) 0.0)
+  (run-action cat (list (rotate-by 1.0 -20.0)
+                        (rotate-by 1.0 20.0))
               :repeat :forever))
+
+(defgeneric update-sprite (sprite level dt)
+  (:method (sprite level dt)
+    (declare (ignore sprite level dt))))
+
+(defmethod update-sprite ((actor actor) level dt)
+  (setf (standing-on actor) (update-sprite-physics level actor dt))
+  (update-sprite-velocity actor dt))
+
+(defun update-active-sprites (level dt)
+  (with-struct (level- object-manager) level
+    (loop for game-object across (game-object-manager-awake-objects object-manager)
+       for sprite = (sprite game-object)
+       when sprite do
+         (update-sprite sprite level dt))))
 
 (defun update-object-manager (level dt)
   (declare (ignorable dt))
@@ -439,6 +460,17 @@
                 (prog1 nil (move-sprite-down-if-hitting-tiles-on-top level sprite dt))
                 (move-sprite-up-if-hitting-tiles-on-bottom level sprite prev-bottom dt))))
     standing-on))
+
+(defmethod collide-with-tile ((actor actor) side tile)
+  (declare (ignore tile))
+  (when (eq side 'bottom) (setf (velocity-y actor) 0.0)))
+
+(defmethod collide-with-tile ((cat cat) side tile)
+  (declare (ignore tile))
+  (call-next-method)
+  (case side
+    ((left right) (setf (velocity-x cat) (* -1.0 (velocity-x cat))
+                        (flip-x cat) (not (flip-x cat))))))
 
 (defmethod collide-with-tile ((self player) side tile)
   (when (eq side 'bottom)
@@ -780,6 +812,7 @@
   (with-struct (level- player object-manager ) self
     (set-state player (update-state player self dt))
     (move-player self dt)
+    (update-active-sprites self dt)
     (update-object-manager self dt)
     (collide-player-with-objects self dt)
     (update-sprite-velocity player dt)
