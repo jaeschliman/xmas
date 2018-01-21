@@ -48,8 +48,6 @@
 
 (defrunvar *camera-x* 250.0)
 (defrunvar *camera-y* 250.0)
-(defrunvar *last-player-x* 0.0)
-(defrunvar *last-player-y* 0.0)
 (defrunvar *keys* (make-hash-table :test 'eql))
 (defrunvar *just-pressed* (make-hash-table :test 'eql))
 (defrunvar *font-22* (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
@@ -59,6 +57,8 @@
 (defrunvar *level-states* (make-hash-table :test 'equal))
 (defrunvar *display-width* 0)
 (defrunvar *display-height* 0)
+(defrunvar *level-width* 0)
+(defrunvar *level-height* 0)
 (defrunvar *gravity* -1200.0)
 
 (defmethod cl-user::runloop-bindings-alist ((self platformer))
@@ -98,7 +98,15 @@
            (setf (aref result idx) (tile-from-properties idx plist))))))
 
 (defclass image (node)
-  ((texture :accessor texture :initarg :texture)))
+  ((texture :accessor texture :initarg :texture))
+  (:default-initargs :anchor-x 0.5 :anchor-y 0.5))
+
+(defmethod initialize-instance ((self image) &key texture)
+  (call-next-method)
+  (setf (content-width self) (texture-width texture)
+        (content-height self) (texture-height texture)))
+
+(defclass background-image (image))
 
 (defclass horizontal-scroller-image (image)
   ((speed :initarg :speed))
@@ -279,7 +287,28 @@
 
 (defmethod draw ((self image))
   (draw-node-color self)
-  (xmas.draw:draw-texture (texture self)))
+  (let ((texture (texture self)))
+    (xmas.draw:draw-texture-at texture 0.0 0.0
+                               (texture-width texture)
+                               (texture-height texture))))
+
+(defun background-image-y-position (self)
+  (let* ((dh/2 (* 0.5 *display-height*))
+         (range (- (height self) *display-height*))
+         (min-y dh/2)
+         (max-y (- *level-height* dh/2))
+         (pct (clamp (/ (- (y self) min-y) (- max-y min-y)) 0.0 1.0))
+         (y (- (* pct range) (* range 0.5))))
+    (- y)))
+
+(defmethod draw ((self background-image))
+  (draw-node-color self)
+  (let* ((texture (texture self)))
+    (xmas.draw:draw-texture-at texture 0.0 (background-image-y-position self)
+                               (texture-width texture)
+                               (texture-height texture))))
+
+(defmethod draw ((self)))
 
 (defmethod draw ((self horizontal-scroller-image))
   (draw-node-color self)
@@ -287,7 +316,7 @@
          (width (texture-width texture))
          (height (texture-height texture))
          (speed (slot-value self 'speed))
-         (offs-y (* height -0.5))
+         (offs-y (background-image-y-position self))
          (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
     (xmas.draw:draw-texture-at texture (- offs-x width) offs-y width height)
     (xmas.draw:draw-texture-at texture offs-x offs-y width height)
@@ -698,9 +727,6 @@
          (fall-gravity -1200.0)
          (hz-max-vel 200.0))
     (with-struct (level- player tmx) level
-      (setf *last-player-x* (x player))
-      (setf *last-player-y* (y player))
-
       ;;use faster gravity for falling
       (if (> (velocity-y player) 0.0)
           (setf (acceleration-y player) rise-gravity)
@@ -865,6 +891,8 @@
              (height (xmas.tmx-renderer:tmx-renderer-height tmx))
              (x (/ width 2.0))
              (y (/ height 2.0)))
+        (setf *level-width* width
+              *level-height* height)
         (unless already-loaded-objects
           (game-object-manager-set-active-area object-manager x y width height)
           (load-game-objects-from-tmx tmx object-manager tile-table)))
@@ -905,8 +933,8 @@
       ((string= name "dev")
        (init-level level
                 :background-node (make-instance
-                                  'image
-                                  :texture (get-texture "./res/platformer/sky.png"))
+                                  'background-image
+                                  :texture (get-texture "./res/platformer/sky2.png"))
                 :tmx-file "./res/platformer/dev.tmx"
                 :start-position start-position
                 :game-object-manager manager))
@@ -923,8 +951,8 @@
       ((string= name "infinite")
        (init-level level
                 :background-node (make-instance
-                                  'image
-                                  :texture (get-texture "./res/platformer/sky.png"))
+                                  'background-image
+                                  :texture (get-texture "./res/platformer/sky2.png"))
                 :tmx-file "./res/platformer/infinite.tmx"
                 :start-position start-position
                 :game-object-manager manager)))
