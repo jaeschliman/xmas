@@ -120,23 +120,29 @@
 (defclass player (actor)
   ((can-jump :accessor can-jump :initform nil)
    (jump-power :accessor jump-power :initform 100.0)
-   (jumping :accessor jumping :initform nil)))
+   (jumping :accessor jumping :initform nil))
+  (:default-initargs :collision-kind 'player))
 
-(defclass jewel (game-sprite) ())
+(defclass jewel (game-sprite) ()
+  (:default-initargs :collision-kind 'other))
 
-(defclass cat (actor) ())
+(defclass cat (actor) ()
+  (:default-initargs :collision-kind 'other))
 
 (defclass blobby (actor) ()
   (:default-initargs
    :color (vector 1.0 0.0 0.0)
     :content-width 20.0
-    :content-height 30.0))
+    :content-height 30.0
+    :collision-kind 'other))
 
-(defclass platform (game-sprite) ())
+(defclass platform (game-sprite) ()
+  (:default-initargs :collision-kind 'geometry))
 
 (defclass door (game-sprite)
   ((level :initarg :level)
-   (marker :initarg :marker)))
+   (marker :initarg :marker))
+  (:default-initargs :collision-kind 'geometry))
 
 (defmethod player-collision (player (jewel jewel))
   (let ((object (game-object jewel)))
@@ -238,11 +244,16 @@
 (defun collide-player-with-objects (level dt)
   (declare (ignorable dt))
   (with-struct (level- player object-manager) level
-    (with-struct (game-object-manager- sprite-qtree) object-manager
-      (flet ((collide (object) (player-collision player object)))
-        (qtree-query-collisions
-         sprite-qtree (left player) (bottom player) (right player) (top player)
-         #'collide)))))
+    (with-struct (game-object-manager- sprite-qtree-map) object-manager
+      (labels ((collide (object) (player-collision player object))
+               (check (sym)
+                 (when-let (qtree (gethash sym sprite-qtree-map))
+                   (qtree-query-collisions
+                    qtree
+                    (left player) (bottom player) (right player) (top player)
+                    #'collide))))
+        (check 'geometry)
+        (check 'other)))))
 
 (defgeneric leave-state (object state next-state))
 (defgeneric enter-state (object state prev-state))

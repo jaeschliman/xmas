@@ -8,7 +8,7 @@
              #:game-object-manager-objects
              #:game-object-manager-awake-objects
              #:game-object-manager-object-qtree
-             #:game-object-manager-sprite-qtree
+             #:game-object-manager-sprite-qtree-map
              #:game-object-manager-points
              #:wake-sprite
              #:wake
@@ -39,15 +39,18 @@
   ((game-object :accessor game-object)))
 
 (defclass game-sprite (sprite belongs-to-game-object)
-  ())
+  ((kind :initarg :collision-kind)))
 
 (defstruct game-object-manager
   sprite-node
   (objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
   (awake-objects (make-array 256 :element-type t :adjustable t :fill-pointer 0))
   (object-qtree (qtree))
-  (sprite-qtree (qtree))
+  (sprite-qtree-map (make-hash-table :test 'eq))
   (points (make-hash-table :test 'eq)))
+
+(defmethod print-object ((self game-object-manager) stream)
+  (print-unreadable-object (self stream)))
 
 (defgeneric wake-sprite (sprite game-object)
   (:method (sprite game-object)
@@ -106,7 +109,7 @@
 
 (defun game-object-manager-update (object-manager left bottom right top dt)
   (declare (ignore dt))
-  (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree) object-manager
+  (with-struct (game-object-manager- awake-objects object-qtree sprite-qtree-map) object-manager
     (let* ((wake (lambda (object) (wake object object-manager)))
            (width (- right left))
            (height (- top bottom))
@@ -120,8 +123,18 @@
              (push object sleepers))
          finally
            (dolist (sleeper sleepers) (to-sleep sleeper object-manager)))
-      (qtree-reset sprite-qtree
-                   :x x :y y :width width :height height)
-      (loop for object across awake-objects do
-           (when-let (s (sprite object))
-             (qtree-add sprite-qtree s))))))
+      (maphash (lambda (k qtree)
+                 (declare (ignore k))
+                 (qtree-reset
+                  qtree :x x :y y :width width :height height))
+               sprite-qtree-map)
+      (flet ((get-qtree (sym)
+               (if-let (existing (gethash sym sprite-qtree-map))
+                 existing
+                 (let ((new (qtree)))
+                   (prog1 new
+                     (setf (gethash sym sprite-qtree-map) new)
+                     (qtree-reset new :x x :y y :width width :height height))))))
+        (loop for object across awake-objects do
+             (when-let (s (sprite object))
+               (qtree-add (get-qtree (slot-value s 'kind)) s)))))))
