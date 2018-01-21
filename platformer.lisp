@@ -59,6 +59,7 @@
 (defrunvar *level-states* (make-hash-table :test 'equal))
 (defrunvar *display-width* 0)
 (defrunvar *display-height* 0)
+(defrunvar *gravity* -1200.0)
 
 (defmethod cl-user::runloop-bindings-alist ((self platformer))
   (let (result)
@@ -121,14 +122,17 @@
    (jump-power :accessor jump-power :initform 100.0)
    (jumping :accessor jumping :initform nil)))
 
-(defclass jewel (game-sprite)
-  ())
+(defclass jewel (game-sprite) ())
 
-(defclass cat (actor)
-  ())
+(defclass cat (actor) ())
 
-(defclass platform (game-sprite)
-  ())
+(defclass blobby (actor) ()
+  (:default-initargs
+   :color (vector 1.0 0.0 0.0)
+    :content-width 20.0
+    :content-height 30.0))
+
+(defclass platform (game-sprite) ())
 
 (defclass door (game-sprite)
   ((level :initarg :level)
@@ -161,15 +165,26 @@
           (standing-on player) platform
           (can-jump player) t)))
 
+(defmethod wake-sprite ((actor actor) game-object)
+  (setf (x actor) (x game-object)
+        (y actor) (y game-object)
+        (acceleration-y actor) *gravity*))
+
 (defmethod wake-sprite ((cat cat) game-object)
-  (setf (x cat) (x game-object)
-        (y cat) (y game-object)
-        (flip-x cat) t
+  (declare (ignore game-object))
+  (call-next-method)
+  (setf (flip-x cat) t
         (velocity-x cat) -100.0
         (velocity-y cat) 0.0)
   (run-action cat (list (rotate-by 1.0 -20.0)
                         (rotate-by 1.0 20.0))
               :repeat :forever))
+
+(defmethod wake-sprite ((blobby blobby) game-object)
+  (declare (ignore game-object))
+  (call-next-method)
+  (setf (velocity-x blobby) -100.0
+        (velocity-y blobby) 0.0))
 
 (defgeneric update-sprite (sprite level dt)
   (:method (sprite level dt)
@@ -178,6 +193,23 @@
 (defmethod update-sprite ((actor actor) level dt)
   (setf (standing-on actor) (update-sprite-physics level actor dt))
   (update-sprite-velocity actor dt))
+
+(defmethod update-sprite ((blobby blobby) level dt)
+  (declare (ignore dt))
+  (let* ((vel (velocity-x blobby))
+         (x (if (< vel 0.0) (left blobby) (right blobby)))
+         (y (- (bottom blobby) 1.0))
+         (standing-on (standing-on blobby))
+         (on-slope (and (tile-p standing-on)
+                        (or (eq (tile-shape standing-on) 'slope-left)
+                            (eq (tile-shape standing-on) 'slope-right)))))
+    (when (and standing-on (not on-slope) (tile-is-empty-at level x y))
+      (let ((under (tile-shape-at level (x blobby) (1- (bottom blobby)))))
+        (unless (or (eq under 'slope-left)
+                    (eq under 'slope-right))
+          (setf (velocity-x blobby) (* -1.0 (velocity-x blobby))
+                (flip-x blobby) (not (flip-x blobby)))))))
+  (call-next-method))
 
 (defun update-active-sprites (level dt)
   (with-struct (level- object-manager) level
@@ -345,6 +377,18 @@
     (platform x)
     (block (* 32.0 (1+ (floor x 32.0))))))
 
+(defun tile-is-empty-at (level x y)
+  (with-struct (level- tmx tile-table) level
+    (let* ((gid (tile-at-point tmx x y))
+           (tile (aref tile-table gid)))
+      (null (tile-material tile)))))
+
+(defun tile-shape-at (level x y)
+  (with-struct (level- tmx tile-table) level
+    (let* ((gid (tile-at-point tmx x y))
+           (tile (aref tile-table gid)))
+      (tile-shape tile))))
+
 (defun move-sprite-up-if-hitting-tiles-on-bottom  (level sprite prev-y dt)
   (with-struct (level- tmx tile-table) level
     (let ((y (bottom sprite)) (hit nil))
@@ -466,11 +510,25 @@
   (when (eq side 'bottom) (setf (velocity-y actor) 0.0)))
 
 (defmethod collide-with-tile ((cat cat) side tile)
-  (declare (ignore tile))
   (call-next-method)
   (case side
-    ((left right) (setf (velocity-x cat) (* -1.0 (velocity-x cat))
-                        (flip-x cat) (not (flip-x cat))))))
+    ((left right)
+     (when (eq (tile-shape tile) 'block)
+       (setf (velocity-x cat) (* -1.0 (velocity-x cat))
+             (flip-x cat) (not (flip-x cat)))))))
+
+(defmethod collide-with-tile ((blobby blobby) side tile)
+  (call-next-method)
+  (case side
+    ((left right)
+     (when (eq (tile-shape tile) 'block)
+       (setf (velocity-x blobby) (* -1.0 (velocity-x blobby))
+             (flip-x blobby) (not (flip-x blobby)))))
+    ;;HACK: this is needed to keep the sprite 'on' the slope...
+    ;;      I'm not even sure why it works D:
+    (bottom (when (or (eq (tile-shape tile) 'slope-left)
+                      (eq (tile-shape tile) 'slope-right))
+              (setf (velocity-y blobby) -100.0)))))
 
 (defmethod collide-with-tile ((self player) side tile)
   (when (eq side 'bottom)
@@ -724,7 +782,8 @@
                       (jewel "jewel.png")
                       (cat "throwcat.png")
                       (door "door.png")
-                      (platform "platform.png")))
+                      (platform "platform.png")
+                      (blobby "circle-40.png")))
               (frame (get-frame path)))
     (apply #'make-instance type :sprite-frame frame initargs)))
 

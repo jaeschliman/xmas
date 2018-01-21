@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="300" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="6">
+<map version="1.0" tiledversion="1.1.0" orientation="orthogonal" renderorder="right-down" width="300" height="20" tilewidth="32" tileheight="32" infinite="0" nextobjectid="7">
  <tileset firstgid="1" source="dev.tsx"/>
  <tileset firstgid="65" source="dev-objects.tsx"/>
  <layer name="Tile Layer 1" width="300" height="20">
   <data encoding="base64" compression="zlib">
-   eJzt1DEOgCAMBVAd1Em9/21lxAHjQNJQ3kv+3jYflgUAAAAAAAAAAAAAAAAAAABy2kr2KkfsOABNZ8lV5Y4dB6DJfwWMwn8FfFmTpceOzOdvB2buTPTbznbrHvvNcsfozsmYIYfoHune2wO1AAIt
+   eJzt1EEKgzAQBVBTsV1p739bsxHShaIQGDp5Dz5kISEJ35kmAAAAAAAAAAAAAAAAAAAAyGmpeTf5xB4H4NRaszX5xh4HSOJVU2rmjnuaV0APpVkfs+rIfPLdU+YVcKUkS487Mp67HRi5M9H/dra37nG/Ud4xunPynyGH6B7p3q8d2+MCPQ==
   </data>
  </layer>
  <objectgroup name="Object Layer 1">
@@ -27,5 +27,6 @@
    <point/>
   </object>
   <object id="5" gid="69" x="5856" y="448" width="128" height="16"/>
+  <object id="6" gid="70" x="4256" y="480" width="40" height="40"/>
  </objectgroup>
 </map>
