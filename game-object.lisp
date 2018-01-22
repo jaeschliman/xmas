@@ -1,6 +1,5 @@
 (defpackage :xmas.game-object (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.qtree)
             (:export
-             #:game-object
              #:game-sprite
              #:game-object-manager
              #:make-game-object-manager
@@ -16,7 +15,8 @@
              #:game-object-manager-set-active-area
              #:game-object-manager-add-object
              #:game-object-manager-sleep-all
-             #:game-object-manager-update))
+             #:game-object-manager-update
+             #:spawn-point))
 (in-package :xmas.game-object)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -27,20 +27,18 @@
        ,@body)))
 
 ;;should really be called spawn-point
-(defclass game-object ()
+(defclass spawn-point ()
   ((x :reader x :initarg :x) ;; immutable
    (y :reader y :initarg :y) ;; immutable
    (sprite :accessor sprite :initarg :sprite)
    (sleeping :accessor sleeping :initform t)))
 
-(defmethod width  ((self game-object)) 0.0)
-(defmethod height ((self game-object)) 0.0)
+(defmethod width  ((self spawn-point)) 0.0)
+(defmethod height ((self spawn-point)) 0.0)
 
-(defclass belongs-to-game-object ()
-  ((game-object :accessor game-object)))
-
-(defclass game-sprite (sprite belongs-to-game-object)
-  ((kind :initarg :collision-kind)))
+(defclass game-sprite (sprite)
+  ((spawn-point :accessor spawn-point :initarg :spawn-point)
+   (kind :initarg :collision-kind)))
 
 (defstruct game-object-manager
   sprite-node
@@ -53,11 +51,11 @@
 (defmethod print-object ((self game-object-manager) stream)
   (print-unreadable-object (self stream)))
 
-(defgeneric wake-sprite (sprite game-object)
-  (:method (sprite game-object)
-    (declare (ignore sprite game-object))))
+(defgeneric wake-sprite (sprite spawn-point)
+  (:method (sprite spawn-point)
+    (declare (ignore sprite spawn-point))))
 
-(defmethod wake ((object game-object) manager)
+(defmethod wake ((object spawn-point) manager)
   (setf (sleeping object) nil)
   (with-struct (game-object-manager- awake-objects sprite-node) manager
     (vector-push-extend object awake-objects)
@@ -65,19 +63,19 @@
       (wake-sprite sprite object)
       (add-child sprite-node sprite))))
 
-(defmethod wake :around ((object game-object) manager)
+(defmethod wake :around ((object spawn-point) manager)
   (declare (ignore manager))
   (when (sleeping object)
     (call-next-method)))
 
-(defmethod to-sleep ((object game-object) manager)
+(defmethod to-sleep ((object spawn-point) manager)
   (setf (sleeping object) t)
   (with-struct (game-object-manager- awake-objects) manager
     (setf awake-objects (delete object awake-objects))
     (when-let (sprite (sprite object))
       (remove-from-parent sprite))))
 
-(defmethod to-sleep :around ((object game-object) manager)
+(defmethod to-sleep :around ((object spawn-point) manager)
   (declare (ignore manager))
   (unless (sleeping object)
     (call-next-method)))

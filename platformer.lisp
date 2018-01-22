@@ -106,7 +106,8 @@
   (setf (content-width self) (texture-width texture)
         (content-height self) (texture-height texture)))
 
-(defclass background-image (image))
+(defclass background-image (image)
+  ())
 
 (defclass horizontal-scroller-image (image)
   ((speed :initarg :speed))
@@ -155,9 +156,10 @@
   (:default-initargs :collision-kind 'geometry))
 
 (defmethod player-collision (player (jewel jewel))
-  (let ((object (game-object jewel)))
+  (declare (ignore player))
+  (let ((spawn-point (spawn-point jewel)))
     (remove-from-parent jewel)
-    (setf (sprite object) nil)
+    (setf (sprite spawn-point) nil)
     (incf *jewel-count*)
     (setf (fill-pointer *jewel-count-label*) 0)
     (with-output-to-string (s *jewel-count-label*)
@@ -181,13 +183,13 @@
           (standing-on player) platform
           (can-jump player) t)))
 
-(defmethod wake-sprite ((actor actor) game-object)
-  (setf (x actor) (x game-object)
-        (y actor) (y game-object)
+(defmethod wake-sprite ((actor actor) spawn-point)
+  (setf (x actor) (x spawn-point)
+        (y actor) (y spawn-point)
         (acceleration-y actor) *gravity*))
 
-(defmethod wake-sprite ((cat cat) game-object)
-  (declare (ignore game-object))
+(defmethod wake-sprite ((cat cat) spawn-point)
+  (declare (ignore spawn-point))
   (call-next-method)
   (setf (flip-x cat) t
         (velocity-x cat) -100.0
@@ -196,8 +198,8 @@
                         (rotate-by 1.0 20.0))
               :repeat :forever))
 
-(defmethod wake-sprite ((blobby blobby) game-object)
-  (declare (ignore game-object))
+(defmethod wake-sprite ((blobby blobby) spawn-point)
+  (declare (ignore spawn-point))
   (call-next-method)
   (setf (velocity-x blobby) -100.0
         (velocity-y blobby) 0.0))
@@ -229,8 +231,8 @@
 
 (defun update-active-sprites (level dt)
   (with-struct (level- object-manager) level
-    (loop for game-object across (game-object-manager-awake-objects object-manager)
-       for sprite = (sprite game-object)
+    (loop for spawn-point across (game-object-manager-awake-objects object-manager)
+       for sprite = (sprite spawn-point)
        when sprite do
          (update-sprite sprite level dt))))
 
@@ -279,7 +281,7 @@
   ((tmx :accessor tmx :initarg :tmx)))
 
 (defgeneric draw (node))
-(defmethod draw ((self node)))
+(defmethod draw ((self node)) (declare (ignore self)))
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
@@ -307,8 +309,6 @@
     (xmas.draw:draw-texture-at texture 0.0 (background-image-y-position self)
                                (texture-width texture)
                                (texture-height texture))))
-
-(defmethod draw ((self)))
 
 (defmethod draw ((self horizontal-scroller-image))
   (draw-node-color self)
@@ -833,9 +833,9 @@
 
 (defun make-game-object-from-object-info (type initargs)
   (when-let (sprite (make-node-from-object-info type initargs))
-    (let ((obj (make-instance 'game-object
+    (let ((obj (make-instance 'spawn-point
                 :sprite sprite :x (getf initargs :x) :y (getf initargs :y))))
-      (setf (game-object sprite) obj)
+      (setf (spawn-point sprite) obj)
       obj)))
 
 (defun load-game-objects-from-tmx (tmx object-manager tile-table)
