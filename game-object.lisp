@@ -26,6 +26,7 @@
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
 
+;;should really be called spawn-point
 (defclass game-object ()
   ((x :reader x :initarg :x) ;; immutable
    (y :reader y :initarg :y) ;; immutable

@@ -647,6 +647,8 @@
     (draw-it sprite2)
     (draw-it sprite3)))
 
+;; (xmas.deftest:run-test 'anchor-point-test-1)
+
 (xmas.deftest:deftest texture-wrap-0 (:width 500 :height 500)
   :tags texture drawing texture-wrapping
   :init
@@ -654,9 +656,8 @@
   :update
   (draw-texture-at-tex-coords tex 0 0 500 500 0.0 0.0 4.0 4.0))
 
-(xmas.deftest:run-test 'texture-wrap-0)
+;; (xmas.deftest:run-test 'texture-wrap-0)
 
-;; (xmas.deftest:run-test 'anchor-point-test-1)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
