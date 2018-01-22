@@ -77,7 +77,8 @@
 (defclass wavy-node (node)
   ((texture :accessor texture :initarg :texture)
    (overlap :accessor overlap :initarg :overlap)
-   (waves   :accessor waves   :initform nil))
+   (waves   :accessor waves   :initform nil)
+   (boat    :reader   boat    :initarg :boat))
   (:default-initargs
    :overlap 0.8))
 
@@ -114,11 +115,13 @@
 
 (defmethod on-enter ((self wavy-node))
   (call-next-method)
-  (map nil #'on-enter (waves self)))
+  (map nil #'on-enter (waves self))
+  (on-enter (boat self)))
 
 (defmethod on-exit ((self wavy-node))
   (call-next-method)
-  (map nil #'on-exit (waves self)))
+  (map nil #'on-exit (waves self))
+  (on-exit (boat self)))
 
 (defmethod draw ((self repeater-node))
   (let* ((texture (texture self))
@@ -130,9 +133,19 @@
 
 (defmethod draw ((self wavy-node))
   (loop
+     with boat = (boat self)
+     with boat-y = (y boat)
+     with boat-drawn = nil
      with waves = (waves self)
-     for i from (1- (length waves)) downto 0 do
-       (visit (aref waves i))))
+     with offs = 5
+     for i from (1- (length waves)) downto 0
+     for wave = (aref waves i)
+     do
+       (visit wave)
+       (unless boat-drawn
+         (when (> boat-y (+ (y wave) offs))
+           (visit boat)
+           (setf boat-drawn t)))))
 
 (xmas.deftest:deftest cross-the-river (:width 500 :height 500)
   :tags sketch
@@ -140,6 +153,10 @@
   started := nil
   tex := (get-texture "./res/cross-the-river/wave.png" :wrap :repeat)
   root := (make-instance 'node)
+  boat := (make-instance 'image
+                         :anchor-y 0.0
+                         :x 150.0
+                         :texture (get-texture "./res/cross-the-river/boat.png"))
   north-shore := (make-instance 'image
                                 :anchor-x 0.0
                                 :anchor-y 1.0
@@ -149,6 +166,7 @@
                          :texture tex
                          :content-width 500.0
                          :content-height 250.0
+                         :boat boat
                          :y 100
                          :overlap 0.5)
 
@@ -159,6 +177,9 @@
   (add-child root north-shore)
   (add-child root node)
   (add-child root south-shore)
+  (run-action boat (list (move-by 6.0 0.0 300.0)
+                         (move-by 6.0 0.0 -300.0))
+              :repeat :forever)
   :update
   (unless started
     (setf started t)
