@@ -67,8 +67,6 @@
       (gl:vertex    x2 y2 0)
       (gl:tex-coord u0  v0)
       (gl:vertex    x  y2 0))))
-  
-
 
 (definstr simple-draw-gl-with-tex-coords (id x y w h tx1 ty1 tx2 ty2)
   (gl:bind-texture :texture-2d id)
@@ -132,7 +130,6 @@
       (gl:tex-coord tx1  ty1)
       (gl:vertex    x  y  0))))
 
-
 (definstr push-matrix ()
   (gl:push-matrix))
 
@@ -161,7 +158,6 @@
   (gl:translate x y 0.0)
   (gl:scale sx sy 1.0)
   (gl:rotate r 0.0 0.0 1.0))
-
 
 (definstr translate-scale-rotate-translate (x y sx sy r x2 y2)
   (gl:translate x y 0.0)

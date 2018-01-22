@@ -3,7 +3,8 @@
              #:draw-texture-frame
              #:draw-texture
              #:draw-texture-frame-at
-             #:draw-texture-at))
+             #:draw-texture-at
+             #:draw-texture-at-tex-coords))
 (in-package xmas.draw)
 
 (defun draw-texture (texture)
@@ -16,6 +17,10 @@
 (defun draw-texture-at (texture x y w h)
   (when-let (id (texture-id texture))
     (xmas.render-buffer::draw-gl-texture-at id x y w h))) 
+
+(defun draw-texture-at-tex-coords (texture x y w h u0 v0 u1 v1)
+  (when-let (id (texture-id texture))
+    (xmas.render-buffer::draw-gl-texture-at-tex-coords id x y w h u0 v0 u1 v1)))
 
 (defun draw-texture-frame (frame x y &optional outset)
   (when-let (id (texture-id (texture-frame-texture frame)))
