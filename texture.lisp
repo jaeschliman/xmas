@@ -86,7 +86,7 @@
             (texture-height texture) h
             (texture-id texture) id))))
 
-(defun gl-load-texture-image-rep (texture rep format)
+(defun gl-load-texture-image-rep (texture rep format &key wrap)
   (let ((w (texture-width texture))
         (h (texture-height texture))
         (dat (#/bitmapData rep)))
@@ -94,6 +94,9 @@
       (gl:enable :texture-2d)
       (gl:bind-texture :texture-2d id)
       (gl:tex-parameter :texture-2d :texture-min-filter :linear)
+      (when wrap
+        (gl:tex-parameter :texture-2d :texture-wrap-s wrap)
+        (gl:tex-parameter :texture-2d :texture-wrap-t wrap))
       (gl:tex-image-2d :texture-2d 0 :rgba
                        w h 0 format
                        :unsigned-byte dat)
@@ -101,36 +104,30 @@
       (gl:bind-texture :texture-2d 0)
       (setf (texture-id texture) id))))
 
-(defun load-texture-on-display (display pathname)
+(defun load-texture-on-display (display pathname &key wrap)
   (when (probe-file (truename pathname))
-    (let ((load-across-threads t))
-      (if load-across-threads
-          (multiple-value-bind (rep width height format)
-              (load-image-rep pathname)
-            (let ((texture (make-texture :path pathname
-                                         :width width
-                                         :height height)))
-              (#/retain rep)
-              (xmas.display:display-enqueue-for-gl
-               display
-               (lambda ()
-                 (gl-load-texture-image-rep texture rep format)
-                 (#/release rep)))
-              texture))
-          (let ((texture (make-texture :path pathname)))
-            (xmas.display:display-enqueue-for-gl
-             display
-             (lambda () (gl-load-texture texture)))
-            texture)))))
+    (multiple-value-bind (rep width height format)
+        (load-image-rep pathname)
+      (let ((texture (make-texture :path pathname
+                                   :width width
+                                   :height height)))
+        (#/retain rep)
+        (xmas.display:display-enqueue-for-gl
+         display
+         (lambda ()
+           (gl-load-texture-image-rep texture rep format :wrap wrap)
+           (#/release rep)))
+        texture))))
 
-(defun get-or-load-texture (texture-manager path)
-  (ensure-gethash
-   path (texture-manager-table texture-manager)
-   (load-texture-on-display (texture-manager-display texture-manager) path)))
+(defun get-or-load-texture (texture-manager path &key wrap)
+  (let ((key (if wrap (list path :wrap wrap) path)))
+    (ensure-gethash
+     key (texture-manager-table texture-manager)
+     (load-texture-on-display (texture-manager-display texture-manager) path :wrap wrap))))
 
-(defun get-texture (path)
+(defun get-texture (path &key wrap)
   (when-let (mgr *texture-manager*)
-    (get-or-load-texture mgr path)))
+    (get-or-load-texture mgr path :wrap wrap)))
 
 (defun get-frame (path)
   (when-let (mgr *texture-manager*)
