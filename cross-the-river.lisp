@@ -89,17 +89,24 @@
          (count (ceiling (height self) h))
          (y 0)
          (odd 1.0)
-         (waves (make-array count :element-type t)))
+         (waves (make-array count :element-type t))
+         (colors (list (vector 0.5 0.75 1.0)
+                       (vector 0.25 0.5 1.0)
+                       (vector 0.0 0.25 0.85)
+                       )))
     (setf (waves self) waves)
+    (setf (cdr (last colors)) colors)
     (dotimes (i count)
       (flet ((make-node ()
                (let ((node (make-instance 'repeater-node
                                           :texture tex
                                           :content-width  (+ (width self) 60.0)
                                           :content-height (texture-height tex)
-                                          :x (- (+ 20.0 (random 20.0) ))
+                                          ;; :x (- (+ 20.0 (random 20.0) ))
+                                          :x (* -1 i (/ 20.0 count))
                                           :y y
-                                          :color (vector 0.5 0.75 1.0)
+                                          :opacity 0.9
+                                          :color (pop colors)
                                           :z-order (- count i)))
                      (dur (+ 0.5 (random 0.5)))
                      (h-amt 20.0)
@@ -139,7 +146,7 @@
      with boat-y = (y boat)
      with boat-drawn = nil
      with waves = (waves self)
-     with offs = 15
+     with offs = 0
      for i from (1- (length waves)) downto 0
      for wave = (aref waves i)
      do
@@ -171,7 +178,7 @@
                          :content-height 250.0
                          :boat boat
                          :y 100
-                         :overlap 0.25)
+                         :overlap 0.20)
 
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
