@@ -99,8 +99,9 @@
                                           :content-height (texture-height tex)
                                           :x (- (+ 20.0 (random 20.0) ))
                                           :y y
+                                          :color (vector 0.5 0.75 1.0)
                                           :z-order (- count i)))
-                     (dur (+ 1.5 (random 1.5)))
+                     (dur (+ 0.5 (random 0.5)))
                      (h-amt 20.0)
                      (v-amt 2.0))
                  (run-action node (list (move-by dur (* h-amt odd) (* v-amt odd -1)
@@ -127,6 +128,7 @@
   (let* ((texture (texture self))
          (tw (texture-width texture))
          (u1 (coerce (/ (width self) tw) 'float)))
+    (draw-node-color self)
     (draw-texture-at-tex-coords texture 0.0 0.0
                                 (width self) (height self)
                                 0.0 0.01 u1 1.0)))
@@ -137,7 +139,7 @@
      with boat-y = (y boat)
      with boat-drawn = nil
      with waves = (waves self)
-     with offs = 5
+     with offs = 15
      for i from (1- (length waves)) downto 0
      for wave = (aref waves i)
      do
@@ -156,6 +158,7 @@
   boat := (make-instance 'image
                          :anchor-y 0.0
                          :x 150.0
+                         :y 50.0
                          :texture (get-texture "./res/cross-the-river/boat.png"))
   north-shore := (make-instance 'image
                                 :anchor-x 0.0
@@ -168,7 +171,7 @@
                          :content-height 250.0
                          :boat boat
                          :y 100
-                         :overlap 0.5)
+                         :overlap 0.25)
 
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
@@ -177,8 +180,12 @@
   (add-child root north-shore)
   (add-child root node)
   (add-child root south-shore)
-  (run-action boat (list (move-by 6.0 0.0 300.0)
-                         (move-by 6.0 0.0 -300.0))
+  (run-action boat (list (move-by 4.0 0.0 200.0)
+                         (move-by 4.0 0.0 -200.0))
+              :repeat :forever)
+  (run-action boat (list (rotate-by 0.5 -5)
+                         (rotate-by 1.0 10)
+                         (rotate-by 0.5 -5))
               :repeat :forever)
   :update
   (unless started
