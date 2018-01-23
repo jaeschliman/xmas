@@ -28,7 +28,9 @@
    #:sprite-animation-action
    #:move-by-x
    #:move-by-y
-   #:tint-to))
+   #:tint-to
+   #:scale-x-to
+   #:scale-y-to))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -399,6 +401,30 @@
 
 (defact tint-to (duration r g b)
   (make-tint-to :duration duration :r r :g g :b b))
+
+(defmacro make-property-lerp-action (name property-name parameter-name)
+  (let ((init (symbolicate name '-initial-value))
+        (tgt  (symbolicate name '-target-value))
+        (target (symbolicate name '-target))
+        (make (symbolicate 'make- name)))
+    `(progn
+       (defstruct (,name (:include finite-time-action))
+         initial-value
+         target-value)
+       (defmethod start-with-target ((self ,name) target)
+         (call-next-method)
+         (setf (,init self) (,property-name target)))
+       (defmethod reset ((self ,name))
+         (call-next-method)
+         (setf (,init self) (,property-name (,target self))))
+       (defmethod update ((self ,name) time)
+         (setf (,property-name (,target self))
+               (lerp (,init self) (,tgt self) time)))
+       (defact ,name (duration ,parameter-name)
+         (,make :duration duration :target-value ,parameter-name)))))
+
+(make-property-lerp-action scale-x-to xmas.node:scale-x scale-x)
+(make-property-lerp-action scale-y-to xmas.node:scale-y scale-y)
 
 ;; ======================================================================
 ;; instant actions

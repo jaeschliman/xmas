@@ -659,7 +659,7 @@
 ;; (xmas.deftest:run-test 'texture-wrap-0)
 
 (xmas.deftest:deftest tint-to-test (:width 500 :height 500)
-  :tags actions tint-to
+  :tags actions tint-to scale-x-to
   :init
   node := (make-instance 'node :x 250 :y 250 :color (vector 1.0 0.0 0.0))
   started := nil
@@ -667,6 +667,10 @@
                     (tint-to 1.0 0.0 1.0 0.0)
                     (tint-to 1.0 0.0 0.0 1.0)
                     (tint-to 1.0 1.0 0.0 0.0))
+              :repeat :forever)
+  (run-action node (list
+                    (scale-x-to 1.0 2.0)
+                    (scale-x-to 1.0 0.5))
               :repeat :forever)
   :update
   (unless started
