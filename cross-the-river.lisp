@@ -93,10 +93,7 @@
          (waves (make-array count :element-type t))
          (colors (list (vector 0.25 0.5 1.0)
                        (vector 0.0 0.25 0.85)
-                       ;; (vector 0.0 0.65 0.85)
-                       (vector 0.0 0.8 0.85)
-                       )
-           )
+                       (vector 0.0 0.8 0.85)))
          (xs (list 0.0 (/ tw 2.0) (/ tw 3.0)))
          (delays (list 1.0 0.0 1.0 1.3333)))
     (setf (waves self) waves)
@@ -206,15 +203,39 @@
                          :content-height 250.0
                          :boat boat
                          :y 100
-                         :overlap (* 0.8 0.4))
+                         :overlap (* 0.8 0.4 0.8))
 
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
                                 :anchor-y 0.0
                                 :texture (get-texture "./res/cross-the-river/south-shore.png"))
+
+  wolf := (make-instance
+           'image
+           :scale-x 0.4 :scale-y 0.4
+           :anchor-y 0.0
+           :x 150 :y 400
+           :texture (get-texture "./res/cross-the-river/wolf.png"))
+  goat := (make-instance
+           'image
+           :scale-x 0.4 :scale-y 0.4
+           :anchor-y 0.0
+           :x 250 :y 400
+           :flip-x t
+           :texture (get-texture "./res/cross-the-river/goat.png"))
+  cabbage := (make-instance
+              'image
+              :scale-x 0.25 :scale-y 0.25
+              :anchor-y 0.0
+              :x 350 :y 400
+              :texture (get-texture "./res/cross-the-river/cabbage.png"))
+  
   (add-child root north-shore)
   (add-child root node)
   (add-child root south-shore)
+  (add-child root wolf)
+  (add-child root goat)
+  (add-child root cabbage)
   (run-action boat (list (move-by 4.0 0.0 200.0)
                          (move-by 4.0 0.0 -200.0))
               :repeat :forever)
