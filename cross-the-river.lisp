@@ -115,7 +115,7 @@
                         (color (copy-seq (pop colors)))
                         (node (make-instance 'repeater-node
                                              :texture tex
-                                             :content-width (+ (width self) (* 2.0 tw))
+                                             :content-width (+ (width self) (* 4.0 tw))
                                              :content-height (texture-height tex)
                                              :x x
                                              :y y
@@ -125,7 +125,9 @@
                         (h-amt tw)
                         (v-amt (+ 3.0 (* pct 6.0)))
                         (v-dur (* 0.5 (+ 0.5 (random 0.5))))
-                        (h-dur (+ (random 0.25) 0.25 (* ipct 1.0))))
+                        (h-dur (+ (random 0.25) 0.25 (* ipct 1.0)))
+                        ;; (wave-dur (+ 0.5 (* ipct 2.5)))
+                        (wave-dur 3.0))
                    (run-action node (list (move-by-x h-dur h-amt)
                                           (callfunc (lambda () (setf (x node) x))))
                                :repeat :forever)
@@ -134,6 +136,18 @@
                                           (move-by-y v-dur (* v-amt odd)
                                                      :ease :in-out-sine))
                                :repeat :forever)
+                   (if (plusp odd)
+                       (run-action node (list (scale-x-to wave-dur 0.95
+                                                          :ease :in-out-sine)
+                                              (scale-x-to wave-dur 1.05
+                                                          :ease :in-out-sine))
+                                   :repeat :forever)
+
+                       (run-action node (list (scale-x-to wave-dur 1.05
+                                                          :ease :in-out-sine)
+                                              (scale-x-to wave-dur 0.95
+                                                          :ease :in-out-sine))
+                                   :repeat :forever))
                    (let ((dur 3.0))
                      (run-action node (list (delay (pop delays))
                                             (tint dur (pop colors))
