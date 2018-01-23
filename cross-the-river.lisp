@@ -85,52 +85,53 @@
 (defmethod initialize-instance ((self wavy-node) &key)
   (call-next-method)
   (let* ((tex (texture self))
+         (tw (texture-width tex))
          (h (* (overlap self) (texture-height tex)))
          (count (ceiling (height self) h))
          (y 0)
          (odd 1.0)
          (waves (make-array count :element-type t))
-         (colors (list (vector 0.5 0.75 1.0)
-                       (vector 0.25 0.5 1.0)
+         (colors (list (vector 0.25 0.5 1.0)
                        (vector 0.0 0.25 0.85)
-                       )))
+                       (vector 0.0 0.65 0.85)))
+         (xs (list 0.0 (/ tw 2.0) (/ tw 3.0))))
     (setf (waves self) waves)
     (setf (cdr (last colors)) colors)
+    (setf (cdr (last xs)) xs)
     (dotimes (i count)
       (flet ((make-node ()
-               (let ((node (make-instance 'repeater-node
-                                          :texture tex
-                                          :content-width  (+ (width self) 60.0)
-                                          :content-height (texture-height tex)
-                                          ;; :x (- (+ 20.0 (random 20.0) ))
-                                          :x (* -1 i (/ 20.0 count))
-                                          :y y
-                                          :opacity 0.9
-                                          :color (pop colors)
-                                          :z-order (- count i)))
-                     (dur (+ 0.5 (random 0.5)))
-                     (h-amt 20.0)
-                     (v-dur (* 0.5 (+ 0.5 (random 0.5))))
-                     (v-amt 6.0))
-                 (run-action node (list (move-by-x dur (* h-amt odd)
-                                                   :ease :in-out-sine)
-                                        (move-by-x dur (* h-amt odd -1)
-                                                   :ease :in-out-sine))
+               (let* ((diff (abs (- (* 0.5 count) i)))
+                      (pct  (/ (- (* 0.5 count) diff) (* 0.5 count)))
+                      (ipct (- 1.0 pct))
+                      (y (* h i))
+                      ;; an attempt to make them bunch up in the center
+                      ;; but it didn't end up looking so great
+                      ;; (y (+ (* pct h count 0.5) (* ipct h i)))
+                      (x (- (+ tw (pop xs) (random tw))))
+                      (node (make-instance 'repeater-node
+                                           :texture tex
+                                           :content-width (+ (width self) (* 2.0 tw))
+                                           :content-height (texture-height tex)
+                                           :x x
+                                           :y y
+                                           :opacity 0.9
+                                           :color (copy-seq (pop colors))
+                                           :z-order (- count i)))
+                      (h-amt tw)
+                      (v-amt (+ 3.0 (* pct 6.0)))
+                      (v-dur (* 0.5 (+ 0.5 (random 0.5))))
+                      (h-dur (+ (random 0.25) 0.25 (* ipct 1.0))))
+                 (run-action node (list (move-by-x h-dur h-amt)
+                                        (callfunc (lambda () (setf (x node) x))))
                              :repeat :forever)
                  (run-action node (list (move-by-y v-dur (* v-amt odd -1)
                                                    :ease :in-out-sine)
                                         (move-by-y v-dur (* v-amt odd)
-                                                   :ease :in-out-sine)
-                                        (move-by-y v-dur (* v-amt odd)
-                                                   :ease :in-out-sine)
-                                        (move-by-y v-dur (* v-amt odd -1)
-                                                   :ease :in-out-sine)
-                                        )
+                                                   :ease :in-out-sine))
                              :repeat :forever)
                  node)))
         (setf (aref waves i) (make-node))
-        (setf odd (* -1.0 odd))
-        (incf y h)))))
+        (setf odd (* -1.0 odd))))))
 
 (defmethod on-enter ((self wavy-node))
   (call-next-method)
@@ -167,7 +168,7 @@
            (visit boat)
            (setf boat-drawn t)))))
 
-(xmas.deftest:deftest cross-the-river (:width 500 :height 500)
+(xmas.deftest:deftest cross-the-river (:width 500 :height 500 :expandable t :preserve-aspect-ratio t)
   :tags sketch
   :init
   started := nil
@@ -189,7 +190,7 @@
                          :content-height 250.0
                          :boat boat
                          :y 100
-                         :overlap 0.20)
+                         :overlap 0.2)
 
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
