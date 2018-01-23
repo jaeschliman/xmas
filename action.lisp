@@ -27,7 +27,8 @@
    #:fade-out
    #:sprite-animation-action
    #:move-by-x
-   #:move-by-y))
+   #:move-by-y
+   #:tint-to))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -36,6 +37,9 @@
          ,(loop for slot in slots collect
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
+
+(defun lerp (from to pct)
+  (+ (* from (- 1.0 pct)) (* to pct)))
 
 (defstruct action
   target
@@ -364,6 +368,37 @@
 (defact fade-out (duration)
   (make-fade-out :duration duration))
 
+(defstruct (tint-to (:include finite-time-action))
+  start-r start-g start-b
+  r g b)
+
+(defmethod start-with-target ((self tint-to) target)
+  (call-next-method)
+  (let ((c (xmas.node:color target)))
+    (with-struct (tint-to- start-r start-g start-b) self
+      (setf start-r (svref c 0)
+            start-g (svref c 1)
+            start-b (svref c 2)))))
+
+(defmethod reset ((self tint-to))
+  (call-next-method)
+  (let* ((target (tint-to-target self))
+         (c (xmas.node:color target)))
+    (with-struct (tint-to- start-r start-g start-b) self
+      (setf start-r (svref c 0)
+            start-g (svref c 1)
+            start-b (svref c 2)))))
+
+(defmethod update ((self tint-to) time)
+  (let* ((target (tint-to-target self))
+         (c (xmas.node:color target)))
+    (with-struct (tint-to- start-r start-g start-b r g b) self
+      (setf (svref c 0) (lerp start-r r time)
+            (svref c 1) (lerp start-g g time)
+            (svref c 2) (lerp start-b b time)))))
+
+(defact tint-to (duration r g b)
+  (make-tint-to :duration duration :r r :g g :b b))
 
 ;; ======================================================================
 ;; instant actions

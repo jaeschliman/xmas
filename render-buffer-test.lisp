@@ -658,6 +658,24 @@
 
 ;; (xmas.deftest:run-test 'texture-wrap-0)
 
+(xmas.deftest:deftest tint-to-test (:width 500 :height 500)
+  :tags actions tint-to
+  :init
+  node := (make-instance 'node :x 250 :y 250 :color (vector 1.0 0.0 0.0))
+  started := nil
+  (run-action node (list
+                    (tint-to 1.0 0.0 1.0 0.0)
+                    (tint-to 1.0 0.0 0.0 1.0)
+                    (tint-to 1.0 1.0 0.0 0.0))
+              :repeat :forever)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter node))
+  (visit node))
+
+;; (xmas.deftest:run-test 'tint-to-test)
+
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
