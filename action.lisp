@@ -25,7 +25,9 @@
    #:move-by
    #:fade-in
    #:fade-out
-   #:sprite-animation-action))
+   #:sprite-animation-action
+   #:move-by-x
+   #:move-by-y))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -307,6 +309,44 @@
 
 (defact move-by (duration x y)
   (make-move-by :duration duration :delta-x x :delta-y y))
+
+(defstruct (move-by-x (:include finite-time-action))
+  delta-x 
+  initial-x)
+
+(defmethod start-with-target ((self move-by-x) target)
+  (call-next-method)
+  (setf (move-by-x-initial-x self) (xmas.node:x target)))
+
+(defmethod reset ((self move-by-x))
+  (call-next-method)
+  (setf (move-by-x-initial-x self) (xmas.node:x (move-by-x-target self))))
+
+(defmethod update ((self move-by-x) time)
+  (with-struct (move-by-x- target initial-x delta-x) self
+    (setf (xmas.node:x target) (+ initial-x (* time delta-x)))))
+
+(defact move-by-x (duration x)
+  (make-move-by-x :duration duration :delta-x x))
+
+(defstruct (move-by-y (:include finite-time-action))
+  delta-y 
+  initial-y)
+
+(defmethod start-with-target ((self move-by-y) target)
+  (call-next-method)
+  (setf (move-by-y-initial-y self) (xmas.node:y target)))
+
+(defmethod reset ((self move-by-y))
+  (call-next-method)
+  (setf (move-by-y-initial-y self) (xmas.node:y (move-by-y-target self))))
+
+(defmethod update ((self move-by-y) time)
+  (with-struct (move-by-y- target initial-y delta-y) self
+    (setf (xmas.node:y target) (+ initial-y (* time delta-y)))))
+
+(defact move-by-y (duration y)
+  (make-move-by-y :duration duration :delta-y y))
 
 (defstruct (fade-in (:include finite-time-action)))
 
