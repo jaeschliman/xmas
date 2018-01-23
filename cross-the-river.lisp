@@ -184,19 +184,20 @@
 (xmas.deftest:deftest cross-the-river (:width 500 :height 500 :expandable t :preserve-aspect-ratio t)
   :tags sketch
   :init
+  (set-default-texture-directory "./res/cross-the-river/")
   started := nil
-  tex := (get-texture "./res/cross-the-river/wave.png" :wrap :repeat)
+  tex := (get-texture "wave.png" :wrap :repeat)
   root := (make-instance 'node)
   boat := (make-instance 'image
                          :anchor-y 0.0
                          :x 150.0
                          :y 50.0
-                         :texture (get-texture "./res/cross-the-river/boat.png"))
+                         :texture (get-texture "boat.png"))
   north-shore := (make-instance 'image
                                 :anchor-x 0.0
                                 :anchor-y 1.0
                                 :y 500.0
-                                :texture (get-texture "./res/cross-the-river/north-shore.png"))
+                                :texture (get-texture "north-shore.png"))
   node := (make-instance 'wavy-node
                          :texture tex
                          :content-width 500.0
@@ -208,27 +209,27 @@
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
                                 :anchor-y 0.0
-                                :texture (get-texture "./res/cross-the-river/south-shore.png"))
+                                :texture (get-texture "south-shore.png"))
 
   wolf := (make-instance
            'image
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
            :x 150 :y 400
-           :texture (get-texture "./res/cross-the-river/wolf.png"))
+           :texture (get-texture "wolf.png"))
   goat := (make-instance
            'image
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
            :x 250 :y 400
            :flip-x t
-           :texture (get-texture "./res/cross-the-river/goat.png"))
+           :texture (get-texture "goat.png"))
   cabbage := (make-instance
               'image
               :scale-x 0.25 :scale-y 0.25
               :anchor-y 0.0
               :x 350 :y 400
-              :texture (get-texture "./res/cross-the-river/cabbage.png"))
+              :texture (get-texture "cabbage.png"))
   
   (add-child root north-shore)
   (add-child root node)
