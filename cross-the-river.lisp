@@ -93,7 +93,10 @@
          (waves (make-array count :element-type t))
          (colors (list (vector 0.25 0.5 1.0)
                        (vector 0.0 0.25 0.85)
-                       (vector 0.0 0.65 0.85)))
+                       ;; (vector 0.0 0.65 0.85)
+                       (vector 0.0 0.8 0.85)
+                       )
+           )
          (xs (list 0.0 (/ tw 2.0) (/ tw 3.0))))
     (setf (waves self) waves)
     (setf (cdr (last colors)) colors)
@@ -158,7 +161,7 @@
      with boat-y = (y boat)
      with boat-drawn = nil
      with waves = (waves self)
-     with offs = 0
+     with offs = 10
      for i from (1- (length waves)) downto 0
      for wave = (aref waves i)
      do
@@ -190,7 +193,7 @@
                          :content-height 250.0
                          :boat boat
                          :y 100
-                         :overlap 0.2)
+                         :overlap (* 0.8 0.4))
 
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
