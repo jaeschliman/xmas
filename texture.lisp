@@ -22,7 +22,8 @@
              #:texture-manager-display
              #:texture-manager-frames
              #:texture-manager-add-frame
-             #:get-frame))
+             #:get-frame
+             #:set-default-texture-directory))
 
 (in-package :xmas.texture)
 
@@ -52,9 +53,14 @@
 (defstruct texture-manager
   (table (make-hash-table :test 'equal))
   display
-  (frames (make-hash-table :test 'equal)))
+  (frames (make-hash-table :test 'equal))
+  default-resource-dir)
 
 (defvar *texture-manager* nil)
+
+(defun set-default-texture-directory (dir)
+  (when-let (mgr *texture-manager*)
+    (setf (texture-manager-default-resource-dir mgr) dir)))
 
 (defun load-image-rep (path)
   (let* ((p (truename path))
@@ -127,7 +133,10 @@
 
 (defun get-texture (path &key wrap)
   (when-let (mgr *texture-manager*)
-    (get-or-load-texture mgr path :wrap wrap)))
+    (let ((default (texture-manager-default-resource-dir mgr)))
+      (when default
+        (setf path (merge-pathnames path default)))
+      (get-or-load-texture mgr path :wrap wrap))))
 
 (defun get-frame (path)
   (when-let (mgr *texture-manager*)
