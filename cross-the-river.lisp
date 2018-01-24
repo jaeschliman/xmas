@@ -108,6 +108,7 @@
     (setf (cdr (last colors)) colors)
     (setf (cdr (last xs)) xs)
     (setf (cdr (last delays)) delays)
+    (setf (parent (boat self)) self)
     (dotimes (i count)
       (labels ((tint (duration color)
                  (tint-to duration (svref color 0) (svref color 1) (svref color 2)))
@@ -252,7 +253,8 @@
               'pickable-image
               :scale-x 0.25 :scale-y 0.25
               :anchor-y 0.0
-              :x 350 :y 400
+              ;;:x 350 :y 400
+              :x 50 :y 10
               :texture (get-texture "cabbage.png"))
   
   (add-child root north-shore)
@@ -260,7 +262,7 @@
   (add-child root south-shore)
   (add-child root wolf)
   (add-child root goat)
-  (add-child root cabbage)
+  (add-child boat cabbage)
   ;; (run-action boat (list (move-by 4.0 0.0 200.0)
   ;;                        (move-by 4.0 0.0 -200.0))
   ;;             :repeat :forever)
