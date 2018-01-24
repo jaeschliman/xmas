@@ -68,6 +68,15 @@
                      (texture-width texture)
                      (texture-height texture))))
 
+(defclass pickable-image (image)
+  ((hovering :accessor hovering :initform nil)))
+
+(defmethod draw ((self pickable-image))
+  (when (hovering self)
+    (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
+    (xmas.render-buffer::draw-rect 0.0 0.0 (content-width self) (content-height self)))
+  (call-next-method))
+
 ;; end boilerplate
 ;;------------------------------------------------------------
 
@@ -88,7 +97,6 @@
          (tw (texture-width tex))
          (h (* (overlap self) (texture-height tex)))
          (count (ceiling (height self) h))
-         (y 0)
          (odd 1.0)
          (waves (make-array count :element-type t))
          (colors (list (vector 0.25 0.5 1.0)
@@ -200,6 +208,8 @@
   :init
   (set-default-texture-directory "./res/cross-the-river/")
   started := nil
+  mouse-x := -1.0
+  mouse-y := -1.0
   tex := (get-texture "wave.png" :wrap :repeat)
   root := (make-instance 'node)
   boat := (make-instance 'image
@@ -226,20 +236,20 @@
                                 :texture (get-texture "south-shore.png"))
 
   wolf := (make-instance
-           'image
+           'pickable-image
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
            :x 150 :y 400
            :texture (get-texture "wolf.png"))
   goat := (make-instance
-           'image
+           'pickable-image
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
            :x 250 :y 400
            :flip-x t
            :texture (get-texture "goat.png"))
   cabbage := (make-instance
-              'image
+              'pickable-image
               :scale-x 0.25 :scale-y 0.25
               :anchor-y 0.0
               :x 350 :y 400
@@ -251,9 +261,9 @@
   (add-child root wolf)
   (add-child root goat)
   (add-child root cabbage)
-  (run-action boat (list (move-by 4.0 0.0 200.0)
-                         (move-by 4.0 0.0 -200.0))
-              :repeat :forever)
+  ;; (run-action boat (list (move-by 4.0 0.0 200.0)
+  ;;                        (move-by 4.0 0.0 -200.0))
+  ;;             :repeat :forever)
   (run-action boat (list (rotate-by 0.5 -5)
                          (rotate-by 1.0 10)
                          (rotate-by 0.5 -5))
@@ -262,6 +272,13 @@
   (unless started
     (setf started t)
     (on-enter root))
-  (visit root))
+  (setf (hovering wolf) (node-contains-world-point-p wolf mouse-x mouse-y))
+  (setf (hovering goat) (node-contains-world-point-p goat mouse-x mouse-y))
+  (setf (hovering cabbage) (node-contains-world-point-p cabbage mouse-x mouse-y))
+  (visit root)
+  :on-event
+  (when (eq (car event) :mousemove)
+    (setf mouse-x (cadr event)
+          mouse-y (cddr event))))
 
 (xmas.deftest:run-test 'cross-the-river)
