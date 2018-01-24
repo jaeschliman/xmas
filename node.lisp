@@ -47,7 +47,8 @@
    #:right-for-x
    #:left-for-x
    #:bottom-for-y
-   #:top-for-y))
+   #:top-for-y
+   #:node-contains-world-point-p))
 (in-package :xmas.node)
 
 ;;; honestly, this should probably be a struct...
@@ -106,7 +107,8 @@
    x y scale-x scale-y flip-x flip-y skew-x skew-y rotation
    anchor-x anchor-y content-width content-height))
 
-;;TODO: take anchor point into account
+;;TODO: matrix tests taking anchor-point into acct
+
 (defmethod node-transform ((self node))
   (when (xform-dirty-p self)
     (setf (xform-dirty-p self) nil)
@@ -119,10 +121,11 @@
                  (scale-x self))
              (if (flip-x self)
                  (- (scale-y self))
-                 (scale-y self)))))
+                 (scale-y self)))
+      (translate (* -1.0 (anchor-x self) (content-width self))
+                 (* -1.0 (anchor-y self) (content-height self)))))
   (xform self))
 
-;;TODO: take anchor point into account
 (defmethod node-to-parent-transform ((self node))
   (when (parent-xform-dirty-p self)
     (setf (parent-xform-dirty-p self) nil)
@@ -132,17 +135,22 @@
           (-x (- (x self)))
           (-y (- (y self)))  
           (fx (flip-x self))
-          (fy (flip-y self)))
+          (fy (flip-y self))
+          (ax (anchor-x self))
+          (ay (anchor-y self)))
       (let ((isx (if (zerop sx) 100.0 (/ 1.0 sx)))
             (isy (if (zerop sy) 100.0 (/ 1.0 sy))))
         (into-matrix ((parent-xform self))
           (load-identity)
+          (translate (* ax (content-width self))
+                     (* ay (content-height self)))
           (scale (if fy (- isx) isx)
                  (if fx (- isy) isy))
           (rotate -r)
           (translate -x -y)))))
   (parent-xform self))
 
+;;TODO: make these optionally non-consing
 (defmethod world-to-node-transform ((self node))
   (if-let ((p (parent self)))
     (into-matrix ((world-to-node-transform p))
@@ -154,6 +162,14 @@
     (into-matrix ((node-to-world-transform p))
       (left-cat-matrix (node-to-parent-transform self)))
     (copy-matrix (node-to-parent-transform self))))
+
+(defmethod node-contains-world-point-p ((self node) x y)
+  (multiple-value-bind (x y)
+      (matrix-multiply-point-2d (node-to-world-transform self) x y)
+    (and (<= x (content-width self))
+         (>= x 0.0)
+         (<= y (content-height self))
+         (>= y 0.0))))
 
 (defgeneric width (node))
 (defgeneric height (node))

@@ -15,7 +15,8 @@
              #:load-matrix
              #:translate
              #:rotate
-             #:scale))
+             #:scale
+             #:matrix-multiply-point-2d))
 
 (in-package :xmas.matrix)
 
@@ -173,3 +174,14 @@
   (unless (= sx sy 1.0)
     (load-scale sx sy *tmp-matrix*)
     (cat-matrix *tmp-matrix*)))
+
+(defun matrix-multiply-point-2d (matrix x y)
+  (let ((m (m4-vector matrix))
+        (input (vector x y 0.0 1.0))
+        (output (vector 0.0 0.0 0.0 0.0)))
+    (declare (dynamic-extent input output))
+    (loop for row from 0 to 3 do
+         (setf (svref output row)
+               (loop for col from 0 to 3 sum
+                    (* (svref input col) (aref m (+ (* col 4) row))))))
+    (values (svref output 0) (svref output 1))))
