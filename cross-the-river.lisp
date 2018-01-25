@@ -204,6 +204,44 @@
            (visit boat)
            (setf boat-drawn t)))))
 
+(defclass positioned (node)
+  ((place :accessor place :initarg :place)
+   (north-position :initarg :north-position)
+   (south-position :initarg :south-position)) )
+
+(defun update-position (self)
+  (let* ((slot (ecase (place self)
+                 (north 'north-position)
+                 (south 'south-position)))
+         (posn (slot-value self slot)))
+    (setf (x self) (getf posn :x)
+          (y self) (getf posn :y))))
+
+(defmethod initialize-instance ((self positioned) &key)
+  (call-next-method)
+  (update-position self))
+
+(defclass boat (image positioned)
+  ((item :accessor item :initform nil)))
+
+(defclass possesion (pickable-image positioned)
+  ())
+
+(defun try-swap-places (ctr item)
+  (with-slots (boat root) ctr
+    (if (eq (place item) 'boat)
+        (let* ((shore (place boat)))
+          (add-child root item)
+          (setf (item boat) nil
+                (place item) shore)
+          (update-position item))
+        (when (and (null (item boat)) (eq (place item) (place boat)))
+           (add-child boat item)
+            (setf (x item) 20.0
+                  (y item) 10.0
+                  (place item) 'boat
+                  (item boat) item)))))
+
 (xmas.deftest:deftest cross-the-river (:width 500 :height 500 :expandable t :preserve-aspect-ratio t)
   :tags sketch
   :init
@@ -211,13 +249,16 @@
   started := nil
   mouse-x := -1.0
   mouse-y := -1.0
+  mouse-clicked := nil
   tex := (get-texture "wave.png" :wrap :repeat)
   root := (make-instance 'node)
-  boat := (make-instance 'image
+  boat := (make-instance 'boat
                          :anchor-y 0.0
-                         :x 150.0
-                         :y 50.0
-                         :texture (get-texture "boat.png"))
+                         :x 150.0 :y 50.0
+                         :north-position '(:x 150 :y 200) 
+                         :south-position '(:x 150 :y 20) 
+                         :texture (get-texture "boat.png")
+                         :place 'north)
   north-shore := (make-instance 'image
                                 :anchor-x 0.0
                                 :anchor-y 1.0
@@ -237,24 +278,32 @@
                                 :texture (get-texture "south-shore.png"))
 
   wolf := (make-instance
-           'pickable-image
+           'possesion
+           :place 'north
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
            :x 150 :y 400
+           :north-position '(:x 150 :y 400) 
+           :south-position '(:x 150 :y 100) 
            :texture (get-texture "wolf.png"))
   goat := (make-instance
-           'pickable-image
+           'possesion
+           :place 'north
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
            :x 250 :y 400
+           :north-position '(:x 250 :y 400)
+           :south-position '(:x 250 :y 100)
            :flip-x t
            :texture (get-texture "goat.png"))
   cabbage := (make-instance
-              'pickable-image
+              'possesion
+              :place 'north
               :scale-x 0.25 :scale-y 0.25
               :anchor-y 0.0
-              ;;:x 350 :y 400
-              :x 50 :y 10
+              :x 350 :y 400
+              :north-position '(:x 350 :y 400)
+              :south-position '(:x 350 :y 100)
               :texture (get-texture "cabbage.png"))
   
   (add-child root north-shore)
@@ -262,7 +311,7 @@
   (add-child root south-shore)
   (add-child root wolf)
   (add-child root goat)
-  (add-child boat cabbage)
+  (add-child root cabbage)
   ;; (run-action boat (list (move-by 4.0 0.0 200.0)
   ;;                        (move-by 4.0 0.0 -200.0))
   ;;             :repeat :forever)
@@ -274,13 +323,27 @@
   (unless started
     (setf started t)
     (on-enter root))
-  (setf (hovering wolf) (node-contains-world-point-p wolf mouse-x mouse-y))
-  (setf (hovering goat) (node-contains-world-point-p goat mouse-x mouse-y))
-  (setf (hovering cabbage) (node-contains-world-point-p cabbage mouse-x mouse-y))
+  (let ((over (node-contains-world-point-p wolf mouse-x mouse-y)))
+    (if (and over mouse-clicked)
+        (try-swap-places self wolf)
+        (setf (hovering wolf) over)))
+  (let ((over (node-contains-world-point-p goat mouse-x mouse-y)))
+    (if (and over mouse-clicked)
+        (try-swap-places self goat)
+        (setf (hovering goat) over)))
+  (let ((over (node-contains-world-point-p cabbage mouse-x mouse-y)))
+    (if (and over mouse-clicked)
+        (try-swap-places self cabbage)
+        (setf (hovering cabbage) over)))
   (visit root)
+  (setf mouse-clicked nil)
   :on-event
-  (when (eq (car event) :mousemove)
-    (setf mouse-x (cadr event)
-          mouse-y (cddr event))))
+  (case (car event)
+    (:mousemove (setf mouse-x (cadr event)
+                      mouse-y (cddr event)))
+    (:click (setf mouse-clicked t))
+    (:keypress
+     (setf (place boat) (if (eq (place boat) 'north) 'south 'north))
+     (update-position boat))))
 
 (xmas.deftest:run-test 'cross-the-river)
