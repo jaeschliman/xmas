@@ -245,6 +245,41 @@
                   (place item) 'boat
                   (item boat) item)))))
 
+(defun new-mode (ctr)
+  (with-slots (boat mode goat cabbage wolf) ctr
+    (flet ((eating? (a b)
+             (and (eq (place a) (place b))
+                  (not (eq (place a) (place boat))))))
+      (cond ((eq mode 'play)
+             (cond ((and (eq (place goat) 'south)
+                         (eq (place cabbage) 'south)
+                         (eq (place wolf) 'south))
+                    'win)
+                   ((eating? goat cabbage) 'lose-goat)
+                   ((eating? wolf goat) 'lose-wolf)))))))
+
+(defun enter-mode (ctr new-mode)
+  (with-slots (root boat mode goat cabbage wolf) ctr
+    (case mode
+      ((win lose-goat lose-wolf)
+       (when (eq new-mode 'play)
+         (when-let (item (item boat))
+           (add-child root item)
+           (setf (item boat) nil))
+         (setf (place boat) 'north
+               (place goat) 'north
+               (place cabbage) 'north
+               (place wolf) 'north)
+         (map nil 'update-position (list boat goat cabbage wolf))))
+      (play
+       (case new-mode
+         (win (format t "You Win!~%"))
+         (lose-goat (format t "The goat ate the cabbage. You Lose!~%"))
+         (lose-wolf (format t "The wolf ate the goat. You Lose!~%")))))
+    (setf mode new-mode)))
+
+
+
 (xmas.deftest:deftest cross-the-river (:width 500 :height 500 :expandable t :preserve-aspect-ratio t)
   :tags sketch
   :init
@@ -340,7 +375,14 @@
      (let ((over (node-contains-world-point-p cabbage mouse-x mouse-y)))
        (if (and over mouse-clicked)
            (try-swap-places self cabbage)
-           (setf (hovering cabbage) over)))))
+           (setf (hovering cabbage) over))))
+    (t
+     (setf (hovering goat) nil
+           (hovering cabbage) nil
+           (hovering wolf) nil)))
+  (when-let (new-mode (new-mode self))
+    (unless (eq mode new-mode)
+      (enter-mode self new-mode)))
   (visit root)
   (setf mouse-clicked nil)
   :on-event
@@ -353,12 +395,14 @@
        (play 
         (let ((shore (if (eq (place boat) 'north) 'south 'north)))
           (multiple-value-bind (x y) (get-position-for-place boat shore)
-            (setf mode 'animation)
+            (enter-mode self 'animation)
             (run-action boat
                         (list
                          (move-to 3.0 x y)
                          (callfunc (lambda ()
-                                     (setf (place boat) shore
-                                           mode 'play))))))))))))
+                                     (setf (place boat) shore)
+                                     (enter-mode self 'play))))))))
+       ((win lose-goat lose-wolf)
+        (enter-mode self 'play))))))
 
 (xmas.deftest:run-test 'cross-the-river)
