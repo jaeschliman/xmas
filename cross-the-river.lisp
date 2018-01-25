@@ -209,13 +209,16 @@
    (north-position :initarg :north-position)
    (south-position :initarg :south-position)) )
 
-(defun update-position (self)
-  (let* ((slot (ecase (place self)
+(defun get-position-for-place (positioned place)
+  (let* ((slot (ecase place
                  (north 'north-position)
                  (south 'south-position)))
-         (posn (slot-value self slot)))
-    (setf (x self) (getf posn :x)
-          (y self) (getf posn :y))))
+         (posn (slot-value positioned slot)))
+    (values (getf posn :x) (getf posn :y))))
+
+(defun update-position (self)
+  (multiple-value-bind (x y) (get-position-for-place self (place self))
+    (setf (x self) x (y self) y)))
 
 (defmethod initialize-instance ((self positioned) &key)
   (call-next-method)
@@ -247,6 +250,7 @@
   :init
   (set-default-texture-directory "./res/cross-the-river/")
   started := nil
+  mode := 'play
   mouse-x := -1.0
   mouse-y := -1.0
   mouse-clicked := nil
@@ -323,18 +327,20 @@
   (unless started
     (setf started t)
     (on-enter root))
-  (let ((over (node-contains-world-point-p wolf mouse-x mouse-y)))
-    (if (and over mouse-clicked)
-        (try-swap-places self wolf)
-        (setf (hovering wolf) over)))
-  (let ((over (node-contains-world-point-p goat mouse-x mouse-y)))
-    (if (and over mouse-clicked)
-        (try-swap-places self goat)
-        (setf (hovering goat) over)))
-  (let ((over (node-contains-world-point-p cabbage mouse-x mouse-y)))
-    (if (and over mouse-clicked)
-        (try-swap-places self cabbage)
-        (setf (hovering cabbage) over)))
+  (case mode
+    (play
+     (let ((over (node-contains-world-point-p wolf mouse-x mouse-y)))
+       (if (and over mouse-clicked)
+           (try-swap-places self wolf)
+           (setf (hovering wolf) over)))
+     (let ((over (node-contains-world-point-p goat mouse-x mouse-y)))
+       (if (and over mouse-clicked)
+           (try-swap-places self goat)
+           (setf (hovering goat) over)))
+     (let ((over (node-contains-world-point-p cabbage mouse-x mouse-y)))
+       (if (and over mouse-clicked)
+           (try-swap-places self cabbage)
+           (setf (hovering cabbage) over)))))
   (visit root)
   (setf mouse-clicked nil)
   :on-event
@@ -343,7 +349,16 @@
                       mouse-y (cddr event)))
     (:click (setf mouse-clicked t))
     (:keypress
-     (setf (place boat) (if (eq (place boat) 'north) 'south 'north))
-     (update-position boat))))
+     (case mode
+       (play 
+        (let ((shore (if (eq (place boat) 'north) 'south 'north)))
+          (multiple-value-bind (x y) (get-position-for-place boat shore)
+            (setf mode 'animation)
+            (run-action boat
+                        (list
+                         (move-to 3.0 x y)
+                         (callfunc (lambda ()
+                                     (setf (place boat) shore
+                                           mode 'play))))))))))))
 
 (xmas.deftest:run-test 'cross-the-river)
