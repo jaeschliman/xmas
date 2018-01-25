@@ -680,6 +680,13 @@
 
 ;; (xmas.deftest:run-test 'tint-to-test)
 
+(xmas.deftest:deftest empty-window (:width 500 :height 500)
+  :tags memory window
+  :init
+  :update)
+
+;; (xmas.deftest:run-test 'empty-window)
+
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

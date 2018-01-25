@@ -199,6 +199,7 @@
 
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
+  (#/setDelegate: self +null-ptr+)
   (cleanup-display (display self))
   (alexandria:when-let (hook (xmas.display:display-closed-hook (display self)))
     (funcall hook)))
@@ -323,41 +324,43 @@
     (setf (xmas.display:display-texture-manager result)
           texture-manager)
     (progmain (*package*)
-      (let* ((w (gui::new-cocoa-window :class (find-class 'my-window)
-                                       :title title
-                                       :width width
-                                       :height height
-                                       :expandable expandable))
-             (w-content-view (#/contentView w))
-             (w-frame (#/frame w-content-view))
-             (glview (make-instance 'my-view
-                                    :contents contents
-                                    :display  result
-                                    :with-frame w-frame
-                                    :pixel-format (default-pixel-format))))
-        (#/setContentView: w glview)
-        (#/setDelegate: w w)
-        (#/setAcceptsMouseMovedEvents: w #$YES)
-        (setf (xmas.display:native-view result) glview
-              (xmas.display:native-window result) w
-              (display w) result)
-        (init-display result)
-        (let ((xmas.matrix:*tmp-matrix* (xmas.display:display-scratch-matrix result))
-              (xmas.texture:*texture-manager* (xmas.display:display-texture-manager result))
-              (xmas.action-manager:*action-manager* (xmas.display:display-action-manager result))
-              (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager result)))
-          (let ((bindings (copy-alist (runloop-bindings-alist contents))))
-            (setf (xmas.display:display-runloop-bindings result) bindings)
-            (progv (mapcar 'car bindings) (mapcar 'cdr bindings)
-              (call-with-contents
-               contents
-               (lambda ()
-                 (contents-will-mount contents result)
-                 (mount-contents contents result)))
-              (loop for cons in bindings do
-                   (setf (cdr cons) (symbol-value (car cons)))))))
-        (#/setLevel: w 100)
-        (#/makeFirstResponder: w glview)
-        (#/makeKeyAndOrderFront: w nil)))
+      (ccl::with-autorelease-pool
+        (let* ((w (gui::new-cocoa-window :class (find-class 'my-window)
+                                         :title title
+                                         :width width
+                                         :height height
+                                         :expandable expandable))
+               (w-content-view (#/contentView w))
+               (w-frame (#/frame w-content-view))
+               (glview (make-instance 'my-view
+                                      :contents contents
+                                      :display  result
+                                      :with-frame w-frame
+                                      :pixel-format (default-pixel-format))))
+          (#/setContentView: w glview)
+          (#/autorelease glview)
+          (#/setDelegate: w w)
+          (#/setAcceptsMouseMovedEvents: w #$YES)
+          (setf (xmas.display:native-view result) glview
+                (xmas.display:native-window result) w
+                (display w) result)
+          (init-display result)
+          (let ((xmas.matrix:*tmp-matrix* (xmas.display:display-scratch-matrix result))
+                (xmas.texture:*texture-manager* (xmas.display:display-texture-manager result))
+                (xmas.action-manager:*action-manager* (xmas.display:display-action-manager result))
+                (xmas.animation-manager:*animation-manager* (xmas.display:display-animation-manager result)))
+            (let ((bindings (copy-alist (runloop-bindings-alist contents))))
+              (setf (xmas.display:display-runloop-bindings result) bindings)
+              (progv (mapcar 'car bindings) (mapcar 'cdr bindings)
+                (call-with-contents
+                 contents
+                 (lambda ()
+                   (contents-will-mount contents result)
+                   (mount-contents contents result)))
+                (loop for cons in bindings do
+                     (setf (cdr cons) (symbol-value (car cons)))))))
+          (#/setLevel: w 100)
+          (#/makeFirstResponder: w glview)
+          (#/makeKeyAndOrderFront: w nil))))
 
     result))
