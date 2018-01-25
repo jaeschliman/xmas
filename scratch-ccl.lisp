@@ -200,7 +200,11 @@
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
   (#/setDelegate: self +null-ptr+)
-  (cleanup-display (display self))
+  (ccl::with-autorelease-pool
+    (let ((display (display self)))
+      (#/makeCurrentContext (#/openGLContext (#/contentView self)))
+      (xmas.texture:texture-manager-release-all-textures (xmas.display:display-texture-manager display))
+      (cleanup-display display)))
   (alexandria:when-let (hook (xmas.display:display-closed-hook (display self)))
     (funcall hook)))
 

@@ -23,7 +23,8 @@
              #:texture-manager-frames
              #:texture-manager-add-frame
              #:get-frame
-             #:set-default-texture-directory))
+             #:set-default-texture-directory
+             #:texture-manager-release-all-textures))
 
 (in-package :xmas.texture)
 
@@ -112,18 +113,19 @@
 
 (defun load-texture-on-display (display pathname &key wrap)
   (when (probe-file (truename pathname))
-    (multiple-value-bind (rep width height format)
-        (load-image-rep pathname)
-      (let ((texture (make-texture :path pathname
-                                   :width width
-                                   :height height)))
-        (#/retain rep)
-        (xmas.display:display-enqueue-for-gl
-         display
-         (lambda ()
-           (gl-load-texture-image-rep texture rep format :wrap wrap)
-           (#/release rep)))
-        texture))))
+    (ccl::with-autorelease-pool
+      (multiple-value-bind (rep width height format)
+          (load-image-rep pathname)
+        (let ((texture (make-texture :path pathname
+                                     :width width
+                                     :height height)))
+          (#/retain rep)
+          (xmas.display:display-enqueue-for-gl
+           display
+           (lambda ()
+             (gl-load-texture-image-rep texture rep format :wrap wrap)
+             (#/release rep)))
+          texture)))))
 
 (defun get-or-load-texture (texture-manager path &key wrap)
   (let ((key (if wrap (list path :wrap wrap) path)))
@@ -145,3 +147,11 @@
 (defun texture-manager-add-frame (path frame)
   (when-let (mgr *texture-manager*)
     (setf (gethash path (texture-manager-frames mgr)) frame)))
+
+;;NOTE: must be colled with correct opengl context current
+(defun texture-manager-release-all-textures (mgr)
+  (let* ((textures (hash-table-values (texture-manager-table mgr)))
+         (ids (mapcar #'texture-id textures)))
+    (loop for texture in textures do
+         (setf (texture-id texture) nil))
+    (gl:delete-textures ids)))

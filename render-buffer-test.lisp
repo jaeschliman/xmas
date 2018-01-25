@@ -687,6 +687,13 @@
 
 ;; (xmas.deftest:run-test 'empty-window)
 
+(xmas.deftest:deftest load-texture (:width 500 :height 500)
+  :tags memory texture
+  :init
+  (get-texture "./alien.png")
+  :update)
+
+;; (xmas.deftest:run-test 'load-texture)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
