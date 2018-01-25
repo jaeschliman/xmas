@@ -30,7 +30,8 @@
    #:move-by-y
    #:tint-to
    #:scale-x-to
-   #:scale-y-to))
+   #:scale-y-to
+   #:move-to))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -315,6 +316,37 @@
 
 (defact move-by (duration x y)
   (make-move-by :duration duration :delta-x x :delta-y y))
+
+(defstruct (move-to (:include finite-time-action))
+  target-x target-y
+  delta-x delta-y
+  initial-x initial-y)
+
+(defmethod start-with-target ((self move-to) target)
+  (call-next-method)
+  (let* ((x (xmas.node:x target))
+         (y (xmas.node:y target)))
+    (setf (move-to-initial-x self) x
+          (move-to-initial-y self) y
+          (move-to-delta-x self) (- (move-to-target-x self) x)
+          (move-to-delta-y self) (- (move-to-target-y self) y))))
+
+(defmethod reset ((self move-to))
+  (call-next-method)
+  (let* ((x (xmas.node:x (move-to-target self)))
+         (y (xmas.node:y (move-to-target self))))
+    (setf (move-to-initial-x self) x
+          (move-to-initial-y self) y
+          (move-to-delta-x self) (- (move-to-target-x self) x)
+          (move-to-delta-y self) (- (move-to-target-y self) y))))
+
+(defmethod update ((self move-to) time)
+  (with-struct (move-to- initial-x delta-x initial-y delta-y target) self
+    (setf (xmas.node:x target) (+ initial-x (* time delta-x)))
+    (setf (xmas.node:y target) (+ initial-y (* time delta-y)))))
+
+(defact move-to (duration x y)
+  (make-move-to :duration duration :target-x x :target-y y))
 
 (defstruct (move-by-x (:include finite-time-action))
   delta-x 
