@@ -47,8 +47,8 @@
    (height :accessor rect-height :initarg :height)
    (texture :accessor texture :initarg :texture)))
 
-(defun sprite-with-file (path)
-  (let ((texture (get-texture path)))
+(defun sprite-with-file (path &key wrap)
+  (let ((texture (get-texture path :wrap wrap)))
     (make-instance 'sprite :texture texture)))
 
 (defmethod draw ((self sprite))
@@ -110,8 +110,8 @@
          (beam (sprite-with-file "./beam.png"))
          (root (make-instance 'node))
          (doom (sprite-with-file "./ufo.png"))
-         (buildings1 (sprite-with-file "./buildings.png"))
-         (buildings2 (sprite-with-file "./buildings.png"))
+         (buildings1 (sprite-with-file "./buildings.png" :wrap :clamp))
+         (buildings2 (sprite-with-file "./buildings.png" :wrap :clamp))
          (sky (make-instance 'rect
                              :texture (get-texture "./pixel.png")
                              :width width :height height
