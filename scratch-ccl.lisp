@@ -163,7 +163,6 @@
          (h (pref f :<NSR>ect.size.height)))
     (values w h)))
 
-
 (defun aspect-fit (screen-w screen-h content-w content-h)
   (let* ((screen-ratio (/ screen-w screen-h))
          (content-ratio (/ content-w content-h))
@@ -177,6 +176,12 @@
          (offs-y (/ (- screen-h new-h) 2.0)))
     (values offs-x offs-y new-w new-h)))
 
+(defun update-display-scale (display offs-x offs-y w h width height)
+  (setf (xmas.display:display-offset-x display) offs-x
+        (xmas.display:display-offset-y display) offs-y
+        (xmas.display:display-scale-x display) (/ width w)
+        (xmas.display:display-scale-y display) (/ height h)))
+
 (defun reshape-window (self)
   (multiple-value-bind (w h) (nsview-size self)
     (let* ((display (my-view-display self))
@@ -186,11 +191,14 @@
         (cond
           (xmas.display:preserve-aspect-ratio
            (multiple-value-bind (x y w h) (aspect-fit w h width height)
-             (resize-gl-2d x y w h width height)))
+             (resize-gl-2d x y w h width height)
+             (update-display-scale display x y w h width height)))
           (xmas.display:size-to-fit
-           (resize-gl-2d 0 0 w h width height))
+           (resize-gl-2d 0 0 w h width height)
+           (update-display-scale display 0 0 w h width height))
           (t
-           (resize-gl-2d 0 0 w h w h)))))))
+           (resize-gl-2d 0 0 w h w h)
+           (update-display-scale display 0 0 w h w h)))))))
 
 (objc:defmethod (#/prepareOpenGL :void) ((self my-view))
   (#_glClearColor 0.05 0.05 0.05 0.0)
@@ -260,12 +268,15 @@
   (%enqueue-key-event self event :keypress))
 
 (defun %translate-mouse-coords (myview ns-event)
-  ;;TODO: take aspect/stretch scaling into account
   (let* ((p1 (#/locationInWindow ns-event))
          (p2 (#/convertPoint:fromView: myview p1 +null-ptr+))
          (x  (ns:ns-point-x p2))
-         (y  (ns:ns-point-y p2)))
-    (values x y)))
+         (y  (ns:ns-point-y p2))
+         (d  (my-view-display myview)))
+    (values (* (xmas.display:display-scale-x d)
+               (- x (xmas.display:display-offset-x d)))
+            (* (xmas.display:display-scale-y d)
+               (- y (xmas.display:display-offset-y d))))))
 
 (defun %enqueue-mouse-event (myview ns-event event)
   (multiple-value-bind (x y) (%translate-mouse-coords myview ns-event)

@@ -19,7 +19,11 @@
              #:preserve-aspect-ratio
              #:display-animation-manager
              #:display-closed-hook
-             #:display-runloop-bindings))
+             #:display-runloop-bindings
+             #:display-offset-x
+             #:display-offset-y
+             #:display-scale-x
+             #:display-scale-y))
 
 (in-package :xmas.display)
 
@@ -45,7 +49,11 @@
                       :initarg :animation-manager)
    (closed-hook :accessor display-closed-hook
                 :initarg :closed-hook)
-   (runloop-bindings :accessor display-runloop-bindings)))
+   (runloop-bindings :accessor display-runloop-bindings)
+   (offset-x :accessor display-offset-x :initform 0.0)
+   (offset-y :accessor display-offset-y :initform 0.0)
+   (scale-x  :accessor display-scale-x :initform 1.0)
+   (scale-y  :accessor display-scale-y :initform 1.0)))
 
 (defun display-drain-gl-queue (display)
   (loop
