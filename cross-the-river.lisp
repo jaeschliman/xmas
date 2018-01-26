@@ -1,4 +1,4 @@
-(defpackage :xmas.cross-the-river (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.draw))
+(defpackage :xmas.cross-the-river (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.draw :xmas.lfont-reader))
 (in-package :xmas.cross-the-river)
 
 ;;------------------------------------------------------------
@@ -262,6 +262,7 @@
   (with-slots (root boat mode goat cabbage wolf) ctr
     (case mode
       ((win lose-goat lose-wolf)
+       (setf (visible root) t)
        (when (eq new-mode 'play)
          (when-let (item (item boat))
            (add-child root item)
@@ -273,9 +274,7 @@
          (map nil 'update-position (list boat goat cabbage wolf))))
       (play
        (case new-mode
-         (win (format t "You Win!~%"))
-         (lose-goat (format t "The goat ate the cabbage. You Lose!~%"))
-         (lose-wolf (format t "The wolf ate the goat. You Lose!~%")))))
+        ((win lose-goat lose-wolf) (setf (visible root) nil)))))
     (setf mode new-mode)))
 
 
@@ -289,13 +288,14 @@
   mouse-x := -1.0
   mouse-y := -1.0
   mouse-clicked := nil
+  november  := (lfont-from-file "./res/lfont/november.lfont")
   tex := (get-texture "wave.png" :wrap :repeat)
   root := (make-instance 'node)
   boat := (make-instance 'boat
                          :anchor-y 0.0
                          :x 150.0 :y 50.0
-                         :north-position '(:x 150 :y 200) 
-                         :south-position '(:x 150 :y 20) 
+                         :north-position '(:x 250 :y 250) 
+                         :south-position '(:x 250 :y 20) 
                          :texture (get-texture "boat.png")
                          :place 'north)
   north-shore := (make-instance 'image
@@ -321,7 +321,6 @@
            :place 'north
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
-           :x 150 :y 400
            :north-position '(:x 150 :y 400) 
            :south-position '(:x 150 :y 100) 
            :texture (get-texture "wolf.png"))
@@ -330,7 +329,6 @@
            :place 'north
            :scale-x 0.4 :scale-y 0.4
            :anchor-y 0.0
-           :x 250 :y 400
            :north-position '(:x 250 :y 400)
            :south-position '(:x 250 :y 100)
            :flip-x t
@@ -340,7 +338,6 @@
               :place 'north
               :scale-x 0.25 :scale-y 0.25
               :anchor-y 0.0
-              :x 350 :y 400
               :north-position '(:x 350 :y 400)
               :south-position '(:x 350 :y 100)
               :texture (get-texture "cabbage.png"))
@@ -384,6 +381,16 @@
     (unless (eq mode new-mode)
       (enter-mode self new-mode)))
   (visit root)
+  (case mode
+    (lose-goat
+     (xmas.render-buffer::set-color 1.0 0.0 0.0 1.0)
+     (lfont-draw-string november "The goat ate the cabbage!" 85 250))
+    (lose-wolf
+     (xmas.render-buffer::set-color 1.0 0.0 0.0 1.0)
+     (lfont-draw-string november "The wolf ate the goat!" 100 250))
+    (win
+     (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
+     (lfont-draw-string november "You win!" 200 250)))
   (setf mouse-clicked nil)
   :on-event
   (case (car event)
