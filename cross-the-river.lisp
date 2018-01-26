@@ -49,15 +49,13 @@
          (count (ceiling (height self) h))
          (odd 1.0)
          (waves (make-array count :element-type t))
-         (colors (list (vector 0.25 0.5 1.0)
+         (colors (circular-list (vector 0.25 0.5 1.0)
                        (vector 0.0 0.25 0.85)
                        (vector 0.0 0.8 0.85)))
-         (xs (list 0.0 (/ tw 2.0) (/ tw 3.0)))
-         (delays (list 1.0 0.0 1.0 1.3333)))
+         (xs (circular-list 0.0 (/ tw 2.0) (/ tw 3.0)))
+         (delays (circular-list 1.0 0.0 1.0 1.3333))
+         (scales (circular-list 0.95 1.05 1.05 0.95)))
     (setf (waves self) waves)
-    (setf (cdr (last colors)) colors)
-    (setf (cdr (last xs)) xs)
-    (setf (cdr (last delays)) delays)
     (setf (parent (boat self)) self)
     (dotimes (i count)
       (labels ((tint (duration color)
@@ -95,18 +93,11 @@
                                           (move-by-y v-dur (* v-amt odd)
                                                      :ease :in-out-sine))
                                :repeat :forever)
-                   (if (plusp odd)
-                       (run-action node (list (scale-x-to wave-dur 0.95
-                                                          :ease :in-out-sine)
-                                              (scale-x-to wave-dur 1.05
-                                                          :ease :in-out-sine))
+                   (run-action node (list (scale-x-to wave-dur (pop scales)
+                                                      :ease :in-out-sine)
+                                          (scale-x-to wave-dur (pop scales)
+                                                      :ease :in-out-sine))
                                    :repeat :forever)
-
-                       (run-action node (list (scale-x-to wave-dur 1.05
-                                                          :ease :in-out-sine)
-                                              (scale-x-to wave-dur 0.95
-                                                          :ease :in-out-sine))
-                                   :repeat :forever))
                    (let ((dur 3.0))
                      (run-action node (list (delay (pop delays))
                                             (tint dur (pop colors))
@@ -140,11 +131,11 @@
 
 (defmethod draw ((self wavy-node))
   (loop
-     with boat = (boat self)
-     with boat-y = (y boat)
+     with boat       = (boat self)
+     with boat-y     = (y boat)
      with boat-drawn = nil
-     with waves = (waves self)
-     with offs = 10
+     with waves      = (waves self)
+     with offs       = 10
      for i from (1- (length waves)) downto 0
      for wave = (aref waves i)
      do
@@ -227,8 +218,6 @@
         ((win lose-goat lose-wolf) (setf (visible root) nil)))))
     (setf mode new-mode)))
 
-
-
 (xmas.deftest:deftest cross-the-river (:width 500 :height 500 :expandable t :preserve-aspect-ratio t)
   :tags sketch
   :init
@@ -260,47 +249,35 @@
                          :boat boat
                          :y 100
                          :overlap (* 0.8 0.4 0.8))
-
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
                                 :anchor-y 0.0
                                 :texture (get-texture "south-shore.png"))
-
-  wolf := (make-instance
-           'possesion
-           :place 'north
-           :scale-x 0.4 :scale-y 0.4
-           :anchor-y 0.0
-           :north-position '(:x 150 :y 400) 
-           :south-position '(:x 150 :y 100) 
-           :texture (get-texture "wolf.png"))
-  goat := (make-instance
-           'possesion
-           :place 'north
-           :scale-x 0.4 :scale-y 0.4
-           :anchor-y 0.0
-           :north-position '(:x 250 :y 400)
-           :south-position '(:x 250 :y 100)
-           :flip-x t
-           :texture (get-texture "goat.png"))
-  cabbage := (make-instance
-              'possesion
-              :place 'north
-              :scale-x 0.25 :scale-y 0.25
-              :anchor-y 0.0
-              :north-position '(:x 350 :y 400)
-              :south-position '(:x 350 :y 100)
-              :texture (get-texture "cabbage.png"))
-  
-  (add-child root north-shore)
-  (add-child root node)
-  (add-child root south-shore)
-  (add-child root wolf)
-  (add-child root goat)
-  (add-child root cabbage)
-  ;; (run-action boat (list (move-by 4.0 0.0 200.0)
-  ;;                        (move-by 4.0 0.0 -200.0))
-  ;;             :repeat :forever)
+  wolf := (make-instance 'possesion
+                         :place 'north
+                         :scale-x 0.4 :scale-y 0.4
+                         :anchor-y 0.0
+                         :north-position '(:x 150 :y 400) 
+                         :south-position '(:x 150 :y 100) 
+                         :texture (get-texture "wolf.png"))
+  goat := (make-instance 'possesion
+                         :place 'north
+                         :scale-x 0.4 :scale-y 0.4
+                         :anchor-y 0.0
+                         :north-position '(:x 250 :y 400)
+                         :south-position '(:x 250 :y 100)
+                         :flip-x t
+                         :texture (get-texture "goat.png"))
+  cabbage := (make-instance 'possesion
+                            :place 'north
+                            :scale-x 0.25 :scale-y 0.25
+                            :anchor-y 0.0
+                            :north-position '(:x 350 :y 400)
+                            :south-position '(:x 350 :y 100)
+                            :texture (get-texture "cabbage.png"))
+  (flet ((add (&rest children)
+           (map nil (lambda (child) (add-child root child)) children)))
+    (add north-shore node south-shore wolf goat cabbage))
   (run-action boat (list (rotate-by 0.5 -5)
                          (rotate-by 1.0 10)
                          (rotate-by 0.5 -5))
@@ -311,18 +288,14 @@
     (on-enter root))
   (case mode
     (play
-     (let ((over (node-contains-world-point-p wolf mouse-x mouse-y)))
-       (if (and over mouse-clicked)
-           (try-swap-places self wolf)
-           (setf (hovering wolf) over)))
-     (let ((over (node-contains-world-point-p goat mouse-x mouse-y)))
-       (if (and over mouse-clicked)
-           (try-swap-places self goat)
-           (setf (hovering goat) over)))
-     (let ((over (node-contains-world-point-p cabbage mouse-x mouse-y)))
-       (if (and over mouse-clicked)
-           (try-swap-places self cabbage)
-           (setf (hovering cabbage) over))))
+     (flet ((hover-or-click (item)
+              (let ((over (node-contains-world-point-p item mouse-x mouse-y)))
+                (if (and over mouse-clicked)
+                    (try-swap-places self item)
+                    (setf (hovering item) over))) ))
+       (hover-or-click wolf)
+       (hover-or-click goat)
+       (hover-or-click cabbage)))
     (t
      (setf (hovering goat) nil
            (hovering cabbage) nil
