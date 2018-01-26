@@ -48,7 +48,9 @@
    #:left-for-x
    #:bottom-for-y
    #:top-for-y
-   #:node-contains-world-point-p))
+   #:node-contains-world-point-p
+   #:draw
+   #:visit))
 (in-package :xmas.node)
 
 ;;; honestly, this should probably be a struct...
@@ -177,6 +179,71 @@
 (defmethod width  ((self node)) (* (scale-x self) (content-width self)))
 (defmethod height ((self node)) (* (scale-y self) (content-height self)))
 
+(defmethod draw ((self node))
+  (declare (ignore self)))
+
+(defmethod visit ((self node))
+  (when (not (visible self))
+    (return-from visit))
+  (xmas.render-buffer::push-matrix)
+  (let ((ax (anchor-x self))
+        (ay (anchor-y self)))
+    (if (and (zerop ax) (zerop ay))
+        (xmas.render-buffer::translate-scale-rotate
+         (x self) (y self)
+         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
+         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
+         (rotation self))
+        (xmas.render-buffer::translate-scale-rotate-translate
+         (x self) (y self)
+         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
+         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
+         (rotation self)
+         (* -1.0 ax (content-width self))
+         (* -1.0 ay (content-height self)))))
+  (draw self)
+  (when (children self)
+    (loop for child across (children self) do
+         (visit child)))
+  (xmas.render-buffer::pop-matrix))
+
+;;; previous previous versions of visit here, for reference:
+;;; TL;DR: using the matrix directly appears to slow things down considerably
+;; the also-fast method:
+;; (defmethod visit ((self node))
+;;   (push-matrix)
+;;   (translate-scale-rotate (x self) (y self)
+;;                           (scale-x self) (scale-y self)
+;;                           (rotation self))
+;;   (node-transform self) ;; <- note this addition
+;;   (draw self)
+;;   (pop-matrix))
+
+;; this method also performs fairly well (some minor stuttering),
+;; seeming to indicate that the bottleneck is actually in
+;; %gl:mult-matrix-f
+;; (defmethod visit ((self node))
+;;   (push-matrix)
+;;   (translate-scale-rotate (x self) (y self)
+;;                           (scale-x self) (scale-y self)
+;;                           (rotation self))
+;;   (mult-matrix-noop (matrix:unwrap-matrix (node-transform self)))
+;;   (draw self)
+;;   ;;visit children here.
+;;   (pop-matrix))
+
+;; the slow as sin method.
+;; (defmethod visit ((self node))
+;;   (push-matrix)
+;;   (mult-matrix (matrix:unwrap-matrix (node-transform self)))
+;;   (draw self)
+;;   (when (children self)
+;;     (loop for child across (children self) do
+;;          (visit child)))
+;;   (pop-matrix))
+
+
+
 ;;TODO: yuck I don't like this. shouldn't need an anchor point to
 ;;      get/set right/left etc.
 (defmethod anchor-x ((self t)) 0.5)
@@ -219,4 +286,5 @@
 
 (defun (setf top) (y node)
   (setf (y node) (- y (* (height node) (- 1.0 (anchor-y node))))))
+
 

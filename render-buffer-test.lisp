@@ -163,6 +163,9 @@
   (let ((c (color node)) (a (opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
+(defclass debug-node (node)
+  ())
+
 (defclass rect (node)
   ()
   (:default-initargs :anchor-x 0.5 :anchor-y 0.5))
@@ -171,78 +174,9 @@
   (draw-node-color self)
   (xmas.render-buffer::draw-rect 0.0 0.0 (width self) (height self)))
 
-(defmethod draw ((self node))
+(defmethod draw ((self debug-node))
   (draw-node-color self)
   (xmas.render-buffer::draw-rect -20.0 -20.0 40.0 40.0))
-
-(defmethod draw ((self sprite))
-  (draw-node-color self)
-  (let* ((frame (sprite-frame self))
-         (frame-width (texture-frame-width frame))
-         (frame-height (texture-frame-height frame))
-         (width
-          (if (texture-frame-rotated frame) frame-height frame-width))
-         (height
-          (if (texture-frame-rotated frame) frame-width frame-height))
-         (offs-x (* 0.5 (- (content-width self) width)))
-         (offs-y (* 0.5 (- (content-height self) height))))
-    (draw-texture-frame-at frame offs-x offs-y frame-width frame-height)))
-
-;; the fast method:
-(defmethod visit ((self node))
-  (xmas.render-buffer::push-matrix)
-  (let ((ax (anchor-x self))
-        (ay (anchor-y self)))
-    (if (and (zerop ax) (zerop ay))
-        (xmas.render-buffer::translate-scale-rotate
-         (x self) (y self)
-         (scale-x self) (scale-y self)
-         (rotation self))
-        (xmas.render-buffer::translate-scale-rotate-translate
-         (x self) (y self)
-         (scale-x self) (scale-y self)
-         (rotation self)
-         (* -1.0 ax (content-width self))
-         (* -1.0 ay (content-height self)))))
-  (draw self)
-  (when (children self)
-    (loop for child across (children self) do
-         (visit child)))
-  (xmas.render-buffer::pop-matrix))
-
-;; the also-fast method:
-;; (defmethod visit ((self node))
-;;   (push-matrix)
-;;   (translate-scale-rotate (x self) (y self)
-;;                           (scale-x self) (scale-y self)
-;;                           (rotation self))
-;;   (node-transform self) ;; <- note this addition
-;;   (draw self)
-;;   (pop-matrix))
-
-;; this method also performs fairly well (some minor stuttering),
-;; seeming to indicate that the bottleneck is actually in
-;; %gl:mult-matrix-f
-;; (defmethod visit ((self node))
-;;   (push-matrix)
-;;   (translate-scale-rotate (x self) (y self)
-;;                           (scale-x self) (scale-y self)
-;;                           (rotation self))
-;;   (mult-matrix-noop (matrix:unwrap-matrix (node-transform self)))
-;;   (draw self)
-;;   ;;visit children here.
-;;   (pop-matrix))
-
-;; the slow as sin method.
-;; (defmethod visit ((self node))
-;;   (push-matrix)
-;;   (mult-matrix (matrix:unwrap-matrix (node-transform self)))
-;;   (draw self)
-;;   (when (children self)
-;;     (loop for child across (children self) do
-;;          (visit child)))
-;;   (pop-matrix))
-
 
 (xmas.deftest:deftest visit-and-draw-many-nodes (:width 500 :height 500)
   :tags node draw-heavy add-child rotation slow-start
@@ -253,7 +187,7 @@
   d/2       := (/ diagonal 2)
   root-node := (make-instance 'node :x (/ width 2.0) :y (/ height 2.0))
   nodes     := (loop repeat 4000 collect
-                    (make-instance 'node
+                    (make-instance 'debug-node
                                    :x (coerce (- (random diagonal) d/2) 'float)
                                    :y (coerce (- (random diagonal) d/2)'float)
                                    :rotation (coerce (random 360) 'float)
@@ -279,25 +213,25 @@
   :tags node actions run-action repeat easing callfunc remove-from-parent
   :init
   started := nil
-  node := (make-instance 'node
+  node := (make-instance 'debug-node
                          :x (/ (display-width display) 2)
                          :y (/ (display-height display) 2))
-  node2 := (make-instance 'node
+  node2 := (make-instance 'debug-node
                           :color (vector 0.0 1.0 1.0)
                           :opacity 0.4
                           :x 20.0
                           :y 20.0)
-  node3 := (make-instance 'node
+  node3 := (make-instance 'debug-node
                           :color (vector 1.0 0.0 0.0)
                           :opacity 0.4
                           :x -20.0
                           :y -20.0)
-  node4 := (make-instance 'node
+  node4 := (make-instance 'debug-node
                           :color (vector 0.0 1.0 0.0)
                           :opacity 0.4
                           :x  20.0
                           :y -20.0)
-  node5 := (make-instance 'node
+  node5 := (make-instance 'debug-node
                           :color (vector 1.0 1.0 0.0)
                           :opacity 0.4
                           :x -20.0
@@ -348,10 +282,10 @@
   :tags node actions action-manager
   :init
   started := nil
-  root := (make-instance 'node
+  root := (make-instance 'debug-node
                          :x (/ (display-width display) 2)
                          :y (/ (display-height display) 2))
-  (labels ((add-node (&aux (node (make-instance 'node)))
+  (labels ((add-node (&aux (node (make-instance 'debug-node)))
              (run-action
               node
               (list (move-by 3.0 -250 -250)
@@ -452,7 +386,7 @@
   :tags node action-manager actions action-tags
   :init
   started := nil
-  n := (make-instance 'node :x 250 :y 250)
+  n := (make-instance 'debug-node :x 250 :y 250)
   (run-action n (list (move-by 3.0 -100.0 0)
                       (move-by 3.0 100.0 0))
               :repeat :forever :tag 'moving)
@@ -661,7 +595,7 @@
 (xmas.deftest:deftest tint-to-test (:width 500 :height 500)
   :tags actions tint-to scale-x-to
   :init
-  node := (make-instance 'node :x 250 :y 250 :color (vector 1.0 0.0 0.0))
+  node := (make-instance 'debug-node :x 250 :y 250 :color (vector 1.0 0.0 0.0))
   started := nil
   (run-action node (list
                     (tint-to 1.0 0.0 1.0 0.0)

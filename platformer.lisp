@@ -280,9 +280,6 @@
 (defclass tmx-node (node)
   ((tmx :accessor tmx :initarg :tmx)))
 
-(defgeneric draw (node))
-(defmethod draw ((self node)) (declare (ignore self)))
-
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
@@ -322,22 +319,6 @@
     (xmas.draw:draw-texture-at texture offs-x offs-y width height)
     (xmas.draw:draw-texture-at texture (+ offs-x width) offs-y width height)))
 
-(defmethod draw ((self sprite))
-  (draw-node-color self)
-  (let* ((frame (sprite-frame self))
-         (frame-width (texture-frame-width frame))
-         (frame-height (texture-frame-height frame))
-         (width
-          (if (texture-frame-rotated frame) frame-height frame-width))
-         (height
-          (if (texture-frame-rotated frame) frame-width frame-height))
-         (offs-x (* 0.5 (- (content-width self) width)))
-         (offs-y (* 0.5 (- (content-height self) height))))
-    (xmas.draw:draw-texture-frame-at
-     frame offs-x offs-y
-     frame-width
-     frame-height)))
-
 (defmethod draw ((self tmx-node))
   (let* ((r (tmx self))
          (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
@@ -352,31 +333,6 @@
      x y r
      x1 y1
      x2 y2)))
-
-(defmethod visit ((self node))
-  (when (not (visible self))
-    (return-from visit))
-  (xmas.render-buffer::push-matrix)
-  (let ((ax (anchor-x self))
-        (ay (anchor-y self)))
-    (if (or nil (and (zerop ax) (zerop ay)))
-        (xmas.render-buffer::translate-scale-rotate
-         (x self) (y self)
-         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
-         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
-         (rotation self))
-        (xmas.render-buffer::translate-scale-rotate-translate
-         (x self) (y self)
-         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
-         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
-         (rotation self)
-         (* -1.0 ax (content-width self))
-         (* -1.0 ay (content-height self)))))
-  (draw self)
-  (when (children self)
-    (loop for child across (children self) do
-         (visit child)))
-  (xmas.render-buffer::pop-matrix))
 
 (defun tile-at-point (tmx x y)
   (xmas.tmx-renderer:tmx-renderer-tile-at-point tmx x y))

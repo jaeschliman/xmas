@@ -72,28 +72,9 @@
   (let ((c (color node)) (a (opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
-(defgeneric draw (node))
-
-(defmethod draw ((self node)))
-
 (defmethod draw ((self sprite))
   (draw-node-color self)
   (xmas.draw::draw-texture-frame (sprite-frame self) 0.0 0.0))
-
-(defmethod visit ((self node))
-  (when (not (visible self))
-    (return-from visit))
-  (xmas.render-buffer::push-matrix)
-  (xmas.render-buffer::translate-scale-rotate
-   (x self) (y self)
-   (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
-   (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
-   (rotation self))
-  (draw self)
-  (when (xmas.node:children self)
-    (loop for child across (xmas.node:children self) do
-         (visit child)))
-  (xmas.render-buffer::pop-matrix))
 
 (defstruct pickle-game
   (keys (make-hash-table :test 'eql))

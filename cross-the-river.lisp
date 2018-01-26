@@ -1,57 +1,6 @@
 (defpackage :xmas.cross-the-river (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.draw :xmas.lfont-reader))
 (in-package :xmas.cross-the-river)
 
-;;------------------------------------------------------------
-;; boilerplate visit/draw code
-;; TODO: move these out into common file (will require updating tests)
-(defgeneric draw (node))
-(defmethod draw ((self node)))
-
-(defun draw-node-color (node)
-  (let ((c (color node)) (a (opacity node)))
-    (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
-
-(defmethod draw ((self sprite))
-  (draw-node-color self)
-  (let* ((frame (sprite-frame self))
-         (frame-width (texture-frame-width frame))
-         (frame-height (texture-frame-height frame))
-         (width
-          (if (texture-frame-rotated frame) frame-height frame-width))
-         (height
-          (if (texture-frame-rotated frame) frame-width frame-height))
-         (offs-x (* 0.5 (- (content-width self) width)))
-         (offs-y (* 0.5 (- (content-height self) height))))
-    (xmas.draw:draw-texture-frame-at
-     frame offs-x offs-y
-     frame-width
-     frame-height)))
-
-(defmethod visit ((self node))
-  (when (not (visible self))
-    (return-from visit))
-  (xmas.render-buffer::push-matrix)
-  (let ((ax (anchor-x self))
-        (ay (anchor-y self)))
-    (if (or nil (and (zerop ax) (zerop ay)))
-        (xmas.render-buffer::translate-scale-rotate
-         (x self) (y self)
-         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
-         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
-         (rotation self))
-        (xmas.render-buffer::translate-scale-rotate-translate
-         (x self) (y self)
-         (if (flip-x self) (* -1.0 (scale-x self)) (scale-x self))
-         (if (flip-y self) (* -1.0 (scale-y self)) (scale-y self))
-         (rotation self)
-         (* -1.0 ax (content-width self))
-         (* -1.0 ay (content-height self)))))
-  (draw self)
-  (when (children self)
-    (loop for child across (children self) do
-         (visit child)))
-  (xmas.render-buffer::pop-matrix))
-
 (defclass image (node)
   ((texture :accessor texture :initarg :texture))
   (:default-initargs :anchor-x 0.5 :anchor-y 0.5))
@@ -60,6 +9,10 @@
   (call-next-method)
   (setf (content-width self) (texture-width texture)
         (content-height self) (texture-height texture)))
+
+(defun draw-node-color (node)
+  (let ((c (color node)) (a (opacity node)))
+    (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
 (defmethod draw ((self image))
   (draw-node-color self)
@@ -76,9 +29,6 @@
     (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
     (xmas.render-buffer::draw-rect 0.0 0.0 (content-width self) (content-height self)))
   (call-next-method))
-
-;; end boilerplate
-;;------------------------------------------------------------
 
 (defclass repeater-node (node)
   ((texture :accessor texture :initarg :texture)))

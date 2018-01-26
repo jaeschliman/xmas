@@ -51,10 +51,6 @@
   (let ((texture (get-texture path)))
     (make-instance 'sprite :texture texture)))
 
-(defgeneric draw (node))
-
-(defmethod draw ((self node)))
-
 (defmethod draw ((self sprite))
   (draw-node-color self)
   (xmas.draw::draw-texture (texture self)))
@@ -64,20 +60,6 @@
   (when-let (id (texture-id (texture self)))
     (xmas.render-buffer::simple-draw-gl-texture-no-color
      id (rect-width self) (rect-height self))))
-
-(defmethod visit ((self node))
-  (when (not (visible self))
-    (return-from visit))
-  (xmas.render-buffer::push-matrix)
-  (xmas.render-buffer::translate-scale-rotate
-   (x self) (y self)
-   (scale-x self) (scale-y self)
-   (rotation self))
-  (draw self)
-  (when (xmas.node:children self)
-    (loop for child across (xmas.node:children self) do
-         (visit child)))
-  (xmas.render-buffer::pop-matrix))
 
 (defstruct ufo-game
   player
