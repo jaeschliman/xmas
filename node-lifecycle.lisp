@@ -52,6 +52,8 @@
       (on-exit child))
     (cleanup child)))
 
+(defvar *adding-children* nil)
+
 (defmethod add-child ((parent node) (child node))
   (unless (children parent)
     (setf (children parent) (make-array 0 :element-type t :fill-pointer 0 :adjustable t)))
@@ -59,12 +61,18 @@
     ;;remove from parent but don't clean up if we are reparenting
     (remove-child child-parent child) nil)
   (vector-push-extend child (children parent))
-  (setf (children parent) (stable-sort (children parent) #'< :key #'z-order)
-        (parent child) parent)
+  (unless *adding-children*
+    (setf (children parent) (stable-sort (children parent) #'< :key #'z-order)))
+  (setf (parent child) parent)
   (mark-as-dirty child)
   (when (and (running parent) (not (running child)))
     (on-enter child)))
 
+(defmethod add-children ((parent node) child-nodes)
+  (let ((*adding-children* t))
+    (dolist (child child-nodes)
+      (add-child parent child))
+    (setf (children parent) (stable-sort (children parent) #'< :key #'z-order))))
 
 (defmethod remove-from-parent ((child node))
   (when (parent child)

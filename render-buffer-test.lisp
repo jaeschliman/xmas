@@ -179,7 +179,7 @@
   (xmas.render-buffer::draw-rect -20.0 -20.0 40.0 40.0))
 
 (xmas.deftest:deftest visit-and-draw-many-nodes (:width 500 :height 500)
-  :tags node draw-heavy add-child rotation slow-start
+  :tags node draw-heavy add-child rotation
   :init
   width     := (display-width display)
   height    := (display-height display)
@@ -196,8 +196,7 @@
                                            (/ (random 100) 100.0)
                                            (/ (random 100) 100.0))
                                    :opacity (/ (random 100) 100.0)))
-  (dolist (node nodes)
-    (add-child root-node node))
+  (add-children root-node nodes)
   :update
   (dolist (node (cons root-node nodes))
     (let ((r (rotation node)))

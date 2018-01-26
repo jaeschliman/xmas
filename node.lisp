@@ -50,7 +50,8 @@
    #:top-for-y
    #:node-contains-world-point-p
    #:draw
-   #:visit))
+   #:visit
+   #:add-children))
 (in-package :xmas.node)
 
 ;;; honestly, this should probably be a struct...
