@@ -52,7 +52,10 @@
                      (xmas.texture:*texture-manager* texture-manager)
                      (xmas.action-manager:*action-manager* action-manager)
                      (xmas.animation-manager:*animation-manager* animation-manager))
-                 (let ((handler (lambda () (handle-event contents event))))
+                 (let ((handler (lambda ()
+                                  (if (eq (car event) :thunk)
+                                      (funcall (cdr event))
+                                      (handle-event contents event)))))
                    (declare (dynamic-extent handler))
                    (call-with-contents contents handler)))))))))
 
@@ -206,8 +209,16 @@
   (reshape-window self)
   (xmas.display:display-drain-gl-queue (my-view-display self)))
 
+(defvar *current-window* nil)
+
+(objc:defmethod (#/windowDidBecomeKey: :void) ((self my-window) notification)
+  (declare (ignore notification))
+  (setf *current-window* self))
+
 (objc:defmethod (#/windowWillClose: :void) ((self my-window) notification)
   (declare (ignorable notification))
+  (when (eq *current-window* self)
+    (setf *current-window* nil))
   (#/setDelegate: self +null-ptr+)
   (ccl::with-autorelease-pool
     (let ((display (display self)))
@@ -379,6 +390,20 @@
                      (setf (cdr cons) (symbol-value (car cons)))))))
           (#/setLevel: w 100)
           (#/makeFirstResponder: w glview)
-          (#/makeKeyAndOrderFront: w nil))))
+          (#/makeKeyAndOrderFront: w nil)
+          (setf *current-window* w))))
 
     result))
+
+(defun call-with-current-window-contents (fn)
+  (alexandria:when-let* ((mywindow *current-window*)
+                         (display  (display mywindow))
+                         (runloop  (xmas.display:display-runloop display))
+                         (contents (xmas.display:contents display)))
+    (xmas.runloop:enqueue-runloop-event
+     runloop
+     (cons :thunk (lambda () (funcall fn contents))))))
+
+(defmacro with-current-window-contents ((var) &body body)
+  `(call-with-current-window-contents (lambda (,var) ,@body)))
+
