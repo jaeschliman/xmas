@@ -38,12 +38,12 @@
                               :x 55 :y 15 :color (apply 'vector (first colors)))))
     (flet ((cycle (node)
              (run-action node (list
-                               (apply #'tint-to 1.0 (pop colors))
-                               (apply #'tint-to 1.0 (pop colors))
-                               (apply #'tint-to 1.0 (pop colors))
-                               (apply #'tint-to 1.0 (pop colors))
-                               (apply #'tint-to 1.0 (pop colors))
-                               (apply #'tint-to 1.0 (pop colors)))
+                               (apply #'tint-to 1.77 (pop colors))
+                               (apply #'tint-to 1.77 (pop colors))
+                               (apply #'tint-to 1.77 (pop colors))
+                               (apply #'tint-to 1.77 (pop colors))
+                               (apply #'tint-to 1.77 (pop colors))
+                               (apply #'tint-to 1.77 (pop colors)))
                          :repeat :forever)))
       (cycle big)
       (cycle med)
@@ -79,7 +79,7 @@
   :init
   started := nil
   root := (make-instance 'reflector-node :x 250 :y 250 :reflection-count 5)
-  wash := (make-instance 'rect :content-width 500 :content-height 500 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 15.0))
+  wash := (make-instance 'rect :content-width 500 :content-height 500 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 10.0))
   colors := (circular-list
              (list 1.0 0.0 0.0)
              (list 1.0 1.0 0.0)
@@ -91,12 +91,12 @@
   r2 := (make-rect 50 0 colors)
   r3 := (make-rect 50 40 colors)
   (run-action r1 (list
-                  (move-by-x 3.0 -100)
-                  (move-by-x 3.0 100))
+                  (move-by-x 6.0 -100)
+                  (move-by-x 6.0 100))
               :repeat :forever)
   (run-action r2 (list
-                  (move-by-y 3.0 -100)
-                  (move-by-y 3.0 100))
+                  (move-by-y 6.0 -100)
+                  (move-by-y 6.0 100))
               :repeat :forever)
   (run-action r1 (rotate-by 3.0 360) :repeat :forever)
   (run-action r2 (rotate-by 1.5 -360) :repeat :forever)
@@ -110,3 +110,8 @@
   (visit root))
 
 (run-test 'reflector-node)
+
+(when nil
+  (cl-user::with-current-window-contents (self)
+    (with-slots (root) self
+      (setf (slot-value  root 'reflection-count) 5))))
