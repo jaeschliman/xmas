@@ -368,6 +368,8 @@
                                       :pixel-format (default-pixel-format))))
           (#/setContentView: w glview)
           (#/autorelease glview)
+          (when expandable
+            (#/setCollectionBehavior: w #$NSWindowCollectionBehaviorFullScreenPrimary))
           (#/setDelegate: w w)
           (#/setAcceptsMouseMovedEvents: w #$YES)
           (setf (xmas.display:native-view result) glview
