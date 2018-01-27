@@ -28,11 +28,11 @@
   (let ((big (make-instance 'rect :content-width 20.0 :content-height 20.0
                             :opacity 0.5
                             :x x :y y :color (apply 'vector (first colors))))
-        (reflector  (make-instance 'reflector-node :x 25 :y 25 :reflection-count 3))
-        (reflector2 (make-instance 'reflector-node :x 25 :y 25 :reflection-count 5))
+        (reflector  (make-instance 'reflector-node :x 25 :y 25 :reflection-count 12))
+        (reflector2 (make-instance 'reflector-node :x 25 :y 25 :reflection-count 4))
         (med (make-instance 'rect :content-width 10.0 :content-height 10.0
                             :opacity 0.5
-                            :x 25 :y 25 :color (apply 'vector (first colors))))
+                            :x 25 :y 75 :color (apply 'vector (first colors))))
         (small (make-instance 'rect :content-width 5.0 :content-height 5.0
                               :opacity 0.8
                               :x 55 :y 15 :color (apply 'vector (first colors)))))
@@ -49,14 +49,26 @@
       (cycle med)
       (cycle small)
       (run-action med (rotate-by 6.0 360.0) :repeat :forever)
+      (run-action small (rotate-by 0.5 360) :repeat :forever)
       (run-action small (list
-                         (move-by-x 3.0 -50 :ease :in-out-sine)
-                         (move-by-x 3.0 50 :ease :in-out-sine))
+                         (move-by-x 1.5 -50 :ease :in-out-sine)
+                         (move-by-x 1.5 50 :ease :in-out-sine))
                   :repeat :forever)
       (run-action med (list
                        (move-by-y 3.0 -100 :ease :in-out-sine)
                        (move-by-y 3.0 100 :ease :in-out-sine))
                   :repeat :forever)
+      (let ((scale-offs 0.50)
+            (scale-dur  0.65)
+            (scale-node big))
+        (run-action scale-node (list
+                                (scale-x-to scale-dur (+ 1.0 scale-offs))
+                                (scale-x-to scale-dur (- 1.0 scale-offs)))
+                    :repeat :forever)
+        (run-action scale-node (list
+                                (scale-y-to scale-dur (- 1.0 scale-offs))
+                                (scale-y-to scale-dur (+ 1.0 scale-offs)))
+                    :repeat :forever))
       (add-child big reflector)
       (add-child reflector med)
       (add-child med reflector2)
@@ -67,7 +79,7 @@
   :init
   started := nil
   root := (make-instance 'reflector-node :x 250 :y 250 :reflection-count 5)
-  wash := (make-instance 'rect :content-width 500 :content-height 500 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 10.0))
+  wash := (make-instance 'rect :content-width 500 :content-height 500 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 15.0))
   colors := (circular-list
              (list 1.0 0.0 0.0)
              (list 1.0 1.0 0.0)
@@ -86,7 +98,6 @@
                   (move-by-y 3.0 -100)
                   (move-by-y 3.0 100))
               :repeat :forever)
-  
   (run-action r1 (rotate-by 3.0 360) :repeat :forever)
   (run-action r2 (rotate-by 1.5 -360) :repeat :forever)
   (run-action r3 (rotate-by 3.0 -360) :repeat :forever)
