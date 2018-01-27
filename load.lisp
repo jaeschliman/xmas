@@ -41,5 +41,6 @@
   (load "./qtree.lisp")
   (load "./lfont-reader.lisp")
   (load "./game-object.lisp")
+  (load "./deftest.lisp")
   )
 
