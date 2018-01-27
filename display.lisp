@@ -23,7 +23,8 @@
              #:display-offset-x
              #:display-offset-y
              #:display-scale-x
-             #:display-scale-y))
+             #:display-scale-y
+             #:display-should-clear))
 
 (in-package :xmas.display)
 
@@ -53,7 +54,8 @@
    (offset-x :accessor display-offset-x :initform 0.0)
    (offset-y :accessor display-offset-y :initform 0.0)
    (scale-x  :accessor display-scale-x :initform 1.0)
-   (scale-y  :accessor display-scale-y :initform 1.0)))
+   (scale-y  :accessor display-scale-y :initform 1.0)
+   (should-clear :accessor display-should-clear :initarg :should-clear)))
 
 (defun display-drain-gl-queue (display)
   (loop

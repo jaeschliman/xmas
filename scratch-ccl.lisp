@@ -65,8 +65,9 @@
 (defgeneric draw (contents display)
   (:method (contents (display xmas.display:display))
     (declare (ignorable contents))
-    (gl:clear-color 0.0 0.0 0.0 1.0)
-    (gl:clear :color-buffer)
+    (when (xmas.display:display-should-clear display)
+      (gl:clear-color 0.0 0.0 0.0 1.0)
+      (gl:clear :color-buffer))
     (gl:enable :texture-2d)
     (gl:enable :blend)
     (gl:blend-func :src-alpha :one-minus-src-alpha)
@@ -324,7 +325,8 @@
                                     (expandable nil)
                                     (fps (/ 1.0 60.0))
                                     (size-to-fit nil)
-                                    (preserve-aspect-ratio nil))
+                                    (preserve-aspect-ratio nil)
+                                    (should-clear t))
   (let* ((result (make-instance 'xmas.display:display
                                 :fps fps
                                 :contents contents
@@ -334,6 +336,7 @@
                                 :action-manager (xmas.action-manager:make-manager)
                                 :animation-manager (xmas.animation-manager:make-manager)
                                 :preserve-aspect-ratio preserve-aspect-ratio
+                                :should-clear should-clear
                                 :closed-hook *display-closed-hook*))
          (texture-manager (xmas.texture:make-texture-manager :display result)))
     (setf (xmas.display:display-texture-manager result)
