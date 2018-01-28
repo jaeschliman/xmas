@@ -43,5 +43,6 @@
   (load "./lfont-reader.lisp")
   (load "./game-object.lisp")
   (load "./deftest.lisp")
-  (laod "./vecto-texture.lisp"))
+  (load "./vecto-texture.lisp")
+  (load "./ttf-font.lisp"))
 
