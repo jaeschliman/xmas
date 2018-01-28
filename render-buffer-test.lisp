@@ -621,12 +621,33 @@
 ;; (xmas.deftest:run-test 'empty-window)
 
 (xmas.deftest:deftest load-texture (:width 500 :height 500)
-  :tags memory texture
+  :tags memory texture texture-loading
   :init
   (get-texture "./alien.png")
   :update)
 
 ;; (xmas.deftest:run-test 'load-texture)
+
+(defun make-circle-image (width height)
+  (xmas.vecto-texture:vecto-image (:width width :height height)
+    (vecto:set-rgb-fill 1.0 0.0 0.0)
+    (vecto:centered-circle-path (* 0.5 width) (* 0.5 height) (* 0.5 (min width height)))
+    (vecto:fill-path)))
+
+(xmas.deftest:deftest texture-from-vector (:width 500 :height 500)
+  :tags static-vectors texture texture-loading
+  :init
+  width := 100
+  height := 100
+  circle :=  (make-circle-image width height)
+  texture := (make-texture-from-rgba-vector circle width height)
+  :update
+  (draw-texture-at texture
+                   (- 250 (* width 0.5))
+                   (- 250 (* height 0.5))
+                   width height))
+
+;; (xmas.deftest:run-test 'texture-from-vector)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

@@ -15,6 +15,7 @@
 (ql:quickload :chipz)
 (ql:quickload :cl-base64)
 (ql:quickload :vecto)
+(ql:quickload :static-vectors)
 (progmain ()
   (ql:quickload :cl-opengl)
   (ql:quickload :cl-glu)
@@ -42,5 +43,5 @@
   (load "./lfont-reader.lisp")
   (load "./game-object.lisp")
   (load "./deftest.lisp")
-  )
+  (laod "./vecto-texture.lisp"))
 

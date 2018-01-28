@@ -24,7 +24,8 @@
              #:texture-manager-add-frame
              #:get-frame
              #:set-default-texture-directory
-             #:texture-manager-release-all-textures))
+             #:texture-manager-release-all-textures
+             #:make-texture-from-rgba-vector))
 
 (in-package :xmas.texture)
 
@@ -111,6 +112,25 @@
       (gl:bind-texture :texture-2d 0)
       (setf (texture-id texture) id))))
 
+(defun gl-load-texture-from-rgba-vector (texture vector &key wrap)
+  (let ((id (car (gl:gen-textures 1)))
+        (width (texture-width texture))
+        (height (texture-height texture)))
+    (gl:enable :texture-2d)
+    (gl:bind-texture :texture-2d id)
+    (gl:tex-parameter :texture-2d :texture-min-filter :linear)
+    (when wrap
+      (gl:tex-parameter :texture-2d :texture-wrap-s wrap)
+      (gl:tex-parameter :texture-2d :texture-wrap-t wrap))
+    (static-vectors:with-static-vector (static-vector (length vector) :element-type '(unsigned-byte 8) :initial-element 0)
+      (map-into static-vector 'identity vector)
+      (gl:tex-image-2d :texture-2d 0 :rgba
+                       width height 0 :rgba
+                       :unsigned-byte (static-vectors:static-vector-pointer static-vector)))
+    (gl:disable :texture-2d)
+    (gl:bind-texture :texture-2d 0)
+    (setf (texture-id texture) id)))
+
 (defun load-texture-on-display (display pathname &key wrap)
   (when (probe-file (truename pathname))
     (ccl::with-autorelease-pool
@@ -126,6 +146,16 @@
              (gl-load-texture-image-rep texture rep format :wrap wrap)
              (#/release rep)))
           texture)))))
+
+(defun make-texture-from-rgba-vector (vector width height &key wrap)
+  (when-let (mgr *texture-manager*)
+    (let ((texture (make-texture :path nil
+                                 :width width
+                                 :height height)))
+      (xmas.display:display-enqueue-for-gl
+       (texture-manager-display mgr)
+       (lambda () (gl-load-texture-from-rgba-vector texture vector :wrap wrap)))
+      texture)))
 
 (defun get-or-load-texture (texture-manager path &key wrap)
   (let ((key (if wrap (list path :wrap wrap) path)))
