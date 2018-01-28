@@ -11,7 +11,8 @@
                                             :xmas.texture
                                             :xmas.texture-packer
                                             :xmas.tmx-reader
-                                            :xmas.tmx-renderer))
+                                            :xmas.tmx-renderer
+                                            :xmas.deftest))
 (in-package :xmas.render-buffer-tests)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -47,7 +48,7 @@
     (xmas.render-buffer::set-color r g b a)
     (xmas.render-buffer::draw-rect x y 20 20)))
 
-(xmas.deftest:deftest bouncy-balls (:width 500 :height 500 :expandable t)
+(deftest bouncy-balls (:width 500 :height 500 :expandable t)
   :tags draw-rect window events draw-heavy
   :init
   width  := (display-width display)
@@ -71,7 +72,7 @@
              height h)))
     (t (format t "got unhandled event: ~S~%" event))))
 
-(xmas.deftest:deftest draw-texture ()
+(deftest draw-texture ()
   :tags texture load-time draw-texture
   :init
   alien := (get-texture #P "./alien.png")
@@ -115,7 +116,7 @@
   (draw-texture (simple-sprite-texture sprite))
   (xmas.render-buffer::pop-matrix))
 
-(xmas.deftest:deftest draw-many-textures (:width 500 :height 500)
+(deftest draw-many-textures (:width 500 :height 500)
   :tags draw-heavy texture
   :init
   width   := (display-width display)
@@ -137,7 +138,7 @@
   (dolist (sprite sprites)
     (draw-sprite sprite)))
 
-(xmas.deftest:deftest matrix-translation-rotation ()
+(deftest matrix-translation-rotation ()
   :tags draw-rect matrix mult-matrix
   :init
   matrix := (make-matrix)
@@ -178,7 +179,7 @@
   (draw-node-color self)
   (xmas.render-buffer::draw-rect -20.0 -20.0 40.0 40.0))
 
-(xmas.deftest:deftest visit-and-draw-many-nodes (:width 500 :height 500)
+(deftest visit-and-draw-many-nodes (:width 500 :height 500)
   :tags node draw-heavy add-child rotation
   :init
   width     := (display-width display)
@@ -206,9 +207,9 @@
   (xmas.render-buffer::set-color 0.0 1.0 1.0 0.4)
   (visit root-node))
 
-;; (xmas.deftest:run-test 'visit-and-draw-many-nodes)
+;; (run-test 'visit-and-draw-many-nodes)
 
-(xmas.deftest:deftest node-actions ()
+(deftest node-actions ()
   :tags node actions run-action repeat easing callfunc remove-from-parent
   :init
   started := nil
@@ -275,9 +276,9 @@
     (on-enter node))
   (visit node))
 
-;; (xmas.deftest:run-test 'node-actions)
+;; (run-test 'node-actions)
 
-(xmas.deftest:deftest action-manager-test ()
+(deftest action-manager-test ()
   :tags node actions action-manager
   :init
   started := nil
@@ -303,9 +304,9 @@
     (on-enter root))
   (visit root))
 
-;; (xmas.deftest:run-test 'action-manager-test)
+;; (run-test 'action-manager-test)
 
-(xmas.deftest:deftest texture-frame-test (:width 500 :height 500)
+(deftest texture-frame-test (:width 500 :height 500)
   :tags texture-frame edges
   :init
   tex := (get-texture "./bayarea.png")
@@ -321,9 +322,9 @@
   (draw-texture-frame d (+ 250.0 125.0) (+ 250.0 125.0))
   (xmas.render-buffer::pop-matrix))
 
-;; (xmas.deftest:run-test 'texture-frame-test)
+;; (run-test 'texture-frame-test)
 
-(xmas.deftest:deftest texture-packer-test (:width 500 :height 500)
+(deftest texture-packer-test (:width 500 :height 500)
   :tags texture-packer texture texture-frame file-format
   :init
   packer := (texture-packer-from-file "./res/test.json")
@@ -336,9 +337,9 @@
   (draw-texture-frame blink-frame 375.0 250.0)
   (draw-texture-frame jewel 250.0 250.0))
 
-;; (xmas.deftest:run-test 'texture-packer-test)
+;; (run-test 'texture-packer-test)
 
-(xmas.deftest:deftest tilemap-test0 (:width 500 :height 500)
+(deftest tilemap-test0 (:width 500 :height 500)
   :tags tmx file-format
   :init
   map     := (read-tilemap "./res/test-tilemap.tmx")
@@ -352,9 +353,9 @@
      when frame
      do (draw-texture-frame frame (+ x (* i 50)) y)))
 
-;; (xmas.deftest:run-test 'tilemap-test0)
+;; (run-test 'tilemap-test0)
 
-(xmas.deftest:deftest tilemap-test-1 (:width 500 :height 500)
+(deftest tilemap-test-1 (:width 500 :height 500)
   :tags tmx file-format draw-tmx-layer
   :init 
   map     := (read-tilemap "./res/test-tilemap.tmx")
@@ -368,9 +369,9 @@
      layer
      frames))
 
-;; (xmas.deftest:run-test 'tilemap-test-1)
+;; (run-test 'tilemap-test-1)
 
-(xmas.deftest:deftest tmx-renderer-test (:width 500 :height 500)
+(deftest tmx-renderer-test (:width 500 :height 500)
   :tags tmx file-format tmx-renderer
   :init
   r := (tmx-renderer-from-file "./res/test-tilemap.tmx")
@@ -379,9 +380,9 @@
          (y (/ (tmx-renderer-height r) 2.0)))
     (draw-tmx-renderer x y r)))
 
-;; (xmas.deftest:run-test 'tmx-renderer-test)
+;; (run-test 'tmx-renderer-test)
 
-(xmas.deftest:deftest action-tags (:width 500 :height 500)
+(deftest action-tags (:width 500 :height 500)
   :tags node action-manager actions action-tags
   :init
   started := nil
@@ -400,9 +401,9 @@
     (on-enter n))
   (visit n))
 
-;; (xmas.deftest:run-test 'action-tags)
+;; (run-test 'action-tags)
 
-(xmas.deftest:deftest animation (:width 500 :height 500)
+(deftest animation (:width 500 :height 500)
   :tags file-format texture-packer animation anchor-point
   :init
   (texture-packer-add-frames-from-file "./res/test.json")
@@ -424,7 +425,7 @@
     (on-enter sprite))
   (visit sprite))
 
-;; (xmas.deftest:run-test 'animation)
+;; (run-test 'animation)
 
 (defclass box (rect)
   ((vx :accessor box-vx :initarg :vx)
@@ -435,7 +436,7 @@
                                  (y rect)
                                  5.0 5.0))
 
-(xmas.deftest:deftest quadtree (:width 500 :height 500)
+(deftest quadtree (:width 500 :height 500)
   :tags mouse quadtree draw-rect
   :init
   started := nil
@@ -491,9 +492,9 @@
     (setf mouse-x (cadr event)
           mouse-y (cddr event))))
 
-;; (xmas.deftest:run-test 'quadtree)
+;; (run-test 'quadtree)
 
-(xmas.deftest:deftest text-rendering (:width 500 :height 500)
+(deftest text-rendering (:width 500 :height 500)
   :tags text font file-format lfont
   :init
   november  := (lfont-from-file "./res/lfont/november.lfont")
@@ -504,9 +505,9 @@
                      "The quick brown fox jumped over the lazy dog."
                      10.0 150.0 :letter-spacing 0.0))
 
-;; (xmas.deftest:run-test 'text-rendering)
+;; (run-test 'text-rendering)
 
-(xmas.deftest:deftest anchor-point-test-0 (:width 500 :height 500)
+(deftest anchor-point-test-0 (:width 500 :height 500)
   :tags node anchor-point
   :init
   root    := (make-instance 'node)
@@ -555,9 +556,9 @@
     (on-enter root))
   (visit root))
 
-;; (xmas.deftest:run-test 'anchor-point-test-0)
+;; (run-test 'anchor-point-test-0)
 
-(xmas.deftest:deftest anchor-point-test-1 (:width 500 :height 500)
+(deftest anchor-point-test-1 (:width 500 :height 500)
   :tags sprite node anchor-point content-size
   :init
   (texture-packer-add-frames-from-file "./res/test.json")
@@ -580,18 +581,18 @@
     (draw-it sprite2)
     (draw-it sprite3)))
 
-;; (xmas.deftest:run-test 'anchor-point-test-1)
+;; (run-test 'anchor-point-test-1)
 
-(xmas.deftest:deftest texture-wrap-0 (:width 500 :height 500)
+(deftest texture-wrap-0 (:width 500 :height 500)
   :tags texture drawing texture-wrapping
   :init
   tex := (get-texture "./alien.png" :wrap :repeat)
   :update
   (draw-texture-at-tex-coords tex 0 0 500 500 0.0 0.0 4.0 4.0))
 
-;; (xmas.deftest:run-test 'texture-wrap-0)
+;; (run-test 'texture-wrap-0)
 
-(xmas.deftest:deftest tint-to-test (:width 500 :height 500)
+(deftest tint-to-test (:width 500 :height 500)
   :tags actions tint-to scale-x-to
   :init
   node := (make-instance 'debug-node :x 250 :y 250 :color (vector 1.0 0.0 0.0))
@@ -611,22 +612,22 @@
     (on-enter node))
   (visit node))
 
-;; (xmas.deftest:run-test 'tint-to-test)
+;; (run-test 'tint-to-test)
 
-(xmas.deftest:deftest empty-window (:width 500 :height 500)
+(deftest empty-window (:width 500 :height 500)
   :tags memory window
   :init
   :update)
 
-;; (xmas.deftest:run-test 'empty-window)
+;; (run-test 'empty-window)
 
-(xmas.deftest:deftest load-texture (:width 500 :height 500)
+(deftest load-texture (:width 500 :height 500)
   :tags memory texture texture-loading
   :init
   (get-texture "./alien.png")
   :update)
 
-;; (xmas.deftest:run-test 'load-texture)
+;; (run-test 'load-texture)
 
 (defun make-circle-image (width height)
   (xmas.vecto-texture:vecto-image (:width width :height height)
@@ -634,7 +635,7 @@
     (vecto:centered-circle-path (* 0.5 width) (* 0.5 height) (* 0.5 (min width height)))
     (vecto:fill-path)))
 
-(xmas.deftest:deftest texture-from-vector (:width 500 :height 500)
+(deftest texture-from-vector (:width 500 :height 500)
   :tags static-vectors texture texture-loading
   :init
   width := 100
@@ -647,7 +648,26 @@
                    (- 250 (* height 0.5))
                    width height))
 
-;; (xmas.deftest:run-test 'texture-from-vector)
+;; (run-test 'texture-from-vector)
+
+(deftest dynamic-text-rendering (:width 500 :height 500 :expandable t)
+  :tags text font file-format lfont texture texture-loading static-vectors
+  :init
+  path := "./res/ttf/OpenSans-Light.ttf"
+  font10 := (xmas.ttf-font:make-font :font path :size 10)
+  font15 := (xmas.ttf-font:make-font :font path :size 15)
+  font20 := (xmas.ttf-font:make-font :font path :size 20)
+  font30 := (xmas.ttf-font:make-font :font path :size 30)
+  font72 := (xmas.ttf-font:make-font :font path :size 72)
+  str := "The quick brown fox jumped over the lazy dog."
+  :update
+  (lfont-draw-string font10 str 10.0 150.0 :letter-spacing 0.0)
+  (lfont-draw-string font15 str 10.0 200.0 :letter-spacing 0.0)
+  (lfont-draw-string font20 str 10.0 250.0 :letter-spacing 0.0)
+  (lfont-draw-string font30 str 10.0 300.0 :letter-spacing 0.0)
+  (lfont-draw-string font72 str 10.0 350.0 :letter-spacing 0.0))
+
+;; (run-test 'dynamic-text-rendering)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
