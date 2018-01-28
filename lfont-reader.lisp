@@ -1,7 +1,10 @@
 (defpackage :xmas.lfont-reader (:use :cl :alexandria :xmas.texture xmas.draw)
             (:export
              #:lfont-from-file
-             #:lfont-draw-string))
+             #:lfont-draw-string
+             #:lfont
+             #:make-lfont
+             #:lfont-chars))
 (in-package :xmas.lfont-reader)
 
 ;;TODO: move this into a util file

@@ -178,7 +178,7 @@
   (when-let (mgr *texture-manager*)
     (setf (gethash path (texture-manager-frames mgr)) frame)))
 
-;;NOTE: must be colled with correct opengl context current
+;;NOTE: must be called with correct opengl context current
 (defun texture-manager-release-all-textures (mgr)
   (let* ((textures (hash-table-values (texture-manager-table mgr)))
          (ids (mapcar #'texture-id textures)))
