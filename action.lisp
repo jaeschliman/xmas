@@ -31,7 +31,8 @@
    #:tint-to
    #:scale-x-to
    #:scale-y-to
-   #:move-to))
+   #:move-to
+   #:lerp-slot-to))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -457,6 +458,35 @@
 
 (make-property-lerp-action scale-x-to xmas.node:scale-x scale-x)
 (make-property-lerp-action scale-y-to xmas.node:scale-y scale-y)
+
+(defstruct (lerp-slot-to (:include finite-time-action))
+  slot-name
+  initial-value
+  target-value)
+
+(defmethod start-with-target ((self lerp-slot-to) target)
+  (call-next-method)
+  (let ((slot (lerp-slot-to-slot-name self)))
+    (setf (lerp-slot-to-initial-value self) (slot-value target slot))))
+
+(defmethod reset ((self lerp-slot-to))
+  (call-next-method)
+  (let ((target (lerp-slot-to-target self))
+        (slot (lerp-slot-to-slot-name self)))
+    (setf (lerp-slot-to-initial-value self) (slot-value target slot))))
+
+(defmethod update ((self lerp-slot-to) time)
+  (let ((target (lerp-slot-to-target self))
+        (slot (lerp-slot-to-slot-name self)))
+    (setf (slot-value target slot)
+          (lerp (lerp-slot-to-initial-value self)
+                (lerp-slot-to-target-value self)
+                time))))
+
+(defact lerp-slot-to (duration slot-name target-value)
+  (make-lerp-slot-to :duration duration
+                     :slot-name slot-name
+                     :target-value target-value))
 
 ;; ======================================================================
 ;; instant actions
