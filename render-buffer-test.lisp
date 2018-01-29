@@ -686,7 +686,26 @@
     (on-enter root))
   (visit root))
 
-(run-test 'move-to-test)
+;; (run-test 'move-to-test)
+
+(deftest move-by-test (:width 500 :height 500)
+  :tags action move-by
+  :init
+  started := nil
+  root := (make-instance 'debug-node :x 25 :y 25)
+  (run-action root (list
+                    (move-by 1.0 0.0 450.0)
+                    (move-by 1.0 450.0 0.0)
+                    (move-by 1.0 0.0 -450.0)
+                    (move-by 1.0 -450.0 0.0))
+              :repeat :forever)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (visit root))
+
+;; (run-test 'move-by-test)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

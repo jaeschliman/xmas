@@ -269,16 +269,24 @@
 (defmacro make-property-lerp-action (name (&rest descs))
   (let ((target (symbolicate name '-target))
         (make (symbolicate 'make- name)))
-    (flet ((init (desc)
-             (symbolicate name '-initial-value- (first desc)))
-           (tgt (desc)
-             (symbolicate name '-target-value- (first desc))))
+    (labels ((init (desc)
+               (symbolicate name '-initial-value- (first desc)))
+             (tgt (desc)
+               (symbolicate name '-target-value- (first desc)))
+             (delta (desc)
+               (symbolicate name '-delta- (first desc)))
+             (relative? (desc)
+               (not (null (getf desc :relative))))
+             (slot-name (desc)
+               (if (relative? desc)
+                   (symbolicate 'delta- (first desc))
+                   (symbolicate 'target-value- (first desc)))))
       `(progn
          (defstruct (,name (:include finite-time-action))
            ,@(loop for desc in descs append
                   (list
                    (symbolicate 'initial-value- (first desc))
-                   (symbolicate 'target-value- (first desc)))))
+                   (slot-name desc))))
          (defmethod start-with-target ((self ,name) target)
            (call-next-method)
            ,@(loop for desc in descs for init = (init desc)
@@ -292,18 +300,32 @@
                 collect
                   `(setf (,init self) (,property-name (,target self)))))
          (defmethod update ((self ,name) time)
-           ,@(loop for desc in descs for init = (init desc) for tgt = (tgt desc)
+           ,@(loop for desc in descs
+                for init = (init desc) for tgt = (tgt desc)
+                for delta = (delta desc)
                 for property-name = (first desc)
                 collect
-                  `(setf (,property-name (,target self))
-                        (lerp (,init self) (,tgt self) time))))
+                  (if (relative? desc)
+                      `(setf (,property-name (,target self))
+                             (+ (,init self) (* (,delta self) time)))
+                      `(setf (,property-name (,target self))
+                             (lerp (,init self) (,tgt self) time)))))
          (defact ,name (duration ,@(mapcar 'second descs))
            (,make :duration duration
                   ,@(loop for desc in descs
-                         for sym = (symbolicate 'target-value- (first desc))
-                         for kw = (intern (symbol-name sym) :keyword)
-                         append (list kw (second desc)))
-                  ))))))
+                       for sym = (slot-name desc)
+                       for kw = (intern (symbol-name sym) :keyword)
+                       append (list kw (second desc)))))))))
+
+
+(make-property-lerp-action move-by ((xmas.node:x x :relative t)
+                                    (xmas.node:y y :relative t)))
+
+(make-property-lerp-action move-by-x ((xmas.node:x x :relative t)))
+(make-property-lerp-action move-by-y ((xmas.node:y y :relative t)))
+
+(make-property-lerp-action move-to ((xmas.node:x x)
+                                    (xmas.node:y y)))
 
 (make-property-lerp-action scale-x-to ((xmas.node:scale-x scale-x)))
 (make-property-lerp-action scale-y-to ((xmas.node:scale-y scale-y)))
@@ -337,69 +359,6 @@
 
 (defact rotate-by (duration delta)
   (make-rotate-by :duration duration :delta delta))
-
-(defstruct (move-by (:include finite-time-action))
-  delta-x delta-y
-  initial-x initial-y)
-
-(defmethod start-with-target ((self move-by) target)
-  (call-next-method)
-  (setf (move-by-initial-x self) (xmas.node:x target))
-  (setf (move-by-initial-y self) (xmas.node:y target)))
-
-(defmethod reset ((self move-by))
-  (call-next-method)
-  (setf (move-by-initial-x self) (xmas.node:x (move-by-target self)))
-  (setf (move-by-initial-y self) (xmas.node:y (move-by-target self))))
-
-(defmethod update ((self move-by) time)
-  (with-struct (move-by- initial-x delta-x initial-y delta-y target) self
-    (setf (xmas.node:x target) (+ initial-x (* time delta-x)))
-    (setf (xmas.node:y target) (+ initial-y (* time delta-y)))))
-
-(defact move-by (duration x y)
-  (make-move-by :duration duration :delta-x x :delta-y y))
-
-(make-property-lerp-action move-to ((xmas.node:x x)
-                                    (xmas.node:y y)))
-
-(defstruct (move-by-x (:include finite-time-action))
-  delta-x 
-  initial-x)
-
-(defmethod start-with-target ((self move-by-x) target)
-  (call-next-method)
-  (setf (move-by-x-initial-x self) (xmas.node:x target)))
-
-(defmethod reset ((self move-by-x))
-  (call-next-method)
-  (setf (move-by-x-initial-x self) (xmas.node:x (move-by-x-target self))))
-
-(defmethod update ((self move-by-x) time)
-  (with-struct (move-by-x- target initial-x delta-x) self
-    (setf (xmas.node:x target) (+ initial-x (* time delta-x)))))
-
-(defact move-by-x (duration x)
-  (make-move-by-x :duration duration :delta-x x))
-
-(defstruct (move-by-y (:include finite-time-action))
-  delta-y 
-  initial-y)
-
-(defmethod start-with-target ((self move-by-y) target)
-  (call-next-method)
-  (setf (move-by-y-initial-y self) (xmas.node:y target)))
-
-(defmethod reset ((self move-by-y))
-  (call-next-method)
-  (setf (move-by-y-initial-y self) (xmas.node:y (move-by-y-target self))))
-
-(defmethod update ((self move-by-y) time)
-  (with-struct (move-by-y- target initial-y delta-y) self
-    (setf (xmas.node:y target) (+ initial-y (* time delta-y)))))
-
-(defact move-by-y (duration y)
-  (make-move-by-y :duration duration :delta-y y))
 
 (defstruct (fade-in (:include finite-time-action)))
 
