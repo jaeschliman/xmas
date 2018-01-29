@@ -266,6 +266,48 @@
 ;; ======================================================================
 ;; finite time actions
 
+(defmacro make-property-lerp-action (name (&rest descs))
+  (let ((target (symbolicate name '-target))
+        (make (symbolicate 'make- name)))
+    (flet ((init (desc)
+             (symbolicate name '-initial-value- (first desc)))
+           (tgt (desc)
+             (symbolicate name '-target-value- (first desc))))
+      `(progn
+         (defstruct (,name (:include finite-time-action))
+           ,@(loop for desc in descs append
+                  (list
+                   (symbolicate 'initial-value- (first desc))
+                   (symbolicate 'target-value- (first desc)))))
+         (defmethod start-with-target ((self ,name) target)
+           (call-next-method)
+           ,@(loop for desc in descs for init = (init desc)
+                for property-name = (first desc)
+                collect
+                  `(setf (,init self) (,property-name target))))
+         (defmethod reset ((self ,name))
+           (call-next-method)
+           ,@(loop for desc in descs for init = (init desc)
+                for property-name = (first desc)
+                collect
+                  `(setf (,init self) (,property-name (,target self)))))
+         (defmethod update ((self ,name) time)
+           ,@(loop for desc in descs for init = (init desc) for tgt = (tgt desc)
+                for property-name = (first desc)
+                collect
+                  `(setf (,property-name (,target self))
+                        (lerp (,init self) (,tgt self) time))))
+         (defact ,name (duration ,@(mapcar 'second descs))
+           (,make :duration duration
+                  ,@(loop for desc in descs
+                         for sym = (symbolicate 'target-value- (first desc))
+                         for kw = (intern (symbol-name sym) :keyword)
+                         append (list kw (second desc)))
+                  ))))))
+
+(make-property-lerp-action scale-x-to ((xmas.node:scale-x scale-x)))
+(make-property-lerp-action scale-y-to ((xmas.node:scale-y scale-y)))
+
 (defstruct (delay (:include finite-time-action)))
 
 (defmethod update ((self delay) time)
@@ -318,36 +360,8 @@
 (defact move-by (duration x y)
   (make-move-by :duration duration :delta-x x :delta-y y))
 
-(defstruct (move-to (:include finite-time-action))
-  target-x target-y
-  delta-x delta-y
-  initial-x initial-y)
-
-(defmethod start-with-target ((self move-to) target)
-  (call-next-method)
-  (let* ((x (xmas.node:x target))
-         (y (xmas.node:y target)))
-    (setf (move-to-initial-x self) x
-          (move-to-initial-y self) y
-          (move-to-delta-x self) (- (move-to-target-x self) x)
-          (move-to-delta-y self) (- (move-to-target-y self) y))))
-
-(defmethod reset ((self move-to))
-  (call-next-method)
-  (let* ((x (xmas.node:x (move-to-target self)))
-         (y (xmas.node:y (move-to-target self))))
-    (setf (move-to-initial-x self) x
-          (move-to-initial-y self) y
-          (move-to-delta-x self) (- (move-to-target-x self) x)
-          (move-to-delta-y self) (- (move-to-target-y self) y))))
-
-(defmethod update ((self move-to) time)
-  (with-struct (move-to- initial-x delta-x initial-y delta-y target) self
-    (setf (xmas.node:x target) (+ initial-x (* time delta-x)))
-    (setf (xmas.node:y target) (+ initial-y (* time delta-y)))))
-
-(defact move-to (duration x y)
-  (make-move-to :duration duration :target-x x :target-y y))
+(make-property-lerp-action move-to ((xmas.node:x x)
+                                    (xmas.node:y y)))
 
 (defstruct (move-by-x (:include finite-time-action))
   delta-x 
@@ -434,30 +448,6 @@
 
 (defact tint-to (duration r g b)
   (make-tint-to :duration duration :r r :g g :b b))
-
-(defmacro make-property-lerp-action (name property-name parameter-name)
-  (let ((init (symbolicate name '-initial-value))
-        (tgt  (symbolicate name '-target-value))
-        (target (symbolicate name '-target))
-        (make (symbolicate 'make- name)))
-    `(progn
-       (defstruct (,name (:include finite-time-action))
-         initial-value
-         target-value)
-       (defmethod start-with-target ((self ,name) target)
-         (call-next-method)
-         (setf (,init self) (,property-name target)))
-       (defmethod reset ((self ,name))
-         (call-next-method)
-         (setf (,init self) (,property-name (,target self))))
-       (defmethod update ((self ,name) time)
-         (setf (,property-name (,target self))
-               (lerp (,init self) (,tgt self) time)))
-       (defact ,name (duration ,parameter-name)
-         (,make :duration duration :target-value ,parameter-name)))))
-
-(make-property-lerp-action scale-x-to xmas.node:scale-x scale-x)
-(make-property-lerp-action scale-y-to xmas.node:scale-y scale-y)
 
 (defstruct (lerp-slot-to (:include finite-time-action))
   slot-name

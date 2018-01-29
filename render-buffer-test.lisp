@@ -669,5 +669,24 @@
 
 ;; (run-test 'dynamic-text-rendering)
 
+(deftest move-to-test (:width 500 :height 500)
+  :tags action move-to
+  :init
+  started := nil
+  root := (make-instance 'debug-node :x 25 :y 25)
+  (run-action root (list
+                    (move-to 1.0 25.0 475.0)
+                    (move-to 1.0 475.0 475.0)
+                    (move-to 1.0 475.0 25.0)
+                    (move-to 1.0 25.0 25.0))
+              :repeat :forever)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (visit root))
+
+(run-test 'move-to-test)
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
