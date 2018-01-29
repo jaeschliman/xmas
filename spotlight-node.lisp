@@ -19,8 +19,7 @@
   (draw-node-color self)
   (with-slots (radius texture) self
     (flet ((rect (x y w h) (xmas.render-buffer::draw-rect x y w h)))
-      (let* ((-r (- radius))
-             (d  (* 2.0 radius))
+      (let* ((d (* 2.0 radius))
              (width d)
              (height d)
              (hw radius)
@@ -28,12 +27,14 @@
              (full-width (content-width self))
              (full-height (content-height self))
              (w (* 0.5 (- full-width width)))
-             (h (* 0.5 (- full-height height))))
-        (draw-texture-at texture -r -r width height)
-        (rect (+ 0 hw)   (- 0 hh)   w          height)
-        (rect (- 0 hw w) (- 0 hh)   w          height)
-        (rect (- 0 hw w) (+ 0 hh)   full-width h)
-        (rect (- 0 hw w) (- 0 hh h) full-width h)))))
+             (h (* 0.5 (- full-height height)))
+             (cx (* 0.5 full-width))
+             (cy (* 0.5 full-height)))
+        (draw-texture-at texture (- cx radius) (- cy radius) width height)
+        (rect (+ cx hw)   (- cy hh)   w          height)
+        (rect (- cx hw w) (- cy hh)   w          height)
+        (rect (- cx hw w) (+ cy hh)   full-width h)
+        (rect (- cx hw w) (- cy hh h) full-width h)))))
 
 (defun make-inverted-circle-image (width height)
   (xmas.vecto-texture:vecto-image (:width width :height height)
@@ -60,6 +61,7 @@
                          :content-width 1000 :content-height 1000
                          :texture texture
                          :radius 0.0
+                         :anchor-x 0.5 :anchor-y 0.5
                          :color (vector 0.0 0.0 0.0))
   (run-action root (list
                     (lerp-slot-to 1.0 'radius (* 250 (sqrt 2.0)))
