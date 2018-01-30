@@ -133,6 +133,8 @@
      (lambda ()
        (contents-will-unmount contents display)
        (unmount-contents contents display))))
+  (xmas.render-buffer:cleanup-render-buffer
+   (xmas.display:display-renderbuffer display))
   (setf (xmas.display:native-view display) nil
         (xmas.display:native-window display) nil))
 
