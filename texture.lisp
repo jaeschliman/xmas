@@ -30,7 +30,7 @@
 (in-package :xmas.texture)
 
 (defstruct texture
-  (id 0 :type (unsigned-byte 32))
+  (id nil :type (or null (unsigned-byte 32)))
   (width  0.0 :type single-float)
   (height 0.0 :type single-float)
   path)
