@@ -28,14 +28,14 @@
   (let ((big (make-instance 'rect :content-width 20.0 :content-height 20.0
                             :opacity 0.5
                             :x x :y y :color (apply 'vector (first colors))))
-        (reflector  (make-instance 'reflector-node :x 25 :y 25 :reflection-count 12))
-        (reflector2 (make-instance 'reflector-node :x 25 :y 25 :reflection-count 4))
+        (reflector  (make-instance 'reflector-node :x 25.0 :y 25.0 :reflection-count 12))
+        (reflector2 (make-instance 'reflector-node :x 25.0 :y 25.0 :reflection-count 4))
         (med (make-instance 'rect :content-width 10.0 :content-height 10.0
                             :opacity 0.5
-                            :x 25 :y 75 :color (apply 'vector (first colors))))
+                            :x 25.0 :y 75.0 :color (apply 'vector (first colors))))
         (small (make-instance 'rect :content-width 5.0 :content-height 5.0
                               :opacity 0.8
-                              :x 55 :y 15 :color (apply 'vector (first colors)))))
+                              :x 55.0 :y 15.0 :color (apply 'vector (first colors)))))
     (flet ((cycle (node)
              (run-action node (list
                                (apply #'tint-to 1.77 (pop colors))
@@ -78,8 +78,8 @@
 (deftest reflector-node (:width 500 :height 500 :should-clear nil)
   :init
   started := nil
-  root := (make-instance 'reflector-node :x 250 :y 250 :reflection-count 5)
-  wash := (make-instance 'rect :content-width 500 :content-height 500 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 10.0))
+  root := (make-instance 'reflector-node :x 250.0 :y 250.0 :reflection-count 5)
+  wash := (make-instance 'rect :content-width 500.0 :content-height 500.0 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 10.0))
   colors := (circular-list
              (list 1.0 0.0 0.0)
              (list 1.0 1.0 0.0)
@@ -87,9 +87,9 @@
              (list 0.0 1.0 1.0)
              (list 0.0 0.0 1.0)
              (list 1.0 0.0 1.0))
-  r1 := (make-rect 50 20 colors)
-  r2 := (make-rect 50 0 colors)
-  r3 := (make-rect 50 40 colors)
+  r1 := (make-rect 50.0 20.0 colors)
+  r2 := (make-rect 50.0 0.0 colors)
+  r3 := (make-rect 50.0 40.0 colors)
   (run-action r1 (list
                   (move-by-x 6.0 -100)
                   (move-by-x 6.0 100))
