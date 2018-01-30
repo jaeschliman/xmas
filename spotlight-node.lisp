@@ -54,17 +54,17 @@
   texture := (make-texture-from-rgba-vector 
               (make-inverted-circle-image width height)
               width height)
-  mouse-x := 250
-  mouse-y := 250
+  mouse-x := 250.0
+  mouse-y := 250.0
   root := (make-instance 'spotlight-node
                          :x mouse-x :y mouse-y
-                         :content-width 1000 :content-height 1000
+                         :content-width 1000.0 :content-height 1000.0
                          :texture texture
                          :radius 0.0
                          :anchor-x 0.5 :anchor-y 0.5
                          :color (vector 0.0 0.0 0.0))
   (run-action root (list
-                    (lerp-slot-to 1.0 'radius (* 250 (sqrt 2.0)))
+                    (lerp-slot-to 1.0 'radius (* 250.0 (sqrt 2.0)))
                     (delay 1.0)
                     (lerp-slot-to 1.0 'radius 0.0)
                     (delay 0.5))
