@@ -54,7 +54,6 @@
    #:add-children))
 (in-package :xmas.node)
 
-;;; honestly, this should probably be a struct...
 (defclass node ()
   ((x          :reader   x          :initarg  :x        :type single-float)
    (y          :reader   y          :initarg  :y        :type single-float)
@@ -66,13 +65,14 @@
    (skew-x     :reader   skew-x     :initarg  :skew-x   :type single-float)
    (skew-y     :reader   skew-y     :initarg  :skew-y   :type single-float)
    (rotation   :reader   rotation   :initarg  :rotation :type single-float)
-   (color                :accessor color                :initarg  :color)
-   (opacity              :accessor opacity              :initarg  :opacity)
-   (visible              :accessor visible              :initarg  :visible)
+
+   (color      :accessor color      :initarg  :color)
+   (opacity    :accessor opacity    :initarg  :opacity :type single-float)
+   (visible    :accessor visible    :initarg  :visible :type boolean)
 
    (anchor-x       :reader anchor-x       :initarg  :anchor-x :type single-float)
    (anchor-y       :reader anchor-y       :initarg  :anchor-y :type single-float)
-   (content-width  :reader content-width  :initarg  :content-width :type single-float)
+   (content-width  :reader content-width  :initarg  :content-width  :type single-float)
    (content-height :reader content-height :initarg  :content-height :type single-float)
 
    (parent               :accessor parent               :initform nil)
