@@ -7,8 +7,12 @@
   (gl:bind-texture :texture-2d 0)
   (gl:rect x y (+ x w) (+ y h)))
 
+;; I don't like this, but currently forcing the value stream to be all single-floats
+(defun bind-texture (id)
+  (gl:bind-texture :texture-2d (ceiling id)))
+
 (definstr simple-draw-gl-texture (id w h)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (gl:color 1 1 1)
   (let* ((x (- (/ w 2)))
          (y (- (/ h 2)))
@@ -25,7 +29,7 @@
       (gl:vertex    x  y2 0))))
 
 (definstr simple-draw-gl-texture-no-color (id w h)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (let* ((x (- (/ w 2)))
          (y (- (/ h 2)))
          (x2 (+ x w))
@@ -41,7 +45,7 @@
       (gl:vertex    x  y2 0))))
 
 (definstr draw-gl-texture-at (id x y w h)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (let* ((x2 (+ x w))
          (y2 (+ y h)))
     (gl:with-primitive :quads
@@ -55,7 +59,7 @@
       (gl:vertex    x  y2 0))))
 
 (definstr draw-gl-texture-at-tex-coords (id x y w h u0 v0 u1 v1)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (let* ((x2 (+ x w))
          (y2 (+ y h)))
     (gl:with-primitive :quads
@@ -69,7 +73,7 @@
       (gl:vertex    x  y2 0))))
 
 (definstr simple-draw-gl-with-tex-coords (id x y w h tx1 ty1 tx2 ty2)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (let* ((x (+ x (- (/ w 2))))
          (y (+ y (- (/ h 2))))
          (x2 (+ x w))
@@ -85,7 +89,7 @@
       (gl:vertex    x  y2 0))))
 
 (definstr simple-draw-gl-with-tex-coords-rotated (id x y w h tx1 ty1 tx2 ty2)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (rotatef w h)
   (let* ((x (+ x (- (/ w 2))))
          (y (+ y (- (/ h 2))))
@@ -102,7 +106,7 @@
       (gl:vertex    x  y  0))))
 
 (definstr draw-gl-with-tex-coords (id x y w h tx1 ty1 tx2 ty2)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (let* ((x2 (+ x w))
          (y2 (+ y h)))
     (gl:with-primitive :quads
@@ -116,7 +120,7 @@
       (gl:vertex    x  y2 0))))
 
 (definstr draw-gl-with-tex-coords-rotated (id x y w h tx1 ty1 tx2 ty2)
-  (gl:bind-texture :texture-2d id)
+  (bind-texture id)
   (rotatef w h)
   (let* ((x2 (+ x w))
          (y2 (+ y h)))

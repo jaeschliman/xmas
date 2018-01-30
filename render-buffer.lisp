@@ -5,8 +5,15 @@
 (defpackage :xmas.render-buffer (:use :cl :alexandria))
 (in-package :xmas.render-buffer)
 
-(defun make-buffer (&key (size 1024))
-  (make-array size :element-type t :adjustable t :fill-pointer 0))
+(defun make-adjustable-vector (&key (size 1024) (element-type t))
+  (make-array size :element-type element-type :adjustable t :fill-pointer 0))
+
+(defstruct buffer
+  (instrs (make-adjustable-vector :element-type 'fixnum))
+  (values (make-adjustable-vector :element-type 'single-float)))
+
+;; (defun make-buffer (&key (size 1024))
+;;   (make-array size :element-type t :adjustable t :fill-pointer 0))
 
 (defvar *read-buffer* nil)
 (defvar *write-buffer* nil)
@@ -33,10 +40,14 @@
                (render-buffer-back-buffer render-buffer))
       (setf (render-buffer-back-buffer-ready? render-buffer) nil))))
 
-(defun write! (val)
-  (vector-push-extend val *write-buffer*))
+(defun write-float! (val)
+  (vector-push-extend (coerce val 'single-float) (buffer-values *write-buffer*)))
+(defun write-instr! (val)
+  (vector-push-extend val (buffer-instrs *write-buffer*)))
+
 (defun reset-write-buffer! ()
-  (setf (fill-pointer *write-buffer*) 0))
+  (setf (fill-pointer (buffer-instrs *write-buffer*)) 0
+        (fill-pointer (buffer-values *write-buffer*)) 0))
 
 (defmacro with-writes-to-render-buffer ((buffer) &body body)
   (once-only (buffer)
@@ -54,10 +65,10 @@
          ,@body))))
 
 (defun read! ()
-  (prog1 (aref *read-buffer* *pc*)
+  (prog1 (aref (buffer-values *read-buffer*) *pc*)
     (incf *pc*)))
 
-(defvar *instr-table* (make-buffer))
+(defvar *instr-table*  (make-adjustable-vector :element-type t))
 (defvar *instr-counter* (length *instr-table*))
 
 (defmacro definstr (name (&rest args) &body body)
@@ -66,9 +77,9 @@
     (incf *instr-counter*)
     `(progn
        (defun ,name ,args
-         (write! ,instr)
+         (write-instr! ,instr)
          ,@(loop for arg in args collect
-                `(write! ,arg)))
+                `(write-float! ,arg)))
        (defun ,instr-name ()
          (let ,(loop for arg in args collect `(,arg (read!)))
            ,@body))
@@ -80,12 +91,12 @@
     (incf *instr-counter*)
     `(progn
        (defun ,name (,arg)
-         (write! ,instr)
-         (write! (length ,arg))
-         (loop for elt across ,arg do (write! elt)))
+         (write-instr! ,instr)
+         (write-float! (coerce (length ,arg) 'float))
+         (loop for elt across ,arg do (write-float! elt)))
        (defun ,instr-name ()
          (macrolet ((do-vec! ((sym) &body body)
-                      `(loop repeat (read!)
+                      `(loop repeat (ceiling (read!))
                           for ,sym = (read!) do
                             ,@body)))
            ,@body))
@@ -95,9 +106,7 @@
 (defun run! ()
   (unwind-protect
        (loop
-          with end = (length *read-buffer*)
-          while (< *pc* end)
-          for instr = (read!)
+          for instr across (buffer-instrs *read-buffer*)
           for fn = (aref *instr-table* instr)
           do (funcall fn))
     (setf *pc* 0)))
