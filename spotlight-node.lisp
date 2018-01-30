@@ -19,6 +19,7 @@
   (draw-node-color self)
   (with-slots (radius texture) self
     (flet ((rect (x y w h) (xmas.render-buffer::draw-rect x y w h)))
+      (declare (dynamic-extent (function rect)))
       (let* ((d (* 2.0 radius))
              (width d)
              (height d)
@@ -39,7 +40,8 @@
 (defun make-inverted-circle-image (width height)
   (xmas.vecto-texture:vecto-image (:width width :height height)
     (vecto:set-rgb-fill 1.0 1.0 1.0)
-    (vecto:centered-circle-path (* 0.5 width) (* 0.5 height) (1- (* 0.5 (min width height))))
+    (vecto:centered-circle-path (* 0.5 width) (* 0.5 height)
+                                (1- (* 0.5 (min width height))))
     (vecto:clip-path)
     (vecto:rectangle 0 0 width height)
     (vecto:fill-path)))
