@@ -835,7 +835,7 @@
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
             player (make-instance 'player
-                                  :z-order 1
+                                  :z-order 1.0
                                   :x 50.0
                                   :acceleration-y -100.0
                                   :sprite-frame frame
@@ -853,8 +853,8 @@
           (game-object-manager-set-active-area object-manager x y width height)
           (load-game-objects-from-tmx tmx object-manager tile-table)))
       (if-let (start (gethash start-position (game-object-manager-points object-manager)))
-        (setf (x player) (first start)
-              (bottom player) (second start))
+        (setf (x player) (float (first start))
+              (bottom player) (float (second start)))
         (progn
           (warn "starting position not found!")
           (setf (x player) 100.0)
