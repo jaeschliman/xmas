@@ -95,7 +95,7 @@
     (let ((tomato (make-instance
                 'tomato
                 :sprite-frame (get-frame sprites "tomato.png")
-                :x (random width)
+                :x (random (float width))
                 :y (+ 100.0 height)
                 :velocity-y -200.0
                 :acceleration-y -200.0)))
@@ -164,7 +164,7 @@
     (let ((jewel (make-instance
                 'jewel
                 :sprite-frame (get-frame sprites "jewel.png")
-                :x (random width)
+                :x (random (float width))
                 :y (+ 100.0 height)
                 :scale-x 1.35
                 :scale-y 1.35
@@ -219,7 +219,7 @@
     (let ((cat (make-instance
                 'physics-sprite
                 :sprite-frame (get-frame sprites "throwcat.png")
-                :x (random width)
+                :x (random (float width))
                 :y (+ 100.0 height)
                 :scale-x 1.35
                 :scale-y 1.35
@@ -277,7 +277,7 @@
           (scale-x player) 1.25
           (scale-y player) 1.25
           (x player) (/ width 2.0)
-          (y player) 100)
+          (y player) 100.0)
     (add-child root player)
     (keep-adding-cats self)
     (keep-adding-tomatoes self)
@@ -305,7 +305,7 @@
           (setf (flip-x player) t))
         (when (key-down :right)
           (setf (flip-x player) nil))
-        (if (> (velocity-y player) 0.0 )
+        (if (> (velocity-y player) 0.0)
             (setf (acceleration-y player) rise-gravity)
             (setf (acceleration-y player) fall-gravity))
         (when (and (key-down :up) (can-jump player))
