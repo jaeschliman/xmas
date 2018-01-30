@@ -347,11 +347,11 @@
   frames  := (make-tileset-texture-frames tileset)
   :update
   (loop
-     with x = 100 with y = 250
+     with x = 100.0 with y = 250.0
      for frame across frames
      for i upfrom 0
      when frame
-     do (draw-texture-frame frame (+ x (* i 50)) y)))
+     do (draw-texture-frame frame (+ x (* i 50.0)) y)))
 
 ;; (run-test 'tilemap-test0)
 
@@ -363,7 +363,7 @@
   frames  := (make-tileset-texture-frames tileset)
   layer   := (first (map-layers map))
   :update
-  (draw-tmx-layer 250 250 
+  (draw-tmx-layer 250.0 250.0
      (tileset-tile-width tileset)
      (tileset-tile-height tileset)
      layer
@@ -386,9 +386,9 @@
   :tags node action-manager actions action-tags
   :init
   started := nil
-  n := (make-instance 'debug-node :x 250 :y 250)
-  (run-action n (list (move-by 3.0 -100.0 0)
-                      (move-by 3.0 100.0 0))
+  n := (make-instance 'debug-node :x 250.0 :y 250.0)
+  (run-action n (list (move-by 3.0 -100.0 0.0)
+                      (move-by 3.0 100.0 0.0))
               :repeat :forever :tag 'moving)
   (run-action n (rotate-by 5.0 360.0)
               :repeat :forever :tag 'rotating)
@@ -410,15 +410,15 @@
   (add-animation 'cat (/ 1.0 7.5) '("catwalk0.png" "catwalk1.png"))
   started := nil
   sprite := (make-instance 'sprite
-                           :x 250
-                           :y 250
+                           :x 250.0
+                           :y 250.0
                            :scale-x 2.0
                            :scale-y 2.0
                            :sprite-frame (get-frame "pickle.png")
                            :anchor-x 0.0
                            :anchor-y 0.0)
   (run-animation sprite 'cat :repeat :forever)
-  (setf (rotation sprite) -15)
+  (setf (rotation sprite) -15.0)
   :update
   (unless started
     (setf started t)
@@ -447,11 +447,11 @@
   nodes   := (loop repeat 100 collect
                 (let ((n (make-instance
                           'box
-                          :content-width 20
-                          :content-height 20
+                          :content-width 20.0
+                          :content-height 20.0
                           :opacity 0.5
-                          :x (random 500)
-                          :y (random 500)
+                          :x (random 500.0)
+                          :y (random 500.0)
                           :vx (- (/ (random 100) 100.0) 0.5)
                           :vy (- (/ (random 100) 100.0) 0.5))))
                   (prog1 n
@@ -516,12 +516,12 @@
                                (ay (/ (random 150) 100.0)))
            (let ((r (make-instance
                      'rect
-                     :content-width 40
-                     :content-height 40
+                     :content-width 40.0
+                     :content-height 40.0
                      :anchor-x ax
                      :anchor-y ay
-                     :x 250
-                     :y 250
+                     :x 250.0
+                     :y 250.0
                      :opacity 0.5)))
              (prog1 r
                (add-child root r)
@@ -532,8 +532,8 @@
           (c (make-rect)) (d (make-rect))
           (e (make-rect 0.0 0.0))
           (f (make-rect 0.5 0.5))
-          (top 450) (left 50)
-          (bottom 50) (right 450))
+          (top 450.0) (left 50.0)
+          (bottom 50.0) (right 450.0))
       ;; a b
       ;; c d 
       (setf
@@ -545,10 +545,10 @@
        (right d) right
        (bottom d) bottom
        (bottom c) bottom
-       (x e) 250
-       (y e) 250
-       (x f) 250
-       (y f) 250
+       (x e) 250.0
+       (y e) 250.0
+       (x f) 250.0
+       (y f) 250.0
        (rotation f) 0.0)))
   :update
   (unless started
@@ -562,15 +562,15 @@
   :tags sprite node anchor-point content-size
   :init
   (texture-packer-add-frames-from-file "./res/test.json")
-  sprite1 := (make-instance 'sprite :x 150 :y 250
+  sprite1 := (make-instance 'sprite :x 150.0 :y 250.0
                             :sprite-frame (get-frame "pickle.png"))
-  sprite2 := (make-instance 'sprite :x 250 :y 250
-                            :content-width 40
-                            :content-height 60
+  sprite2 := (make-instance 'sprite :x 250.0 :y 250.0
+                            :content-width 40.0
+                            :content-height 60.0
                             :sprite-frame (get-frame "pickle.png"))
-  sprite3 := (make-instance 'sprite :x 400 :y 250
-                            :content-width 100
-                            :content-height 150
+  sprite3 := (make-instance 'sprite :x 400.0 :y 250.0
+                            :content-width 100.0
+                            :content-height 150.0
                             :sprite-frame (get-frame "pickle.png"))
   :update
  (flet ((draw-it (s)
@@ -595,7 +595,7 @@
 (deftest tint-to-test (:width 500 :height 500)
   :tags actions tint-to scale-x-to
   :init
-  node := (make-instance 'debug-node :x 250 :y 250 :color (vector 1.0 0.0 0.0))
+  node := (make-instance 'debug-node :x 250.0 :y 250.0 :color (vector 1.0 0.0 0.0))
   started := nil
   (run-action node (list
                     (tint-to 1.0 0.0 1.0 0.0)
@@ -644,8 +644,8 @@
   texture := (make-texture-from-rgba-vector circle width height)
   :update
   (draw-texture-at texture
-                   (- 250 (* width 0.5))
-                   (- 250 (* height 0.5))
+                   (- 250.0 (* width 0.5))
+                   (- 250.0 (* height 0.5))
                    width height))
 
 ;; (run-test 'texture-from-vector)
@@ -673,7 +673,7 @@
   :tags action move-to
   :init
   started := nil
-  root := (make-instance 'debug-node :x 25 :y 25)
+  root := (make-instance 'debug-node :x 25.0 :y 25.0)
   (run-action root (list
                     (move-to 1.0 25.0 475.0)
                     (move-to 1.0 475.0 475.0)
@@ -692,7 +692,7 @@
   :tags action move-by
   :init
   started := nil
-  root := (make-instance 'debug-node :x 25 :y 25)
+  root := (make-instance 'debug-node :x 25.0 :y 25.0)
   (run-action root (list
                     (move-by 1.0 0.0 450.0)
                     (move-by 1.0 450.0 0.0)
