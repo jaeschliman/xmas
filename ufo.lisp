@@ -71,9 +71,9 @@
   (speed 50))
 
 (defun add-cow (ufo-game)
-  (let* ((width 500)
+  (let* ((width 500.0)
          (cow (make-instance 'abductable
-                             :x (+ width 100)
+                             :x (+ width 100.0)
                              :y (+ 30.0 (random 7))
                              :texture (get-texture "./cow.png"))))
     (with-struct (ufo-game- root-node cows) ufo-game
@@ -105,7 +105,7 @@
          (center-x (/ width 2.0))
          (center-y (/ height 2.0))
          (ufo (make-instance 'physics-sprite
-                             :z-order 1
+                             :z-order 1.0
                              :texture (get-texture "./ufo.png")))
          (beam (sprite-with-file "./beam.png"))
          (root (make-instance 'node))
@@ -139,9 +139,9 @@
           (opacity doom) 0.8
 
           (x buildings1) center-x
-          (y buildings1) 125
+          (y buildings1) 125.0
           (x buildings2) (+ center-x width)
-          (y buildings2) 125
+          (y buildings2) 125.0
 
           (ufo-game-building1 self) buildings1
           (ufo-game-building2 self) buildings2
@@ -172,7 +172,7 @@
      :repeat :forever)))
 
 (defun adjust-game-speed (ufo-game dt)
-  (move-towards! (ufo-game-speed ufo-game) 150 5 dt))
+  (move-towards! (ufo-game-speed ufo-game) 150.0 5 dt))
 
 (defun adjust-beam-opacity (ufo-game dt)
   (declare (ignorable dt))
@@ -203,8 +203,8 @@
       (when (< (x cow) min-x)
         (remove-cow ufo-game cow))
       (when (< (y cow) min-y)
-        (setf (acceleration-y cow) 0
-              (velocity-y cow) 0
+        (setf (acceleration-y cow) 0.0
+              (velocity-y cow) 0.0
               (y cow) min-y)))))
 
 (defun start-abducting-cow (cow)
@@ -249,8 +249,8 @@
                (move-towards! (velocity-x cow) 0.0 40.0 dt)
                (move-towards! (scale-x cow) 0.3 0.25 dt)
                (move-towards! (scale-y cow) 0.3 0.25 dt)
-               (move-towards! (y cow) y 40 dt)
-               (move-towards! (x cow) x 100 dt))
+               (move-towards! (y cow) y 40. dt)
+               (move-towards! (x cow) x 100.0 dt))
               ((is-being-abducted cow)
                (stop-abducting-cow cow)))))))))
 
