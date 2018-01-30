@@ -30,16 +30,20 @@
 (in-package :xmas.texture)
 
 (defstruct texture
-  id
- (width  0.0 :type single-float) 
- () (float ) (height 0.0 :type single-float) 
+  (id 0 :type (unsigned-byte 32))
+  (width  0.0 :type single-float)
+  (height 0.0 :type single-float)
   path)
 
 (defstruct texture-frame
-  texture tx1 ty1 tx2 ty2
+  texture
+  (tx1 0.0 :type single-float)
+  (ty1 0.0 :type single-float)
+  (tx2 0.0 :type single-float)
+  (ty2 0.0 :type single-float)
   (width 0.0 :type single-float)
   (height 0.0 :type single-float)
-  rotated)
+  (rotated nil :type boolean))
 
 (defun texture-frame (texture x y w h &key (flipped t) (rotated nil))
   (setf x (float x)
