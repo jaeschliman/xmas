@@ -707,5 +707,24 @@
 
 ;; (run-test 'move-by-test)
 
+(deftest batched-writes-0 (:width 500 :height 500)
+  :tags
+  :init
+  tex := (get-texture "./bayarea.png")
+  :update
+  (draw-texture-at tex 100.0 350.0 50.0 50.0)
+  (xmas.render-buffer::disable-texture)
+  (xmas.render-buffer::with-2d-triangles ()
+    (xmas.render-buffer::vert 10.0 10.0)
+    (xmas.render-buffer::vert 200.0 200.0)
+    (xmas.render-buffer::vert 200.0 10.0)
+
+    (xmas.render-buffer::vert 450.0 10.0)
+    (xmas.render-buffer::vert 250.0 200.0)
+    (xmas.render-buffer::vert 250.0 10.0))
+  (draw-texture-at tex 250.0 350.0 50.0 50.0))
+
+;; (run-test 'batched-writes-0)
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

@@ -104,6 +104,18 @@
 (defun write-instr! (val)
   (vector-push-extend val (buffer-instrs *write-buffer*)))
 
+(defun current-write-position ()
+  (adjustable-static-vector-fill-pointer (buffer-values *write-buffer*)))
+
+(defun write-float-at-index! (val index)
+  (setf (aref (adjustable-static-vector-vector (buffer-values *write-buffer*)) index)
+        (coerce val 'single-float)))
+
+(defun current-read-pointer ()
+  (let ((vec (adjustable-static-vector-vector (buffer-values *read-buffer*)))
+        (pos *pc*))
+    (static-vectors:static-vector-pointer vec :offset (* pos 4))))
+
 (defun reset-write-buffer! ()
   (setf (fill-pointer (buffer-instrs *write-buffer*)) 0
         (adjustable-static-vector-fill-pointer (buffer-values *write-buffer*)) 0))
@@ -128,8 +140,38 @@
           (adjustable-static-vector-vector (buffer-values *read-buffer*)) *pc*)
     (incf *pc*)))
 
+(defun call-with-batched-writes (instruction fn)
+  (write-instr! instruction)
+  (let ((start (current-write-position)))
+    (write-float! 0.0)
+    (unwind-protect (funcall fn)
+      (write-float-at-index! (- (current-write-position) start) start))))
+
+(defun call-with-batched-read-pointer (fn)
+  (let* ((count (ceiling (read!)))
+         (ptr   (current-read-pointer)))
+    (unwind-protect (funcall fn count ptr)
+      (incf *pc* (1- count))))) ;;TODO: not 100% on this 1-, but it works...
+
+(defmacro with-batched-writes ((instr) &body body)
+  (with-gensyms (fn)
+    `(let ((,fn (lambda () ,@body)))
+       (declare (dynamic-extent ,fn))
+       (call-with-batched-writes ,instr ,fn))))
+
+(defmacro with-batched-read-pointer ((count-var ptr-var) &body body)
+  (with-gensyms (fn)
+    `(let ((,fn (lambda (,count-var ,ptr-var) ,@body)))
+       (declare (dynamic-extent ,fn))
+       (call-with-batched-read-pointer ,fn))))
+
 (defvar *instr-table*  (make-adjustable-vector :element-type t))
 (defvar *instr-counter* (length *instr-table*))
+
+(defun add-instruction (fn)
+  (prog1 *instr-counter*
+    (vector-push-extend fn *instr-table*)
+    (incf *instr-counter*)))
 
 (defmacro definstr (name (&rest args) &body body)
   (let ((instr-name (symbolicate '%instr- name))
