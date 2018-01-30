@@ -28,10 +28,10 @@
         (loop repeat count 
            for entry = (read s)
            for char = (getf entry :char)
-           for x = (getf entry :x)
-           for y = (getf entry :y)
-           for width = (getf entry :width)
-           for height = (getf entry :height)
+           for x = (float (getf entry :x))
+           for y = (float (getf entry :y))
+           for width = (float (getf entry :width))
+           for height = (float (getf entry :height))
            for frame = (texture-frame texture x y width height)
            do
              (setf (gethash char table) frame))))))
