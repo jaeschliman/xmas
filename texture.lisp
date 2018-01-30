@@ -30,18 +30,28 @@
 (in-package :xmas.texture)
 
 (defstruct texture
-  id width height path)
+  id
+ (width  0.0 :type single-float) 
+ () (float ) (height 0.0 :type single-float) 
+  path)
 
 (defstruct texture-frame
-  texture tx1 ty1 tx2 ty2 width height rotated)
+  texture tx1 ty1 tx2 ty2
+  (width 0.0 :type single-float)
+  (height 0.0 :type single-float)
+  rotated)
 
 (defun texture-frame (texture x y w h &key (flipped t) (rotated nil))
+  (setf x (float x)
+        y (float y)
+        w (float w)
+        h (float h))
   (when rotated (rotatef w h))
   (let* ((width (float (texture-width texture)))
          (height (float (texture-height texture)))
          (y (if flipped (- h y) y)) ;; flip y coord
-         (x2 (+ x w))
-         (y2 (+ y h))
+         (x2 (float (+ x w)))
+         (y2 (float (+ y h)))
          (tx1 (/ x  width))
          (ty1 (/ y  height))
          (tx2 (/ x2 width))
@@ -90,13 +100,13 @@
       (gl:tex-image-2d :texture-2d 0 :rgba
                        w h 0 fmt
                        :unsigned-byte dat)
-      (setf (texture-width texture) w
-            (texture-height texture) h
+      (setf (texture-width texture) (float w)
+            (texture-height texture) (float h)
             (texture-id texture) id))))
 
 (defun gl-load-texture-image-rep (texture rep format &key wrap)
-  (let ((w (texture-width texture))
-        (h (texture-height texture))
+  (let ((w (ceiling (texture-width texture)))
+        (h (ceiling (texture-height texture)))
         (dat (#/bitmapData rep)))
     (let ((id (car (gl:gen-textures 1))))
       (gl:enable :texture-2d)
@@ -114,8 +124,8 @@
 
 (defun gl-load-texture-from-rgba-vector (texture vector &key wrap)
   (let ((id (car (gl:gen-textures 1)))
-        (width (texture-width texture))
-        (height (texture-height texture)))
+        (width (ceiling (texture-width texture)))
+        (height (ceiling (texture-height texture))))
     (gl:enable :texture-2d)
     (gl:bind-texture :texture-2d id)
     (gl:tex-parameter :texture-2d :texture-min-filter :linear)
@@ -137,8 +147,8 @@
       (multiple-value-bind (rep width height format)
           (load-image-rep pathname)
         (let ((texture (make-texture :path pathname
-                                     :width width
-                                     :height height)))
+                                     :width (float width)
+                                     :height (float height))))
           (#/retain rep)
           (xmas.display:display-enqueue-for-gl
            display
@@ -150,8 +160,8 @@
 (defun make-texture-from-rgba-vector (vector width height &key wrap)
   (when-let (mgr *texture-manager*)
     (let ((texture (make-texture :path nil
-                                 :width width
-                                 :height height)))
+                                 :width (float width)
+                                 :height (float height))))
       (xmas.display:display-enqueue-for-gl
        (texture-manager-display mgr)
        (lambda () (gl-load-texture-from-rgba-vector texture vector :wrap wrap)))

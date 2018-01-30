@@ -9,8 +9,8 @@
 (defclass sprite (node)
   ((sprite-frame :accessor sprite-frame :initarg :sprite-frame))
   (:default-initargs
-   :content-width nil :content-height nil
-   :anchor-x 0.5 :anchor-y 0.5))
+   :anchor-x 0.5 :anchor-y 0.5
+   :content-width 0.0 :content-height 0.0))
 
 (defmethod initialize-instance ((self sprite)
                                 &key sprite-frame content-width content-height
@@ -19,9 +19,9 @@
   (let ((width (texture-frame-width sprite-frame))
         (height (texture-frame-height sprite-frame))
         (rotated (texture-frame-rotated sprite-frame)))
-    (unless content-width
+    (when (zerop content-width)
       (setf (content-width self) (if rotated height width)))
-    (unless content-height
+    (when (zerop content-height)
       (setf (content-height self) (if rotated width height)))))
 
 (defun draw-node-color (node)

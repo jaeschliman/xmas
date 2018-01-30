@@ -221,7 +221,7 @@
                    (lookup-name (intern (symbol-name name) :keyword)))
                `(progn
                   (setf (gethash ,lookup-name *easing-functions*) ',fname)
-                  (defun ,easefn (,var) ,@body)
+                  (defun ,easefn (,var) (coerce (progn,@body) 'single-float))
                   (defun ,fname (action)
                     (make-ease :duration (finite-time-action-duration action)
                                :function (function ,easefn)

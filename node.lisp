@@ -56,24 +56,24 @@
 
 ;;; honestly, this should probably be a struct...
 (defclass node ()
-  ((x                    :reader   x                    :initarg  :x)
-   (y                    :reader   y                    :initarg  :y)
-   (z-order              :reader   z-order              :initarg  :z-order)
-   (scale-x              :reader   scale-x              :initarg  :scale-x)
-   (scale-y              :reader   scale-y              :initarg  :scale-y)
-   (flip-x               :reader   flip-x               :initarg  :flip-x)
-   (flip-y               :reader   flip-y               :initarg  :flip-y)
-   (skew-x               :reader   skew-x               :initarg  :skew-x)
-   (skew-y               :reader   skew-y               :initarg  :skew-y)
-   (rotation             :reader   rotation             :initarg  :rotation)
+  ((x          :reader   x          :initarg  :x        :type single-float)
+   (y          :reader   y          :initarg  :y        :type single-float)
+   (z-order    :reader   z-order    :initarg  :z-order  :type single-float)
+   (scale-x    :reader   scale-x    :initarg  :scale-x  :type single-float)
+   (scale-y    :reader   scale-y    :initarg  :scale-y  :type single-float)
+   (flip-x     :reader   flip-x     :initarg  :flip-x   :type boolean)
+   (flip-y     :reader   flip-y     :initarg  :flip-y   :type boolean)
+   (skew-x     :reader   skew-x     :initarg  :skew-x   :type single-float)
+   (skew-y     :reader   skew-y     :initarg  :skew-y   :type single-float)
+   (rotation   :reader   rotation   :initarg  :rotation :type single-float)
    (color                :accessor color                :initarg  :color)
    (opacity              :accessor opacity              :initarg  :opacity)
    (visible              :accessor visible              :initarg  :visible)
 
-   (anchor-x             :reader anchor-x             :initarg  :anchor-x)
-   (anchor-y             :reader anchor-y             :initarg  :anchor-y)
-   (content-width        :reader content-width        :initarg  :content-width)
-   (content-height       :reader content-height       :initarg  :content-height)
+   (anchor-x       :reader anchor-x       :initarg  :anchor-x :type single-float)
+   (anchor-y       :reader anchor-y       :initarg  :anchor-y :type single-float)
+   (content-width  :reader content-width  :initarg  :content-width :type single-float)
+   (content-height :reader content-height :initarg  :content-height :type single-float)
 
    (parent               :accessor parent               :initform nil)
    (children             :accessor children             :initform nil)
@@ -85,7 +85,7 @@
    (pending-actions      :accessor pending-actions      :initform nil))
   (:default-initargs
    :x        0.0 :y       0.0
-   :z-order  0
+   :z-order  0.0
    :scale-x  1.0 :scale-y 1.0
    :flip-x   nil :flip-y  nil
    :skew-x   0.0 :skew-y  0.0
