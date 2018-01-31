@@ -731,11 +731,19 @@
   :init
   width := 800.0
   height := 800.0
+  diagonal := (coerce (sqrt (+ (* width width)
+                               (* height height)))
+                      'single-float)
+  outset-x := (* -0.5 (- diagonal width))
+  outset-y := (* -0.5 (- diagonal height))
   tex := (get-texture "./bayarea.png")
   rotation := 0.0
+  counter := 0
   :update
-  (incf rotation (* 70.0 dt))
+  (incf rotation (* 7.0 dt))
   (setf rotation (mod rotation 360.0))
+  (incf counter (* 0.25 dt))
+  (setf counter (mod counter 8.0))
   (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
   (xmas.render-buffer::push-matrix)
   (xmas.render-buffer::translate-scale-rotate-translate (* width 0.5)
@@ -757,19 +765,21 @@
                  (xmas.render-buffer::vert x2 y 1.0 1.0))))
         (declare (dynamic-extent #'draw-texture))
         (loop
-           with limit = 5
+           with limit = (1+ (floor counter))
            for i below limit do
              (loop
                 with count = (1+ (* 5 i))
                 with inset = (* i 100.0)
-                with width = (/ (- 800.0 inset) count)
-                with height = (/ (- 800.0 inset) count)
+                with width = (/ (- diagonal inset) count)
+                with height = (/ (- diagonal inset) count)
                 with offs = (* inset 0.5)
                 for x below count do
                   (loop for y below count do
-                       (draw-texture (+ (* x width) offs)
-                                     (+ (* y height) offs)
-                                     width height)))))))
+                       (loop for div from 1 upto 3 do
+                            (draw-texture (+ (* x width) offs outset-x)
+                                          (+ (* y height) offs outset-y)
+                                          (/ width div)
+                                          (/ height div)))))))))
   (xmas.render-buffer::pop-matrix))
 
 ;; (run-test 'batched-writes-1)
