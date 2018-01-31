@@ -1,4 +1,4 @@
-(defpackage xmas.tmx-renderer (:use :cl :alexandria)
+(defpackage xmas.tmx-renderer (:use :cl :alexandria :xmas.texture)
             (:export
              #:draw-tmx-layer
              #:tmx-renderer
@@ -31,16 +31,33 @@
          (cols (- end-x start-x))
          (rows (- end-y start-y))
          (origin-x (- at-x (/ (* tile-width layer-width) 2.0)))
-         (origin-y (- (+ at-y (/ (* tile-height layer-height) 2.0)) tile-width)))
-    (dotimes (row rows)
-      (dotimes (col cols)
-        (when-let (frame (aref frames (xmas.tmx-reader:layer-gid-at
-                                       layer
-                                       (+ start-x col)
-                                       (+ start-y row))))
-          (let ((x (+ origin-x (* (+ start-x col) tile-width)))
-                (y (- origin-y (* (+ start-y row) tile-height))))
-            (xmas.draw:draw-texture-frame-at frame x y tile-width tile-height)))))))
+         (origin-y (- (+ at-y (/ (* tile-height layer-height) 2.0)) tile-width))
+         (frame1 (aref frames 1))
+         (texture (texture-frame-texture frame1)))
+    (when-let (id (texture-id texture))
+      (xmas.render-buffer::with-textured-2d-triangles (id)
+        (flet ((draw-frame-at (frame x y w h)
+                 (let ((tx1 (texture-frame-tx1 frame))
+                       (tx2 (texture-frame-tx2 frame))
+                       (ty1 (texture-frame-ty1 frame))
+                       (ty2 (texture-frame-ty2 frame))
+                       (x2  (+ x w))
+                       (y2  (+ y h)))
+                   (xmas.render-buffer::vert x   y tx1 ty2)
+                   (xmas.render-buffer::vert x  y2 tx1 ty1)
+                   (xmas.render-buffer::vert x2 y2 tx2 ty1)
+                   (xmas.render-buffer::vert x2 y2 tx2 ty1)
+                   (xmas.render-buffer::vert x   y tx1 ty2)
+                   (xmas.render-buffer::vert x2  y tx2 ty2))))
+          (dotimes (row rows)
+            (dotimes (col cols)
+              (when-let (frame (aref frames (xmas.tmx-reader:layer-gid-at
+                                             layer
+                                             (+ start-x col)
+                                             (+ start-y row))))
+                (let ((x (+ origin-x (* (+ start-x col) tile-width)))
+                      (y (- origin-y (* (+ start-y row) tile-height))))
+                  (draw-frame-at frame x y tile-width tile-height))))))))))
 
 (defun make-tileset-texture-frames (tileset)
   (let* ((texture (xmas.texture:get-texture (xmas.tmx-reader:tileset-source tileset)))
