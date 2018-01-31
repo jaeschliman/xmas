@@ -172,20 +172,15 @@
   (gl:rotate r 0.0 0.0 1.0)
   (gl:translate x2 y2 0.0))
 
-
-(defun %gl-draw-2d-triangles-verts-only ()
-  (with-batched-read-pointer (count ptr)
+(definstr-batched with-2d-triangles ()
+  (:write
+   `(flet ((vert (x y)
+             (write-float! x)
+             (write-float! y)))
+      (declare (dynamic-extent (function vert)))
+      ,@body))
+  (:read
     (gl:enable-client-state :vertex-array)
     (%gl:vertex-pointer 2 :float (* 4 2) ptr)
     (gl:draw-arrays :triangles 0 (/ count 2))
     (gl:disable-client-state :vertex-array)))
-
-(defparameter *my-instr (add-instruction #'%gl-draw-2d-triangles-verts-only))
-
-(defmacro with-2d-triangles (() &body body)
-  `(with-batched-writes (*my-instr)
-     (flet ((vert (x y)
-              (write-float! x)
-              (write-float! y)))
-       (declare (dynamic-extent (function vert)))
-       ,@body)))

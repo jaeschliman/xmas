@@ -204,6 +204,17 @@
            ,@body))
        (vector-push-extend #',instr-name *instr-table*))))
 
+(defmacro definstr-batched (name write-args &body body)
+  (let ((instr-name (symbolicate '%instr- name))
+        (instr *instr-counter*))
+    (incf *instr-counter*)
+    `(progn
+       (defmacro ,name (,write-args &body body) ;;TODO: use args
+         `(with-batched-writes (,,instr) ,,@(cdr (assoc :write body))))
+       (defun ,instr-name ()
+         (with-batched-read-pointer (count ptr)
+           ,@(cdr (assoc :read body))))
+       (vector-push-extend #',instr-name *instr-table*))))
 
 (defun run! ()
   (unwind-protect
