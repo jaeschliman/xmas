@@ -180,7 +180,27 @@
       (declare (dynamic-extent (function vert)))
       ,@body))
   (:read
-    (gl:enable-client-state :vertex-array)
-    (%gl:vertex-pointer 2 :float (* 4 2) ptr)
-    (gl:draw-arrays :triangles 0 (/ count 2))
-    (gl:disable-client-state :vertex-array)))
+   (gl:enable-client-state :vertex-array)
+   (%gl:vertex-pointer 2 :float (* 4 2) ptr)
+   (gl:draw-arrays :triangles 0 (/ count 2))
+   (gl:disable-client-state :vertex-array)))
+
+(definstr-batched with-textured-2d-triangles (texture-id)
+  (:write
+   `(flet ((vert (x y tx ty)
+             (write-float! x)
+             (write-float! y)
+             (write-float! tx)
+             (write-float! ty)))
+      (declare (dynamic-extent (function vert)))
+      ,@body))
+  (:read
+   (bind-texture texture-id)
+   (gl:enable-client-state :vertex-array)
+   (gl:enable-client-state :texture-coord-array)
+   (%gl:vertex-pointer 2 :float (* 4 2 2) ptr)
+   (%gl:tex-coord-pointer 2 :float (* 4 2 2) (cffi:inc-pointer ptr (* 4 2)))
+   (gl:draw-arrays :triangles 0 (/ count 4))
+   (gl:disable-client-state :texture-coord-array)
+   (gl:disable-client-state :vertex-array)))
+

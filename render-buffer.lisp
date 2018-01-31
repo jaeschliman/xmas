@@ -210,10 +210,13 @@
     (incf *instr-counter*)
     `(progn
        (defmacro ,name (,write-args &body body) ;;TODO: use args
-         `(with-batched-writes (,,instr) ,,@(cdr (assoc :write body))))
+         `(progn
+            ,,@(mapcar (lambda (v) ``(write-float! ,,v)) write-args)
+            (with-batched-writes (,,instr) ,,@(cdr (assoc :write body)))))
        (defun ,instr-name ()
-         (with-batched-read-pointer (count ptr)
-           ,@(cdr (assoc :read body))))
+         (let ,(mapcar (lambda (v) `(,v (read!))) write-args)
+           (with-batched-read-pointer (count ptr)
+             ,@(cdr (assoc :read body)))))
        (vector-push-extend #',instr-name *instr-table*))))
 
 (defun run! ()

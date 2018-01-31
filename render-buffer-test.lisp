@@ -708,7 +708,7 @@
 ;; (run-test 'move-by-test)
 
 (deftest batched-writes-0 (:width 500 :height 500)
-  :tags
+  :tags batched pointers
   :init
   tex := (get-texture "./bayarea.png")
   :update
@@ -725,6 +725,54 @@
   (draw-texture-at tex 250.0 350.0 50.0 50.0))
 
 ;; (run-test 'batched-writes-0)
+
+(deftest batched-writes-1 (:width 800 :height 800)
+  :tags texture batched pointers
+  :init
+  width := 800.0
+  height := 800.0
+  tex := (get-texture "./bayarea.png")
+  rotation := 0.0
+  :update
+  (incf rotation (* 70.0 dt))
+  (setf rotation (mod rotation 360.0))
+  (xmas.render-buffer::set-color 1.0 1.0 1.0 1.0)
+  (xmas.render-buffer::push-matrix)
+  (xmas.render-buffer::translate-scale-rotate-translate (* width 0.5)
+                                                        (* height 0.5)
+                                                        1.0 1.0
+                                                        rotation
+                                                        (* width -0.5)
+                                                        (* height -0.5))
+  (when-let (id (texture-id tex))
+    (xmas.render-buffer::with-textured-2d-triangles (id)
+      (flet ((draw-texture (x y w h)
+               (let ((x2 (+ x w))
+                     (y2 (+ y h)))
+                 (xmas.render-buffer::vert x y 0.0 1.0)
+                 (xmas.render-buffer::vert x y2 0.0 0.0)
+                 (xmas.render-buffer::vert x2 y2 1.0 0.0)
+                 (xmas.render-buffer::vert x2 y2 1.0 0.0)
+                 (xmas.render-buffer::vert x y 0.0 1.0)
+                 (xmas.render-buffer::vert x2 y 1.0 1.0))))
+        (declare (dynamic-extent #'draw-texture))
+        (loop
+           with limit = 5
+           for i below limit do
+             (loop
+                with count = (1+ (* 5 i))
+                with inset = (* i 100.0)
+                with width = (/ (- 800.0 inset) count)
+                with height = (/ (- 800.0 inset) count)
+                with offs = (* inset 0.5)
+                for x below count do
+                  (loop for y below count do
+                       (draw-texture (+ (* x width) offs)
+                                     (+ (* y height) offs)
+                                     width height)))))))
+  (xmas.render-buffer::pop-matrix))
+
+;; (run-test 'batched-writes-1)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
