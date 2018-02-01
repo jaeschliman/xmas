@@ -51,7 +51,8 @@
    #:node-contains-world-point-p
    #:draw
    #:visit
-   #:add-children))
+   #:add-children
+   #:node-four-corners))
 (in-package :xmas.node)
 
 (defclass node ()
@@ -116,15 +117,19 @@
   (when (xform-dirty-p self)
     (setf (xform-dirty-p self) nil)
     (into-matrix ((xform self))
-      (load-identity)
-      (translate (x self) (y self))
-      (rotate (rotation self))
-      (scale (if (flip-x self)
-                 (- (scale-x self))
-                 (scale-x self))
-             (if (flip-y self)
-                 (- (scale-y self))
-                 (scale-y self)))
+      (load-translation (x self) (y self))
+      (unless (= 0.0 (rotation self))
+        (rotate (rotation self)))
+      (unless (and (= 1.0 (scale-x self))
+                   (= 1.0 (scale-y self)))
+        ;;TODO: flip-x and flip-y should be handled
+        ;;at the texture level, this doesn't belong on node
+        (scale (if (flip-x self) 
+                   (- (scale-x self))
+                   (scale-x self))
+               (if (flip-y self)
+                   (- (scale-y self))
+                   (scale-y self))))
       (translate (* -1.0 (anchor-x self) (content-width self))
                  (* -1.0 (anchor-y self) (content-height self)))))
   (xform self))
@@ -173,6 +178,25 @@
          (>= x 0.0)
          (<= y (content-height self))
          (>= y 0.0))))
+
+(defmethod node-four-corners ((self node) matrix)
+  (let ((x1 0.0)
+        (y1 0.0)
+        (x2 (content-width self))
+        (y2 (content-height self))
+        llx lly
+        ulx uly
+        urx ury
+        lrx lry)
+    (setf
+     (values llx lly) (matrix-multiply-point-2d matrix x1 y1)
+     (values ulx uly) (matrix-multiply-point-2d matrix x1 y2)
+     (values urx ury) (matrix-multiply-point-2d matrix x2 y2)
+     (values lrx lry) (matrix-multiply-point-2d matrix x2 y1))
+    (values llx lly
+            ulx uly
+            urx ury
+            lrx lry)))
 
 (defgeneric width (node))
 (defgeneric height (node))

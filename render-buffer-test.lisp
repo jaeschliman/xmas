@@ -801,5 +801,56 @@
 
 ;; (run-test 'batched-writes-2)
 
+(deftest batched-writes-3 (:width 500 :height 500)
+  :init
+  tex := (get-texture "./bayarea.png")
+  :update
+  (when-let (id (texture-id tex))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (xmas.render-buffer::%draw-quad 0.0 0.0
+                                      10.0 400.0
+                                      400.0 400.0
+                                      400.0 10.0
+                                      0.0 1.0
+                                      1.0 0.0))))
+
+;; (run-test 'batched-writes-3)
+
+(defun draw-batched-node-quad (node)
+  (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
+      (node-four-corners node (node-transform node))
+    (xmas.render-buffer::%draw-quad llx lly ulx uly urx ury lrx lry
+                                    0.0 1.0
+                                    1.0 0.0)))
+(defun force-matrix-multiply (node)
+  (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
+      (node-four-corners node (node-transform node))
+    (declare (ignorable llx lly ulx uly urx ury lrx lry))) ) 
+
+(deftest batched-writes-4 (:width 500 :height 500)
+  :init
+  tex := (get-texture "./bayarea.png")
+  started := nil
+  ;;can't handle that many right now, looks like my matrix math is too slow
+  nodes := (loop repeat 1000 collect
+                (make-instance 'node :x (random 500.0) :y (random 500.0)
+                               :content-width (+ (random 100.0) 50.0)
+                               :content-height (+ (random 100.0) 50.0)
+                               :anchor-x 0.5 :anchor-y 0.5
+                               :rotation (random 360.0)))
+  (setf nodes (coerce nodes 'vector))
+  :update
+  (unless started
+    (setf started t)
+    (map nil 'on-enter nodes))
+  (loop for node across nodes do
+       (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0)))
+  (when-let (id (texture-id tex))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (loop for i below (length nodes) do
+           (draw-batched-node-quad (aref nodes i))))))
+
+;; (run-test 'batched-writes-4)
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
