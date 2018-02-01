@@ -22,7 +22,7 @@
 
 ;;column-major 4x4 matrix
 (defun make-m4/unwrapped ()
-  (make-array '(16) :initial-element 0.0))
+  (make-array '(16) :initial-element 0.0 :element-type 'single-float))
 
 (defun mref/unwrapped (m col row)
   (aref m (+ row (* col 4))))
@@ -60,8 +60,8 @@
   (* pi (/ n 180.0)))
 
 (defun load-rotation/unwrapped (deg m &aux (theta (deg->rad deg)))
-  (let ((s (sin theta))
-        (c (cos theta)))
+  (let ((s (coerce (sin theta) 'single-float))
+        (c (coerce (cos theta) 'single-float)))
     (let ((-s (- s)))
       (load-identity/unwrapped m)
       (setf
@@ -176,12 +176,17 @@
     (cat-matrix *tmp-matrix*)))
 
 (defun matrix-multiply-point-2d (matrix x y)
+  (declare (optimize (speed 3) (safety 1)))
   (let ((m (m4-vector matrix))
         (input (vector x y 0.0 1.0))
         (output (vector 0.0 0.0 0.0 0.0)))
     (declare (dynamic-extent input output))
     (loop for row from 0 to 3 do
          (setf (svref output row)
-               (loop for col from 0 to 3 sum
-                    (* (svref input col) (aref m (+ (* col 4) row))))))
+               (the single-float
+                    (loop for col from 0 to 3 sum
+                         (the single-float
+                              (* (the single-float (svref input col))
+                                 (the single-float
+                                      (aref m (+ (* col 4) row)))))))))
     (values (svref output 0) (svref output 1))))
