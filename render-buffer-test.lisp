@@ -357,7 +357,7 @@
 
 (deftest tilemap-test-1 (:width 500 :height 500)
   :tags tmx file-format draw-tmx-layer
-  :init 
+  :init
   map     := (read-tilemap "./res/test-tilemap.tmx")
   tileset := (first (map-tilesets map))
   frames  := (make-tileset-texture-frames tileset)
@@ -535,7 +535,7 @@
           (top 450.0) (left 50.0)
           (bottom 50.0) (right 450.0))
       ;; a b
-      ;; c d 
+      ;; c d
       (setf
        (left a) left
        (left c) left
@@ -783,6 +783,23 @@
   (xmas.render-buffer::pop-matrix))
 
 ;; (run-test 'batched-writes-1)
+
+(deftest batched-writes-2 (:width 500 :height 500)
+  :init
+  tex := (get-texture "./bayarea.png")
+  :update
+  (when-let (id (texture-id tex))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (xmas.render-buffer::quad 0.0   0.0   0.0 1.0
+                                250.0 250.0 1.0 0.0)
+      (xmas.render-buffer::quad 250.0 250.0 0.0 1.0
+                                500.0 500.0 1.0 0.0)
+      (xmas.render-buffer::quad 0.0   250.0 0.0 1.0
+                                250.0 500.0 1.0 0.0)
+      (xmas.render-buffer::quad 250.0 0.0   0.0 1.0
+                                500.0 250.0 1.0 0.0))))
+
+;; (run-test 'batched-writes-2)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
