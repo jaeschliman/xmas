@@ -100,7 +100,7 @@
       (setf (render-buffer-back-buffer-ready? render-buffer) nil))))
 
 (defun write-float! (val)
-  (static-vector-push-extend (coerce val 'single-float) (buffer-values *write-buffer*)))
+  (static-vector-push-extend val (buffer-values *write-buffer*)))
 (defun write-instr! (val)
   (vector-push-extend val (buffer-instrs *write-buffer*)))
 
@@ -181,7 +181,7 @@
        (defun ,name ,args
          (write-instr! ,instr)
          ,@(loop for arg in args collect
-                `(write-float! ,arg)))
+                `(write-float! (coerce ,arg 'single-float))))
        (defun ,instr-name ()
          (let ,(loop for arg in args collect `(,arg (read!)))
            ,@body))
@@ -194,7 +194,7 @@
     `(progn
        (defun ,name (,arg)
          (write-instr! ,instr)
-         (write-float! (coerce (length ,arg) 'float))
+         (write-float! (coerce (length ,arg) 'single-float))
          (loop for elt across ,arg do (write-float! elt)))
        (defun ,instr-name ()
          (macrolet ((do-vec! ((sym) &body body)
@@ -211,7 +211,7 @@
     `(progn
        (defmacro ,name (,write-args &body body) ;;TODO: use args
          `(progn
-            ,,@(mapcar (lambda (v) ``(write-float! ,,v)) write-args)
+            ,,@(mapcar (lambda (v) ``(write-float! (coerce ,,v 'single-float))) write-args)
             (with-batched-writes (,,instr) ,,@(cdr (assoc :write body)))))
        (defun ,instr-name ()
          (let ,(mapcar (lambda (v) `(,v (read!))) write-args)
