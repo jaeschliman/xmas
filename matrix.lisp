@@ -94,14 +94,14 @@
 
 (defun deg->rad (n)
   (declare (type single-float n))
-  (* pi (/ n 180.0)))
+  (* (load-time-value (coerce pi 'single-float)) (/ n 180.0)))
 
 (defun load-rotation/unwrapped (deg m &aux (theta (deg->rad deg)))
   (declare (type matrix m)
-           (type single-float deg)
+           (type single-float deg theta)
            (optimize (speed 3) (safety 1)))
-  (let ((s (coerce (sin theta) 'single-float))
-        (c (coerce (cos theta) 'single-float)))
+  (let ((s (the single-float (sin (the single-float theta))))
+        (c (the single-float (cos (the single-float theta)))))
     (let ((-s (- s)))
       (setf
        (mref/unwrapped m 0 0)  c
