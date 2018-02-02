@@ -117,11 +117,8 @@
   (when (xform-dirty-p self)
     (setf (xform-dirty-p self) nil)
     (into-matrix ((xform self))
-      (load-translation (x self) (y self))
-      (unless (= 0.0 (rotation self))
-        (rotate (rotation self)))
-      (unless (and (= 1.0 (scale-x self))
-                   (= 1.0 (scale-y self)))
+      (load-translation-rotation (x self) (y self) (rotation self))
+      (unless (= 1.0 (scale-x self) (scale-y self))
         ;;TODO: flip-x and flip-y should be handled
         ;;at the texture level, this doesn't belong on node
         (scale (if (flip-x self) 
@@ -130,8 +127,10 @@
                (if (flip-y self)
                    (- (scale-y self))
                    (scale-y self))))
-      (translate (* -1.0 (anchor-x self) (content-width self))
-                 (* -1.0 (anchor-y self) (content-height self)))))
+      (unless (or (= 0.0 (anchor-x self) (anchor-y self))
+                  (= 0.0 (content-width self) (content-height self)))
+        (translate (* -1.0 (anchor-x self) (content-width self))
+                   (* -1.0 (anchor-y self) (content-height self))))))
   (xform self))
 
 (defmethod node-to-parent-transform ((self node))

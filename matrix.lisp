@@ -16,7 +16,8 @@
              #:translate
              #:rotate
              #:scale
-             #:matrix-multiply-point-2d))
+             #:matrix-multiply-point-2d
+             #:load-translation-rotation))
 
 (in-package :xmas.matrix)
 
@@ -88,7 +89,6 @@
   (declare (type matrix m)
            (type single-float x y)
            (optimize (speed 3) (safety 1)))
-  (load-identity/unwrapped m)
   (setf (mref/unwrapped m 3 0) x
         (mref/unwrapped m 3 1) y))
 
@@ -103,7 +103,6 @@
   (let ((s (coerce (sin theta) 'single-float))
         (c (coerce (cos theta) 'single-float)))
     (let ((-s (- s)))
-      (load-identity/unwrapped m)
       (setf
        (mref/unwrapped m 0 0)  c
        (mref/unwrapped m 1 0) -s
@@ -114,44 +113,50 @@
   (declare (type matrix m)
            (type single-float sx sy)
            (optimize (speed 3) (safety 1)))
-  (load-identity/unwrapped m)
   (setf
    (mref/unwrapped m 0 0) sx
    (mref/unwrapped m 1 1) sy))
 
 
 ;;this method gets called ALOT -- could use some optimizing.
+;;cat o into m
 (defun cat-matrix/unwrapped (o m)
-  (declare (type matrix m)
-           (type matrix o)
-           ;;arggggh
-           (optimize (speed 3) (safety 0) (compilation-speed 0)))
-  (macrolet
-      ((@ (m col row)
-           `(the single-float
-                 (aref (the matrix ,m)
-                       (the matrix-index
-                            (+ (the subscript ,row)
-                               (the fixnum (* (the subscript ,col) 4)))))))
-       (*f (a b)
-         `(the single-float (* (the single-float ,a)
-                               (the single-float ,b)))))
-    (loop for row from 0 to 3
-       for a = (@ m 0 row)
-       for b = (@ m 1 row)
-       for c = (@ m 2 row)
-       for d = (@ m 3 row) do
-         (loop for col from 0 to 3
-            for e = (@ o col 0)
-            for f = (@ o col 1)
-            for g = (@ o col 2)
-            for h = (@ o col 3) do
-              (setf (@ m col row)
-                    (the single-float 
-                         (+ (*f a e)
-                            (*f b f)
-                            (*f c g)
-                            (*f d h))))))))
+  (let ((tmp (make-array 16 :initial-element 0.0 :element-type 'single-float)))
+    (declare ;;arggggh
+     (optimize (speed 3) (safety 0) (compilation-speed 0))
+     (dynamic-extent tmp)
+     (type matrix m o result))
+    (macrolet
+        ((@ (m col row)
+             `(the single-float
+                   (aref (the matrix ,m)
+                         (the matrix-index
+                              (+ (the subscript ,row)
+                                 (the fixnum (* (the subscript ,col) 4)))))))
+         (*f (a b)
+           `(the single-float (* (the single-float ,a)
+                                 (the single-float ,b)))))
+      (loop for col from 0 to 3
+         for e = (@ o col 0)
+         for f = (@ o col 1)
+         for g = (@ o col 2)
+         for h = (@ o col 3) do
+           ;; attempt a cache-friendly inner loop...
+           (loop for row from 0 to 3
+              for a = (@ m 0 row)
+              for b = (@ m 1 row)
+              for c = (@ m 2 row)
+              for d = (@ m 3 row) do
+                (setf (@ tmp col row)
+                      (the single-float 
+                           (+ (*f a e)
+                              (*f b f)
+                              (*f c g)
+                              (*f d h))))))
+      ;;but that means we need to copy out
+      (loop for i below 16 do
+           (setf (aref m i) (aref tmp i))))))
+ 
 
 (defstruct m4 (vector (make-m4/unwrapped) :type matrix))
 
@@ -198,12 +203,21 @@
   (load-identity/unwrapped (m4-vector m4))) 
 
 (defun load-translation (x y &optional (m4 *current-matrix*))
+  (load-identity/unwrapped (m4-vector m4))
   (load-translation/unwrapped x y (m4-vector m4)))
 
+(defun load-translation-rotation (x y r &optional (m4 *current-matrix*))
+  (let ((vec (m4-vector m4)))
+    (load-identity/unwrapped vec)
+    (load-translation/unwrapped x y vec)
+    (load-rotation/unwrapped r vec)))
+
 (defun load-rotation (deg &optional (m4 *current-matrix*))
+  (load-identity/unwrapped (m4-vector m4))
   (load-rotation/unwrapped deg (m4-vector m4)))
 
 (defun load-scale (sx sy &optional (m4 *current-matrix*))
+  (load-identity/unwrapped (m4-vector m4))
   (load-scale/unwrapped sx sy (m4-vector m4)))
 
 (defun load-matrix (other &optional (m *current-matrix*))
