@@ -156,6 +156,38 @@
       ;;but that means we need to copy out
       (loop for i below 16 do
            (setf (aref m i) (aref tmp i))))))
+
+(defun cat-matrix/unwrapped (o m)
+  (let ()
+    (declare ;;arggggh
+     (optimize (speed 3) (safety 0) (compilation-speed 0))
+     (type matrix m o))
+    (macrolet
+        ((@ (m col row)
+             `(the single-float
+                   (aref (the matrix ,m)
+                         (the matrix-index
+                              (+ (the subscript ,row)
+                                 (the fixnum (* (the subscript ,col) 4)))))))
+         (*f (a b)
+           `(the single-float (* (the single-float ,a)
+                                 (the single-float ,b)))))
+      (loop for row from 0 to 3
+         for a = (@ m 0 row)
+         for b = (@ m 1 row)
+         for c = (@ m 2 row)
+         for d = (@ m 3 row) do
+           (loop for col from 0 to 3
+              for e = (@ o col 0)
+              for f = (@ o col 1)
+              for g = (@ o col 2)
+              for h = (@ o col 3) do
+                (setf (@ m col row)
+                      (the single-float 
+                           (+ (*f a e)
+                              (*f b f)
+                              (*f c g)
+                              (*f d h)))))))))
  
 
 (defstruct m4 (vector (make-m4/unwrapped) :type matrix))
