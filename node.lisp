@@ -113,25 +113,31 @@
 
 ;;TODO: matrix tests taking anchor-point into acct
 
-(defmethod node-transform ((self node))
+(defun %node-transform (self)
+  (declare (type node self)
+           (optimize (speed 3) (safety 1)))
   (when (xform-dirty-p self)
     (setf (xform-dirty-p self) nil)
-    (into-matrix ((xform self))
-      (load-translation-rotation (x self) (y self) (rotation self))
-      (unless (= 1.0 (scale-x self) (scale-y self))
-        ;;TODO: flip-x and flip-y should be handled
-        ;;at the texture level, this doesn't belong on node
-        (scale (if (flip-x self) 
-                   (- (scale-x self))
-                   (scale-x self))
-               (if (flip-y self)
-                   (- (scale-y self))
-                   (scale-y self))))
-      (unless (or (= 0.0 (anchor-x self) (anchor-y self))
-                  (= 0.0 (content-width self) (content-height self)))
-        (translate (* -1.0 (anchor-x self) (content-width self))
-                   (* -1.0 (anchor-y self) (content-height self))))))
+    (let ((sx (scale-x self))
+          (sy (scale-y self))
+          (ax (anchor-x self))
+          (ay (anchor-y self))
+          (cw (content-width self))
+          (ch (content-height self)))
+      (declare (type single-float sx sy ax ay cw ch))
+      (into-matrix ((xform self))
+        (load-translation-rotation (x self) (y self) (rotation self))
+        (unless (= 1.0 sx sy)
+          ;;TODO: flip-x and flip-y should be handled
+          ;;at the texture level, this doesn't belong on node
+          (scale (if (flip-x self) (- sx) sx)
+                 (if (flip-y self) (- sy) sy)))
+        (unless (or (= 0.0 ax ay) (= 0.0 cw ch))
+          (translate (* -1.0 ax cw) (* -1.0 ay ch))))))
   (xform self))
+
+(defmethod node-transform ((self node))
+  (%node-transform self))
 
 (defmethod node-to-parent-transform ((self node))
   (when (parent-xform-dirty-p self)
