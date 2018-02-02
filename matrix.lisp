@@ -156,7 +156,7 @@
               for c = (@ m 2 row)
               for d = (@ m 3 row) do
                 (setf (@ tmp col row)
-                      (the single-float 
+                      (the single-float
                            (+ (*f a e)
                               (*f b f)
                               (*f c g)
@@ -197,17 +197,17 @@
 
   ;; could probably rewrite this without
   ;; the extra storage with enough effort.
-  
+
   ;; M <- OxM
   ;; copy O into T
   (load-matrix other *tmp-matrix*)
-  ;; T <- TxM 
+  ;; T <- TxM
   (cat-matrix m *tmp-matrix*)
   ;; copy T into M
   (load-matrix *tmp-matrix* m))
 
 (defun load-identity (&optional (m4 *current-matrix*))
-  (load-identity/unwrapped (m4-vector m4))) 
+  (load-identity/unwrapped (m4-vector m4)))
 
 (defun load-translation (x y &optional (m4 *current-matrix*))
   (load-identity/unwrapped (m4-vector m4))
@@ -233,10 +233,27 @@
      with v = (m4-vector m)
      do (setf (aref v i) (aref o i))))
 
+;; [a b c d] [1.0 0.0 0.0 x  ]
+;; [e f g h] [0.0 1.0 0.0 y  ]
+;; [i j k l] [0.0 0.0 1.0 0.0]
+;; [m n o p] [0.0 0 0 0.0 1.0]
+;;
+;; d = a * x + b * y + d
+;; h = e * x + f * y + h
+;; l = i * x + j * y + l
+;;
+(defun translate/unwrapped (x y m)
+  (declare (type single-float x y)
+           (type matrix m)
+           (optimize (speed 3) (safety 1)))
+  (macrolet ((@ (x y) `(aref m ,(+ y (* x 4)))))
+    (incf (@ 3 0) (+ (* (@ 0 0) x) (* (@ 1 0) y)))
+    (incf (@ 3 1) (+ (* (@ 0 1) x) (* (@ 1 1) y)))
+    (incf (@ 3 2) (+ (* (@ 0 2) x) (* (@ 1 2) y)))))
+
 (defun translate (x y)
   (unless (= x y 0.0)
-    (load-translation x y *tmp-matrix*)
-    (cat-matrix *tmp-matrix*)))
+    (translate/unwrapped x y (m4-vector *current-matrix*))))
 
 (defun rotate (deg)
   (unless (or (= deg 0.0)
