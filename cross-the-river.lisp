@@ -78,7 +78,7 @@
                                              :y y
                                              :opacity 0.9
                                              :color color
-                                             :z-order (- count i)))
+                                             :z-order (coerce (- count i) 'single-float)))
                         (h-amt tw)
                         (v-amt (+ 3.0 (* pct 6.0)))
                         (v-dur (* 0.5 (+ 0.5 (random 0.5))))
@@ -233,8 +233,8 @@
   boat := (make-instance 'boat
                          :anchor-y 0.0
                          :x 150.0 :y 50.0
-                         :north-position '(:x 250 :y 250) 
-                         :south-position '(:x 250 :y 20) 
+                         :north-position '(:x 250.0 :y 250.0)
+                         :south-position '(:x 250.0 :y 20.0)
                          :texture (get-texture "boat.png")
                          :place 'north)
   north-shore := (make-instance 'image
@@ -247,7 +247,7 @@
                          :content-width 500.0
                          :content-height 250.0
                          :boat boat
-                         :y 100
+                         :y 100.0
                          :overlap (* 0.8 0.4 0.8))
   south-shore := (make-instance 'image
                                 :anchor-x 0.0
@@ -257,28 +257,28 @@
                          :place 'north
                          :scale-x 0.4 :scale-y 0.4
                          :anchor-y 0.0
-                         :north-position '(:x 150 :y 400) 
-                         :south-position '(:x 150 :y 100) 
+                         :north-position '(:x 150.0 :y 400.0)
+                         :south-position '(:x 150.0 :y 100.0)
                          :texture (get-texture "wolf.png"))
   goat := (make-instance 'possesion
                          :place 'north
                          :scale-x 0.4 :scale-y 0.4
                          :anchor-y 0.0
-                         :north-position '(:x 250 :y 400)
-                         :south-position '(:x 250 :y 100)
+                         :north-position '(:x 250.0 :y 400.0)
+                         :south-position '(:x 250.0 :y 100.0)
                          :flip-x t
                          :texture (get-texture "goat.png"))
   cabbage := (make-instance 'possesion
                             :place 'north
                             :scale-x 0.25 :scale-y 0.25
                             :anchor-y 0.0
-                            :north-position '(:x 350 :y 400)
-                            :south-position '(:x 350 :y 100)
+                            :north-position '(:x 350.0 :y 400.0)
+                            :south-position '(:x 350.0 :y 100.0)
                             :texture (get-texture "cabbage.png"))
   (add-children root (list north-shore node south-shore wolf goat cabbage))
-  (run-action boat (list (rotate-by 0.5 -5)
-                         (rotate-by 1.0 10)
-                         (rotate-by 0.5 -5))
+  (run-action boat (list (rotate-by 0.5 -5.0)
+                         (rotate-by 1.0 10.0)
+                         (rotate-by 0.5 -5.0))
               :repeat :forever)
   :update
   (unless started
@@ -320,7 +320,7 @@
     (:click (setf mouse-clicked t))
     (:keypress
      (case mode
-       (play 
+       (play
         (let ((shore (if (eq (place boat) 'north) 'south 'north)))
           (multiple-value-bind (x y) (get-position-for-place boat shore)
             (enter-mode self 'animation)
