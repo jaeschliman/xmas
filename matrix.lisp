@@ -20,29 +20,62 @@
 
 (in-package :xmas.matrix)
 
+(deftype subscript () '(integer 0 3))
+(deftype matrix-index () '(integer 0 15))
+(deftype matrix () '(simple-array single-float (16)))
+
 ;;column-major 4x4 matrix
 (defun make-m4/unwrapped ()
   (make-array '(16) :initial-element 0.0 :element-type 'single-float))
 
+(declaim (ftype (function (matrix subscript subscript) single-float)
+                mref/unwrapped))
 (defun mref/unwrapped (m col row)
-  (aref m (+ row (* col 4))))
+  (declare (type matrix m)
+           (type subscript col row)
+           (optimize (speed 3) (safety 1)))
+  (the single-float (aref m (the matrix-index (+ row (* col 4))))))
 
 (define-compiler-macro mref/unwrapped (&whole w m col row)
   (cond
     ((and (numberp col)
           (numberp row))
-     `(aref ,m ,(+ row (* col 4))))
+     `(aref (the matrix ,m) (the matrix-index ,(+ row (* col 4)))))
     ((numberp col)
-     `(aref ,m (+ ,row ,(* col 4))))
+     `(aref (the matrix ,m) (the matrix-index (+ (the subscript ,row)
+                                                 (the fixnum ,(* col 4))))))
     ((numberp row)
-     `(aref ,m (+ ,row (* ,col 4))))
+     `(aref (the matrix ,m) (the matrix-index (+ (the subscript ,row)
+                                                 (the fixnum
+                                                      (* (the subscript ,col)
+                                                         4))))))
     (t w)))
 
 ;; TODO: setf-expander for this?
-(defun (setf mref/unwrapped) (v m col row)
-  (setf (aref m (+ row (* col 4))) v))
+;; (defun (setf mref/unwrapped) (v m col row)
+;;   (setf (aref m (+ row (* col 4))) v))
+
+(define-setf-expander mref/unwrapped (m col row &environment env)
+  (multiple-value-bind (dummies vals newval setter getter)
+      (get-setf-expansion m env)
+    (declare (ignore newval setter))
+    (with-gensyms (store colsym rowsym)
+      (values (list* colsym rowsym dummies)
+              (list* col row vals)
+              `(,store)
+              `(locally
+                   (declare (optimize (speed 3) (safety 1)))
+                 (setf
+                  (aref (the matrix ,getter)
+                        (the matrix-index
+                             (+ (the subscript ,rowsym)
+                                (the fixnum (* (the subscript ,colsym) 4)))))
+                  ,store))
+              `(mref/unwrapped ,getter ,colsym ,rowsym)))))
 
 (defun load-identity/unwrapped (m)
+  (declare (type matrix m)
+           (optimize (speed 3) (safety 1)))
   (loop
      for i from 0 to 15
      do (setf (aref m i) 0.0))
@@ -52,14 +85,21 @@
         (mref/unwrapped m 3 3) 1.0))
 
 (defun load-translation/unwrapped (x y m)
+  (declare (type matrix m)
+           (type single-float x y)
+           (optimize (speed 3) (safety 1)))
   (load-identity/unwrapped m)
   (setf (mref/unwrapped m 3 0) x
         (mref/unwrapped m 3 1) y))
 
 (defun deg->rad (n)
+  (declare (type single-float n))
   (* pi (/ n 180.0)))
 
 (defun load-rotation/unwrapped (deg m &aux (theta (deg->rad deg)))
+  (declare (type matrix m)
+           (type single-float deg)
+           (optimize (speed 3) (safety 1)))
   (let ((s (coerce (sin theta) 'single-float))
         (c (coerce (cos theta) 'single-float)))
     (let ((-s (- s)))
@@ -71,31 +111,49 @@
        (mref/unwrapped m 1 1)  c))))
 
 (defun load-scale/unwrapped (sx sy m)
+  (declare (type matrix m)
+           (type single-float sx sy)
+           (optimize (speed 3) (safety 1)))
   (load-identity/unwrapped m)
   (setf
    (mref/unwrapped m 0 0) sx
    (mref/unwrapped m 1 1) sy))
 
+
 ;;this method gets called ALOT -- could use some optimizing.
 (defun cat-matrix/unwrapped (o m)
-  (macrolet ((@ (&rest args) `(mref/unwrapped ,@args)))
+  (declare (type matrix m)
+           (type matrix o)
+           ;;arggggh
+           (optimize (speed 3) (safety 0) (compilation-speed 0)))
+  (macrolet
+      ((@ (m col row)
+           `(the single-float
+                 (aref (the matrix ,m)
+                       (the matrix-index
+                            (+ (the subscript ,row)
+                               (the fixnum (* (the subscript ,col) 4)))))))
+       (*f (a b)
+         `(the single-float (* (the single-float ,a)
+                               (the single-float ,b)))))
     (loop for row from 0 to 3
-     for a = (@ m 0 row)
-     for b = (@ m 1 row)
-     for c = (@ m 2 row)
-     for d = (@ m 3 row) do
-       (loop for col from 0 to 3
-          for e = (@ o col 0)
-          for f = (@ o col 1)
-          for g = (@ o col 2)
-          for h = (@ o col 3) do
-            (setf (@ m col row)
-                  (+ (* a e)
-                     (* b f)
-                     (* c g)
-                     (* d h)))))))
+       for a = (@ m 0 row)
+       for b = (@ m 1 row)
+       for c = (@ m 2 row)
+       for d = (@ m 3 row) do
+         (loop for col from 0 to 3
+            for e = (@ o col 0)
+            for f = (@ o col 1)
+            for g = (@ o col 2)
+            for h = (@ o col 3) do
+              (setf (@ m col row)
+                    (the single-float 
+                         (+ (*f a e)
+                            (*f b f)
+                            (*f c g)
+                            (*f d h))))))))
 
-(defstruct m4 (vector (make-m4/unwrapped)))
+(defstruct m4 (vector (make-m4/unwrapped) :type matrix))
 
 (defvar *current-matrix* nil)
 (defvar *tmp-matrix* nil)
@@ -147,11 +205,6 @@
 
 (defun load-scale (sx sy &optional (m4 *current-matrix*))
   (load-scale/unwrapped sx sy (m4-vector m4)))
-
-;; args are in reverse order, as the left hand side is
-;; the implied argument
-(defun cat-matrix (other &optional (m4 *current-matrix*))
-  (cat-matrix/unwrapped (m4-vector other) (m4-vector m4)))
 
 (defun load-matrix (other &optional (m *current-matrix*))
   (loop for i from 0 to 15

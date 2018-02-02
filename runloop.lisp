@@ -31,8 +31,8 @@
                           ;; appears to give stuttering...
                           ;; just hardcoding the step appears to give smoother
                           ;; results...
-                          ;; dt
-                          step
+                           dt
+                          ;; step
                           )
                  (setf end (get-internal-real-time))
                  (let ((elapsed (/ (- end start) unit)))

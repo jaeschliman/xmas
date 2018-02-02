@@ -831,7 +831,10 @@
   :init
   tex := (get-texture "./bayarea.png")
   started := nil
-  nodes := (loop repeat 4000 collect
+  ;; we can draw alot of nodes, but can't do that
+  ;; many matrix recalculations... having trouble optimizing it
+  count := 2000
+  nodes := (loop repeat count collect
                 (make-instance 'node :x (random 500.0) :y (random 500.0)
                                :content-width (+ (random 100.0) 50.0)
                                :content-height (+ (random 100.0) 50.0)
@@ -843,9 +846,7 @@
     (setf started t)
     (map nil 'on-enter nodes))
   (loop
-       for i from (- (length nodes) 300) to (- (length nodes) 1)
-       for node = (aref nodes i) do
-     ;; for node across nodes do ;; can't handle updating all nodes yet, too slow
+     for node across nodes do
        (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0)))
   (when-let (id (texture-id tex))
     (xmas.render-buffer::with-textured-2d-quads (id)
