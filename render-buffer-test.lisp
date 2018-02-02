@@ -833,7 +833,7 @@
   started := nil
   ;; we can draw alot of nodes, but can't do that
   ;; many matrix recalculations... having trouble optimizing it
-  count := 4000
+  count := 5000
   nodes := (loop repeat count collect
                 (make-instance 'node :x (random 500.0) :y (random 500.0)
                                :content-width (+ (random 100.0) 50.0)

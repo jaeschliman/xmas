@@ -76,7 +76,7 @@
 
 (defun load-identity/unwrapped (m)
   (declare (type matrix m)
-           (optimize (speed 3) (safety 1)))
+           (optimize (speed 3) (safety 0)))
   (loop
      for i from 0 to 15
      do (setf (aref m i) 0.0))
@@ -98,10 +98,18 @@
 
 (defun load-rotation/unwrapped (deg m &aux (theta (deg->rad deg)))
   (declare (type matrix m)
-           (type single-float deg theta)
+           (type single-float deg)
            (optimize (speed 3) (safety 1)))
-  (let ((s (the single-float (sin (the single-float theta))))
-        (c (the single-float (cos (the single-float theta)))))
+  (let ((s (the single-float
+                #+ccl
+                (#_sinf (the single-float theta))
+                #-ccl
+                (sin (the single-float theta))))
+        (c (the single-float
+                #+ccl
+                (#_cosf (the single-float theta))
+                #-ccl
+                (cos (the single-float theta)))))
     (let ((-s (- s)))
       (setf
        (mref/unwrapped m 0 0)  c
@@ -125,7 +133,7 @@
     (declare ;;arggggh
      (optimize (speed 3) (safety 0) (compilation-speed 0))
      (dynamic-extent tmp)
-     (type matrix m o result))
+     (type matrix m o tmp))
     (macrolet
         ((@ (m col row)
              `(the single-float
@@ -156,39 +164,6 @@
       ;;but that means we need to copy out
       (loop for i below 16 do
            (setf (aref m i) (aref tmp i))))))
-
-(defun cat-matrix/unwrapped (o m)
-  (let ()
-    (declare ;;arggggh
-     (optimize (speed 3) (safety 0) (compilation-speed 0))
-     (type matrix m o))
-    (macrolet
-        ((@ (m col row)
-             `(the single-float
-                   (aref (the matrix ,m)
-                         (the matrix-index
-                              (+ (the subscript ,row)
-                                 (the fixnum (* (the subscript ,col) 4)))))))
-         (*f (a b)
-           `(the single-float (* (the single-float ,a)
-                                 (the single-float ,b)))))
-      (loop for row from 0 to 3
-         for a = (@ m 0 row)
-         for b = (@ m 1 row)
-         for c = (@ m 2 row)
-         for d = (@ m 3 row) do
-           (loop for col from 0 to 3
-              for e = (@ o col 0)
-              for f = (@ o col 1)
-              for g = (@ o col 2)
-              for h = (@ o col 3) do
-                (setf (@ m col row)
-                      (the single-float 
-                           (+ (*f a e)
-                              (*f b f)
-                              (*f c g)
-                              (*f d h)))))))))
- 
 
 (defstruct m4 (vector (make-m4/unwrapped) :type matrix))
 
