@@ -233,6 +233,9 @@
      with v = (m4-vector m)
      do (setf (aref v i) (aref o i))))
 
+;;----------------------------------------
+;; translation
+;;
 ;; [a b c d] [1.0 0.0 0.0 x  ]
 ;; [e f g h] [0.0 1.0 0.0 y  ]
 ;; [i j k l] [0.0 0.0 1.0 0.0]
@@ -261,10 +264,37 @@
     (load-rotation deg *tmp-matrix*)
     (cat-matrix *tmp-matrix*)))
 
+;;----------------------------------------
+;; scale
+;;
+;; [a b c d] [sx  0.0 0.0 0.0]
+;; [e f g h] [0.0 sy  0.0 0.0]
+;; [i j k l] [0.0 0.0 1.0 0.0]
+;; [m n o p] [0.0 0 0 0.0 1.0]
+;;
+;; a = sx * a
+;; b = sy * b
+;; e = sx * e
+;; f = sy * f
+;; i = sx * i
+;; j = sy * j
+(defun scale/unwrapped (sx sy m)
+  (declare (type single-float sx sy)
+           (type matrix m)
+           (optimize (speed 3) (safety 1)))
+  (macrolet ((@ (x y) `(aref m ,(+ y (* x 4))))
+             (*= (where what)
+               `(setf ,where (* ,what ,where))))
+    (*= (@ 0 0) sx)
+    (*= (@ 1 0) sy)
+    (*= (@ 0 1) sx)
+    (*= (@ 1 1) sy)
+    (*= (@ 0 2) sx)
+    (*= (@ 1 2) sy)))
+
 (defun scale (sx sy)
   (unless (= sx sy 1.0)
-    (load-scale sx sy *tmp-matrix*)
-    (cat-matrix *tmp-matrix*)))
+    (scale/unwrapped sx sy (m4-vector *current-matrix*))))
 
 (defun matrix-multiply-point-2d (matrix x y)
   (declare (optimize (speed 3) (safety 1)))
