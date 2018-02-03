@@ -300,16 +300,20 @@
 (defun matrix-multiply-point-2d (matrix x y)
   (declare (optimize (speed 3) (safety 1)))
   (let ((m (m4-vector matrix))
-        (input (vector x y 0.0 1.0))
         (output (vector 0.0 0.0 0.0 0.0)))
-    (declare (dynamic-extent input output)
+    (declare (dynamic-extent output)
              (type matrix m))
     (loop for row from 0 to 1 do
          (setf (svref output row)
                (the single-float
-                    (loop for col from 0 to 3 sum
-                         (the single-float
-                              (* (the single-float (svref input col))
-                                 (the single-float
-                                      (aref m (the matrix-index (+ (* col 4) row))))))))))
+                    (+ (the single-float
+                            (* (the single-float x)
+                               (the single-float
+                                    (aref m (the matrix-index row)))))
+                       (the single-float
+                            (* (the single-float y)
+                               (the single-float
+                                    (aref m (the matrix-index (+ 4 row))))))
+                       (the single-float
+                            (aref m (the matrix-index (+ 12 row))))))))
     (values (svref output 0) (svref output 1))))
