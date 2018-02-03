@@ -930,10 +930,11 @@
 
 ;; (run-test 'batched-writes-5)
 
-(deftest draw-with-xform-0 ()
+(deftest draw-with-xform-0 (:width 500 :height 250)
   :init
   (texture-packer-add-frames-from-file "./res/test.json")
   frame := (get-frame "pickle blink.png")
+  frame2 := (get-frame "pickle.png")
   sprite1 := (make-instance 'sprite :x 175.0 :y 175.0
                             :sprite-frame frame)
   sprite2 := (make-instance 'sprite :x 75.0 :y 175.0
@@ -945,13 +946,28 @@
   sprite4 := (make-instance 'sprite :x 75.0 :y 75.0
                             :flip-y t :flip-x t
                             :sprite-frame frame)
+  sprite5 := (make-instance 'sprite :x (+ 250.0 175.0) :y 175.0
+                            :sprite-frame frame2)
+  sprite6 := (make-instance 'sprite :x (+ 250.0 75.0) :y 175.0
+                            :flip-x t
+                            :sprite-frame frame2)
+  sprite7 := (make-instance 'sprite :x (+ 250.0 175.0) :y 75.0
+                            :flip-y t
+                            :sprite-frame frame2)
+  sprite8 := (make-instance 'sprite :x (+ 250.0 75.0) :y 75.0
+                            :flip-y t :flip-x t
+                            :sprite-frame frame2)
   stack := (make-matrix-stack)
   :update
   (let ((*matrix-stack* stack))
     (visit-with-xform sprite1)
     (visit-with-xform sprite2)
     (visit-with-xform sprite3)
-    (visit-with-xform sprite4)))
+    (visit-with-xform sprite4)
+    (visit-with-xform sprite5)
+    (visit-with-xform sprite6)
+    (visit-with-xform sprite7)
+    (visit-with-xform sprite8)))
 
 ;; (run-test 'draw-with-xform-0)
 
