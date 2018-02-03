@@ -55,7 +55,8 @@
    #:node-four-corners
    #:apply-node-transform
    #:draw-with-xform
-   #:visit-with-xform))
+   #:visit-with-xform
+   #:four-corners))
 (in-package :xmas.node)
 
 (defstruct ivars
@@ -249,6 +250,23 @@
         (x2 (content-width self))
         (y2 (content-height self))
         llx lly
+        ulx uly
+        urx ury
+        lrx lry)
+    (declare (type single-float x1 y1 x2 y2)
+             (inline matrix-multiply-point-2d))
+    (setf
+     (values llx lly) (matrix-multiply-point-2d matrix x1 y1)
+     (values ulx uly) (matrix-multiply-point-2d matrix x1 y2)
+     (values urx ury) (matrix-multiply-point-2d matrix x2 y2)
+     (values lrx lry) (matrix-multiply-point-2d matrix x2 y1))
+    (values llx lly
+            ulx uly
+            urx ury
+            lrx lry)))
+
+(defun four-corners (x1 y1 x2 y2 matrix)
+  (let (llx lly
         ulx uly
         urx ury
         lrx lry)
