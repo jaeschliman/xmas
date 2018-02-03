@@ -297,23 +297,25 @@
     (scale/unwrapped sx sy (m4-vector *current-matrix*))))
 
 (declaim (ftype (function (m4 single-float single-float) (values single-float single-float)) matrix-multiply-point-2d))
+
 (defun matrix-multiply-point-2d (matrix x y)
   (declare (optimize (speed 3) (safety 1)))
-  (let ((m (m4-vector matrix))
-        (output (vector 0.0 0.0 0.0 0.0)))
-    (declare (dynamic-extent output)
-             (type matrix m))
-    (loop for row from 0 to 1 do
-         (setf (svref output row)
-               (the single-float
-                    (+ (the single-float
-                            (* (the single-float x)
-                               (the single-float
-                                    (aref m (the matrix-index row)))))
-                       (the single-float
-                            (* (the single-float y)
-                               (the single-float
-                                    (aref m (the matrix-index (+ 4 row))))))
-                       (the single-float
-                            (aref m (the matrix-index (+ 12 row))))))))
-    (values (svref output 0) (svref output 1))))
+  (let ((m (m4-vector matrix)))
+    (declare (type matrix m)
+             (single-float x y))
+    (values (the single-float
+                 (+ (the single-float
+                         (* (the single-float x)
+                            (the single-float (aref m 0))))
+                    (the single-float
+                         (* (the single-float y)
+                            (the single-float (aref m 4))))
+                    (the single-float (aref m 12))))
+            (the single-float
+                 (+ (the single-float
+                         (* (the single-float x)
+                            (the single-float (aref m 1))))
+                    (the single-float
+                         (* (the single-float y)
+                            (the single-float (aref m 5))))
+                    (the single-float (aref m 13)))))))
