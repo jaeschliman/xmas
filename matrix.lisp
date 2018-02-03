@@ -284,30 +284,32 @@
            (optimize (speed 3) (safety 1)))
   (macrolet ((@ (x y) `(aref m ,(+ y (* x 4))))
              (*= (where what)
-               `(setf ,where (* ,what ,where))))
+               `(setf ,where (the single-float (* ,what ,where)))))
     (*= (@ 0 0) sx)
-    (*= (@ 1 0) sy)
     (*= (@ 0 1) sx)
-    (*= (@ 1 1) sy)
     (*= (@ 0 2) sx)
+    (*= (@ 1 0) sy)
+    (*= (@ 1 1) sy)
     (*= (@ 1 2) sy)))
 
 (defun scale (sx sy)
   (unless (= sx sy 1.0)
     (scale/unwrapped sx sy (m4-vector *current-matrix*))))
 
+(declaim (ftype (function (m4 single-float single-float) (values single-float single-float)) matrix-multiply-point-2d))
 (defun matrix-multiply-point-2d (matrix x y)
   (declare (optimize (speed 3) (safety 1)))
   (let ((m (m4-vector matrix))
         (input (vector x y 0.0 1.0))
         (output (vector 0.0 0.0 0.0 0.0)))
-    (declare (dynamic-extent input output))
-    (loop for row from 0 to 3 do
+    (declare (dynamic-extent input output)
+             (type matrix m))
+    (loop for row from 0 to 1 do
          (setf (svref output row)
                (the single-float
                     (loop for col from 0 to 3 sum
                          (the single-float
                               (* (the single-float (svref input col))
                                  (the single-float
-                                      (aref m (+ (* col 4) row)))))))))
+                                      (aref m (the matrix-index (+ (* col 4) row))))))))))
     (values (svref output 0) (svref output 1))))

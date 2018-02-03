@@ -193,6 +193,8 @@
         ulx uly
         urx ury
         lrx lry)
+    (declare (type single-float x1 y1 x2 y2)
+             (inline matrix-multiply-point-2d))
     (setf
      (values llx lly) (matrix-multiply-point-2d matrix x1 y1)
      (values ulx uly) (matrix-multiply-point-2d matrix x1 y2)
