@@ -1,4 +1,4 @@
-(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object))
+(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.matrix-stack))
 (in-package :xmas.platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -27,7 +27,8 @@
   started
   level
   (root (make-instance 'node))
-  initial-level)
+  initial-level
+  (matrix-stack (make-matrix-stack)))
 
 (defstruct level
   root
@@ -291,6 +292,26 @@
                                (texture-width texture)
                                (texture-height texture))))
 
+(defun %draw-texture-at (tex x y matrix)
+  (let ((tx1 0.0) (tx2 1.0)
+        (ty1 1.0) (ty2 0.0))
+    (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
+        (four-corners x y
+                      (+ x (texture-width tex))
+                      (+ y (texture-height tex))
+                      matrix)
+      (xmas.render-buffer::%draw-quad
+       llx lly ulx uly urx ury lrx lry
+       tx1 ty1
+       tx2 ty2))))
+
+(defmethod draw-with-xform ((self image) xform)
+  (draw-node-color self)
+  (when-let* ((texture (texture self))
+              (id (texture-id texture)))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (%draw-texture-at texture 0.0 0.0 xform))))
+
 (defun background-image-y-position (self)
   (let* ((dh/2 (* 0.5 *display-height*))
          (range (- (height self) *display-height*))
@@ -307,6 +328,13 @@
                                (texture-width texture)
                                (texture-height texture))))
 
+(defmethod draw-with-xform ((self background-image) xform)
+  (draw-node-color self)
+  (when-let* ((texture (texture self))
+              (id (texture-id texture)))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (%draw-texture-at texture 0.0 (background-image-y-position self) xform))))
+
 (defmethod draw ((self horizontal-scroller-image))
   (draw-node-color self)
   (let* ((texture (texture self))
@@ -316,8 +344,22 @@
          (offs-y (background-image-y-position self))
          (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
     (xmas.draw:draw-texture-at texture (- offs-x width) offs-y width height)
-    (xmas.draw:draw-texture-at texture offs-x offs-y width height)
+    (xmas.draw:draw-texture-at texture offs-x           offs-y width height)
     (xmas.draw:draw-texture-at texture (+ offs-x width) offs-y width height)))
+
+(defmethod draw-with-xform ((self horizontal-scroller-image) xform)
+  (draw-node-color self)
+  (when-let* ((texture (texture self))
+              (id (texture-id texture)))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (let* ((texture (texture self))
+             (width (texture-width texture))
+             (speed (slot-value self 'speed))
+             (offs-y (background-image-y-position self))
+             (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
+        (%draw-texture-at texture (- offs-x width) offs-y xform)
+        (%draw-texture-at texture offs-x           offs-y xform)
+        (%draw-texture-at texture (+ offs-x width) offs-y xform)))))
 
 (defmethod draw ((self tmx-node))
   (let* ((r (tmx self))
@@ -333,6 +375,22 @@
      x y r
      x1 y1
      x2 y2)))
+
+(defmethod draw-with-xform ((self tmx-node) xform)
+  (let* ((r (tmx self))
+         (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
+         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0))
+         (x-offs (* *display-width* 0.6))
+         (y-offs (* *display-height* 0.6))
+         (x1 (- *camera-x* x-offs))
+         (x2 (+ *camera-x* x-offs))
+         (y1 (- *camera-y* y-offs))
+         (y2 (+ *camera-y* y-offs)))
+    (xmas.tmx-renderer:draw-tmx-renderer-windowed
+     x y r
+     x1 y1
+     x2 y2
+     xform)))
 
 (defun tile-at-point (tmx x y)
   (xmas.tmx-renderer:tmx-renderer-tile-at-point tmx x y))
@@ -929,13 +987,14 @@
     (add-child root (level-root level))))
 
 (defmethod cl-user::step-contents ((self platformer) dt)
-  (with-struct (platformer- started root level) self
+  (with-struct (platformer- started root level matrix-stack) self
     (unless started
       (setf started t)
       (on-enter root))
     (update level dt)
     (clrhash *just-pressed*)
-    (visit root)
+    (let ((*matrix-stack* matrix-stack))
+      (visit-with-xform root))
     (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 360.0)
     (when *next-level*
       (let ((mgr (level-object-manager level)))
