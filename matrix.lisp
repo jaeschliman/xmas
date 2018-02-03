@@ -257,12 +257,53 @@
 (defun translate (x y)
   (unless (= x y 0.0)
     (translate/unwrapped x y (m4-vector *current-matrix*))))
+;;----------------------------------------
+;; rotation
+;;
+;; [a b c d] [cs  -s  0.0 0.0]
+;; [e f g h] [s   cs  0.0 0.0]
+;; [i j k l] [0.0 0.0 1.0 0.0]
+;; [m n o p] [0.0 0 0 0.0 1.0]
+;;
+;; a = a * cs + b * s
+;; b = a * -s + b * cs
+;; e = e * cs + f * s
+;; f = e * -s + f * cs
+;; i = i * cs + j * s  ;; may possibly be ignored for 2d (not sure)
+;; j = i * -s + j * cs ;; may possibly be ignored for 2d (not sure)
+;; m and n can be ignored
+
+(defun rotate/unwrapped (deg m)
+  (declare (type single-float deg)
+           (type matrix m)
+           (optimize (speed 3) (safety 1)))
+  (let* ((theta (deg->rad deg))
+         (s (the single-float
+                 #+ccl
+                 (#_sinf (the single-float theta))
+                 #-ccl
+                 (sin (the single-float theta))))
+         (cs (the single-float
+                  #+ccl
+                  (#_cosf (the single-float theta))
+                  #-ccl
+                  (cos (the single-float theta))))
+         (-s (- s)))
+    (declare (type single-float s cs -s))
+    (macrolet ((@ (x y) `(aref m ,(+ y (* x 4)))))
+      (psetf
+       (@ 0 0) (+ (* (@ 0 0) cs) (* (@ 1 0) s))
+       (@ 1 0) (+ (* (@ 0 0) -s) (* (@ 1 0) cs))
+       (@ 0 1) (+ (* (@ 0 1) cs) (* (@ 1 1) s))
+       (@ 1 1) (+ (* (@ 0 1) -s) (* (@ 1 1) cs))
+       ;;TODO: can these next two be ignored?
+       (@ 0 2) (+ (* (@ 0 2) cs) (* (@ 1 2) s))
+       (@ 1 2) (+ (* (@ 0 2) -s) (* (@ 1 2) cs))))))
 
 (defun rotate (deg)
   (unless (or (= deg 0.0)
               (= deg 360.0))
-    (load-rotation deg *tmp-matrix*)
-    (cat-matrix *tmp-matrix*)))
+    (rotate/unwrapped deg (m4-vector *current-matrix*))))
 
 ;;----------------------------------------
 ;; scale
