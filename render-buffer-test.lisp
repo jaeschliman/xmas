@@ -857,5 +857,53 @@
 
 ;; (run-test 'batched-writes-4)
 
+(defun draw-batched-node-quad-with-matrix (node matrix)
+  (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
+      (node-four-corners node (apply-node-transform node matrix))
+    (xmas.render-buffer::%draw-quad llx lly ulx uly urx ury lrx lry
+                                    0.0 1.0
+                                    1.0 0.0)))
+
+(deftest batched-writes-5 (:width 500 :height 500)
+  :tags batched-drawing matrix quad
+  :init
+  tex := (get-texture "./bayarea.png")
+  started := nil
+  ;; we can draw alot of nodes, but can't do that
+  ;; many matrix recalculations... having trouble optimizing it
+  count := 1000
+  root := (make-instance 'node :x 250.0 :y 250.0
+                         :rotation (random 360.0))
+  nodes := (loop repeat count collect
+                (make-instance 'node
+                               :x (- (random 500.0) 250.0)
+                               :y (- (random 500.0) 250.0)
+                               :content-width (+ (random 100.0) 50.0)
+                               :content-height (+ (random 100.0) 50.0)
+                               :anchor-x 0.5 :anchor-y 0.5
+                               :rotation (random 360.0)))
+  matrix := (make-matrix)
+  (setf nodes (coerce nodes 'vector))
+  (run-action root (rotate-by 12.0 360.0) :repeat :forever)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root)
+    (map nil 'on-enter nodes))
+  (loop
+     for node across nodes do
+       (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0)))
+  (when-let (id (texture-id tex))
+    (xmas.render-buffer::with-textured-2d-quads (id)
+      (loop
+         with root-transform = (node-transform root)
+         for i from (1- (length nodes)) downto 0 do
+           (into-matrix (matrix)
+             (load-matrix root-transform))
+           (draw-batched-node-quad-with-matrix (aref nodes i) matrix)))))
+
+;; (run-test 'batched-writes-5)
+
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

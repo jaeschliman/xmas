@@ -52,7 +52,8 @@
    #:draw
    #:visit
    #:add-children
-   #:node-four-corners))
+   #:node-four-corners
+   #:apply-node-transform))
 (in-package :xmas.node)
 
 (defclass node ()
@@ -138,6 +139,29 @@
 
 (defmethod node-transform ((self node))
   (%node-transform self))
+
+(defun apply-node-transform (self matrix)
+  (declare (type node self)
+           (type xmas.matrix::matrix matrix)
+           (optimize (speed 3) (safety 1)))
+  (let ((sx (scale-x self))
+        (sy (scale-y self))
+        (ax (anchor-x self))
+        (ay (anchor-y self))
+        (cw (content-width self))
+        (ch (content-height self)))
+    (declare (type single-float sx sy ax ay cw ch))
+    (into-matrix (matrix)
+      (translate (x self) (y self))
+      (rotate (rotation self))
+      (unless (= 1.0 sx sy)
+        ;;TODO: flip-x and flip-y should be handled
+        ;;at the texture level, this doesn't belong on node
+        (scale (if (flip-x self) (- sx) sx)
+               (if (flip-y self) (- sy) sy)))
+      (unless (or (= 0.0 ax ay) (= 0.0 cw ch))
+        (translate (* -1.0 ax cw) (* -1.0 ay ch))))) 
+  matrix)
 
 (defmethod node-to-parent-transform ((self node))
   (when (parent-xform-dirty-p self)
