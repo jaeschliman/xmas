@@ -863,6 +863,7 @@
     (xmas.render-buffer::%draw-quad llx lly ulx uly urx ury lrx lry
                                     0.0 1.0
                                     1.0 0.0)))
+(defvar *consing* 0)
 
 (deftest batched-writes-5 (:width 500 :height 500)
   :tags batched-drawing matrix quad
@@ -871,7 +872,7 @@
   started := nil
   ;; we can draw alot of nodes, but can't do that
   ;; many matrix recalculations... having trouble optimizing it
-  count := 1000
+  count := 8000
   root := (make-instance 'node :x 250.0 :y 250.0
                          :rotation (random 360.0))
   nodes := (loop repeat count collect
@@ -883,6 +884,7 @@
                                :anchor-x 0.5 :anchor-y 0.5
                                :rotation (random 360.0)))
   matrix := (make-matrix)
+  consed := 0
   (setf nodes (coerce nodes 'vector))
   (run-action root (rotate-by 12.0 360.0) :repeat :forever)
   :update
@@ -890,6 +892,7 @@
     (setf started t)
     (on-enter root)
     (map nil 'on-enter nodes))
+  (setf consed (ccl::total-bytes-allocated))
   (loop
      for node across nodes do
        (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0)))
@@ -900,7 +903,8 @@
          for i from (1- (length nodes)) downto 0 do
            (into-matrix (matrix)
              (load-matrix root-transform))
-           (draw-batched-node-quad-with-matrix (aref nodes i) matrix)))))
+           (draw-batched-node-quad-with-matrix (aref nodes i) matrix))))
+ (setf *consing* (- (ccl::total-bytes-allocated) consed)) )
 
 ;; (run-test 'batched-writes-5)
 
