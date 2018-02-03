@@ -1,5 +1,5 @@
 (defpackage :xmas.node
-  (:use :cl :alexandria :xmas.matrix)
+  (:use :cl :alexandria :xmas.matrix :xmas.matrix-stack)
   (:export
    #:node
    #:x
@@ -53,7 +53,9 @@
    #:visit
    #:add-children
    #:node-four-corners
-   #:apply-node-transform))
+   #:apply-node-transform
+   #:draw-with-xform
+   #:visit-with-xform))
 (in-package :xmas.node)
 
 (defstruct ivars

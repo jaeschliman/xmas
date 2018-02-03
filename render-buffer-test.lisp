@@ -5,6 +5,7 @@
                                             :xmas.draw
                                             :xmas.lfont-reader
                                             :xmas.matrix
+                                            :xmas.matrix-stack
                                             :xmas.node
                                             :xmas.qtree
                                             :xmas.sprite
@@ -929,6 +930,30 @@
 
 ;; (run-test 'batched-writes-5)
 
+(deftest draw-with-xform-0 ()
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  frame := (get-frame "pickle blink.png")
+  sprite1 := (make-instance 'sprite :x 175.0 :y 175.0
+                            :sprite-frame frame)
+  sprite2 := (make-instance 'sprite :x 75.0 :y 175.0
+                            :flip-x t
+                            :sprite-frame frame)
+  sprite3 := (make-instance 'sprite :x 175.0 :y 75.0
+                            :flip-y t
+                            :sprite-frame frame)
+  sprite4 := (make-instance 'sprite :x 75.0 :y 75.0
+                            :flip-y t :flip-x t
+                            :sprite-frame frame)
+  stack := (make-matrix-stack)
+  :update
+  (let ((*matrix-stack* stack))
+    (visit-with-xform sprite1)
+    (visit-with-xform sprite2)
+    (visit-with-xform sprite3)
+    (visit-with-xform sprite4)))
+
+;; (run-test 'draw-with-xform-0)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
