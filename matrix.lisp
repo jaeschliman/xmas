@@ -227,11 +227,15 @@
   (load-identity/unwrapped (m4-vector m4))
   (load-scale/unwrapped sx sy (m4-vector m4)))
 
-(defun load-matrix (other &optional (m *current-matrix*))
-  (loop for i from 0 to 15
-     with o = (m4-vector other)
-     with v = (m4-vector m)
-     do (setf (aref v i) (aref o i))))
+(defun load-matrix (other &optional (m4 *current-matrix*))
+  (declare (optimize (speed 3) (safety 1))
+           (type m4 other m4))
+  (let ((o (m4-vector other))
+        (m (m4-vector m4)))
+    (declare (type matrix o m))
+    (locally (declare (optimize (speed 3) (safety 0)))
+      (loop for i from 0 to 15
+         do (setf (aref m (the matrix-index i)) (the single-float (aref o (the matrix-index i))))))))
 
 ;;----------------------------------------
 ;; translation
