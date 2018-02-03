@@ -52,10 +52,6 @@
                                                          4))))))
     (t w)))
 
-;; TODO: setf-expander for this?
-;; (defun (setf mref/unwrapped) (v m col row)
-;;   (setf (aref m (+ row (* col 4))) v))
-
 (define-setf-expander mref/unwrapped (m col row &environment env)
   (multiple-value-bind (dummies vals newval setter getter)
       (get-setf-expansion m env)
@@ -93,8 +89,11 @@
         (mref/unwrapped m 3 1) y))
 
 (defun deg->rad (n)
-  (declare (type single-float n))
-  (* (load-time-value (coerce pi 'single-float)) (/ n 180.0)))
+  (declare (type single-float n)
+           (optimize (speed 3) (safety 0)))
+  (* (the single-float (load-time-value (* (/ 1.0 180.0) (coerce pi 'single-float))))
+     n))
+(declaim (inline deg->rad))
 
 (defun load-rotation/unwrapped (deg m &aux (theta (deg->rad deg)))
   (declare (type matrix m)
@@ -304,15 +303,20 @@
                (+f (a b) `(the single-float (+ (the single-float ,a)
                                                (the single-float ,b)))) )
       (locally (declare (optimize (speed 3) (safety 0)))
-        (psetf
-         (@ 0 0) (+f (*f (@ 0 0) cs) (*f (@ 1 0) s))
-         (@ 1 0) (+f (*f (@ 0 0) -s) (*f (@ 1 0) cs))
-         (@ 0 1) (+f (*f (@ 0 1) cs) (*f (@ 1 1) s))
-         (@ 1 1) (+f (*f (@ 0 1) -s) (*f (@ 1 1) cs))
-         ;;TODO: can these next two be ignored?
-         ;; (@ 0 2) (+ (* (@ 0 2) cs) (* (@ 1 2) s))
-         ;; (@ 1 2) (+ (* (@ 0 2) -s) (* (@ 1 2) cs))
-         )))))
+        (let ((a (@ 0 0))
+              (b (@ 1 0))
+              (e (@ 0 1))
+              (f (@ 1 1)))
+          (declare (type single-float a b e f))
+          (setf
+           (@ 0 0) (+f (*f a cs) (*f b s))
+           (@ 0 1) (+f (*f e cs) (*f f s))
+           (@ 1 0) (+f (*f a -s) (*f b cs))
+           (@ 1 1) (+f (*f e -s) (*f f cs))
+           ;;TODO: can these next two be ignored?
+           ;; (@ 0 2) (+ (* (@ 0 2) cs) (* (@ 1 2) s))
+           ;; (@ 1 2) (+ (* (@ 0 2) -s) (* (@ 1 2) cs))
+           ))))))
 
 (defun rotate (deg)
   (unless (or (= deg 0.0)
