@@ -802,6 +802,7 @@
 ;; (run-test 'batched-writes-2)
 
 (deftest batched-writes-3 (:width 500 :height 500)
+  :tags batched-drawing matrix quad
   :init
   tex := (get-texture "./bayarea.png")
   :update
@@ -828,12 +829,13 @@
     (declare (ignorable llx lly ulx uly urx ury lrx lry))) ) 
 
 (deftest batched-writes-4 (:width 500 :height 500)
+  :tags batched-drawing matrix quad
   :init
   tex := (get-texture "./bayarea.png")
   started := nil
   ;; we can draw alot of nodes, but can't do that
   ;; many matrix recalculations... having trouble optimizing it
-  count := 6000
+  count := 10000
   nodes := (loop repeat count collect
                 (make-instance 'node :x (random 500.0) :y (random 500.0)
                                :content-width (+ (random 100.0) 50.0)
@@ -850,7 +852,7 @@
        (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0)))
   (when-let (id (texture-id tex))
     (xmas.render-buffer::with-textured-2d-quads (id)
-      (loop for i below (length nodes) do
+      (loop for i from (1- (length nodes)) downto 0 do
            (draw-batched-node-quad (aref nodes i))))))
 
 ;; (run-test 'batched-writes-4)

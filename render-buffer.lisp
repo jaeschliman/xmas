@@ -35,18 +35,34 @@
   (static-vectors:free-static-vector (adjustable-static-vector-vector v))
   (setf (adjustable-static-vector-vector v) nil))
 
-(defun static-vector-push-extend (item v)
-  (with-struct (adjustable-static-vector- vector fill-pointer element-type) v
-    (when (= fill-pointer (1- (length vector)))
-      (let ((new-vector (static-vectors:make-static-vector
-                         (* 2 (length vector))
-                         :element-type element-type))
-            (old-vector vector))
-        (map-into new-vector 'identity vector)
-        (setf vector new-vector)
-        (static-vectors:free-static-vector old-vector)))
+(defun %grow-adjustable-static-vector (v)
+  (with-struct (adjustable-static-vector- vector element-type) v
+    (let ((new-vector (static-vectors:make-static-vector
+                       (* 2 (length vector))
+                       :element-type element-type))
+          (old-vector vector))
+      (map-into new-vector 'identity vector)
+      (setf vector new-vector)
+      (static-vectors:free-static-vector old-vector))))
+
+(defun static-vector-push (item v)
+  (with-struct (adjustable-static-vector- vector fill-pointer) v
     (prog1 (setf (aref vector fill-pointer) item)
       (incf fill-pointer))))
+
+(defun static-vector-push-extend (item v)
+  (with-struct (adjustable-static-vector- vector fill-pointer) v
+    (when (= fill-pointer (1- (length vector)))
+      (%grow-adjustable-static-vector v))
+    (static-vector-push item v)))
+
+(defun adjustable-static-vector-reserve-capacity (v count)
+  (with-struct (adjustable-static-vector- vector fill-pointer) v
+    (when (< (- (1- (length vector)) fill-pointer) count)
+      (%grow-adjustable-static-vector v)
+      ;;FIXME: this is lazy programming
+      ;;grow again if needed (unlikely)
+      (adjustable-static-vector-reserve-capacity v count))))
 
 (defstruct buffer
   (instrs (make-adjustable-vector :element-type 'fixnum))
@@ -99,8 +115,13 @@
                (render-buffer-back-buffer render-buffer))
       (setf (render-buffer-back-buffer-ready? render-buffer) nil))))
 
+(defun %write-float-on (val values)
+  (static-vector-push-extend val values))
+(declaim (inline %write-float-on))
+
 (defun write-float! (val)
-  (static-vector-push-extend val (buffer-values *write-buffer*)))
+  (%write-float-on val (buffer-values *write-buffer*)))
+
 (defun write-instr! (val)
   (vector-push-extend val (buffer-instrs *write-buffer*)))
 
