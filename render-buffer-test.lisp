@@ -339,6 +339,27 @@
 
 ;; (run-test 'texture-packer-test)
 
+(deftest sprite-frame-test (:width 500 :height 500)
+  :tags texture-packer texture texture-frame file-format sprite
+  :init
+  packer := (texture-packer-from-file "./res/test.json")
+  (assert (xmas.texture-packer::texture-packer-file-texture packer))
+  normal-frame := (texture-packer-get-frame packer "pickle.png")
+  blink-frame  := (texture-packer-get-frame packer "pickle blink.png")
+  jewel-frame  := (texture-packer-get-frame packer "jewel.png")
+  a := (make-instance 'sprite :x 125.0 :y 150.0 :sprite-frame normal-frame)
+  b := (make-instance 'sprite :x 375.0 :y 150.0 :sprite-frame blink-frame)
+  c := (make-instance 'sprite :x 250.0 :y 150.0 :sprite-frame jewel-frame)
+  :update
+  (draw-texture-frame normal-frame 125.0 250.0)
+  (draw-texture-frame blink-frame 375.0 250.0)
+  (draw-texture-frame jewel-frame 250.0 250.0)
+  (visit a)
+  (visit b)
+  (visit c))
+
+;; (run-test 'sprite-frame-test)
+
 (deftest tilemap-test0 (:width 500 :height 500)
   :tags tmx file-format
   :init
@@ -870,9 +891,7 @@
   :init
   tex := (get-texture "./bayarea.png")
   started := nil
-  ;; we can draw alot of nodes, but can't do that
-  ;; many matrix recalculations... having trouble optimizing it
-  count := 8000
+  count := 10000
   root := (make-instance 'node :x 250.0 :y 250.0
                          :rotation (random 360.0))
   nodes := (loop repeat count collect
@@ -904,7 +923,9 @@
            (into-matrix (matrix)
              (load-matrix root-transform))
            (draw-batched-node-quad-with-matrix (aref nodes i) matrix))))
- (setf *consing* (- (ccl::total-bytes-allocated) consed)) )
+  (setf *consing* (- (ccl::total-bytes-allocated) consed))
+  ;; :on-event (format t "got event: ~S~%" event)
+  )
 
 ;; (run-test 'batched-writes-5)
 
