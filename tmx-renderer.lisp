@@ -1,4 +1,4 @@
-(defpackage xmas.tmx-renderer (:use :cl :alexandria :xmas.texture)
+(defpackage xmas.tmx-renderer (:use :cl :alexandria :xmas.texture :xmas.matrix)
             (:export
              #:draw-tmx-layer
              #:tmx-renderer
@@ -21,7 +21,8 @@
 (defun draw-tmx-layer (at-x at-y tile-width tile-height layer frames
                        &key
                          (start-x 0) (end-x (xmas.tmx-reader:layer-width  layer))
-                         (start-y 0) (end-y (xmas.tmx-reader:layer-height layer)))
+                         (start-y 0) (end-y (xmas.tmx-reader:layer-height layer))
+                         matrix)
   (maxf start-x 0)
   (maxf start-y 0)
   (minf end-x (xmas.tmx-reader:layer-width  layer))
@@ -36,19 +37,26 @@
          (texture (texture-frame-texture frame1)))
     (when-let (id (texture-id texture))
       (xmas.render-buffer::with-textured-2d-triangles (id)
-        (flet ((draw-frame-at (frame x y w h)
-                 (let ((tx1 (texture-frame-tx1 frame))
-                       (tx2 (texture-frame-tx2 frame))
-                       (ty1 (texture-frame-ty1 frame))
-                       (ty2 (texture-frame-ty2 frame))
-                       (x2  (+ x w))
-                       (y2  (+ y h)))
-                   (xmas.render-buffer::vert x   y tx1 ty2)
-                   (xmas.render-buffer::vert x  y2 tx1 ty1)
-                   (xmas.render-buffer::vert x2 y2 tx2 ty1)
-                   (xmas.render-buffer::vert x2 y2 tx2 ty1)
-                   (xmas.render-buffer::vert x   y tx1 ty2)
-                   (xmas.render-buffer::vert x2  y tx2 ty2))))
+        (labels ((vert (x y tx ty)
+                   (if matrix
+                       (multiple-value-bind (nx ny)
+                           (matrix-multiply-point-2d matrix x y)
+                         (xmas.render-buffer::vert nx ny tx ty))
+                       (xmas.render-buffer::vert x y tx ty)))
+                 (draw-frame-at (frame x y w h)
+                   (let ((tx1 (texture-frame-tx1 frame))
+                         (tx2 (texture-frame-tx2 frame))
+                         (ty1 (texture-frame-ty1 frame))
+                         (ty2 (texture-frame-ty2 frame))
+                         (x2  (+ x w))
+                         (y2  (+ y h)))
+                     (vert x   y tx1 ty2)
+                     (vert x  y2 tx1 ty1)
+                     (vert x2 y2 tx2 ty1)
+                     (vert x2 y2 tx2 ty1)
+                     (vert x   y tx1 ty2)
+                     (vert x2  y tx2 ty2))))
+          (declare (dynamic-extent #'vert #'draw-frame-at))
           (dotimes (row rows)
             (dotimes (col cols)
               (when-let (frame (aref frames (xmas.tmx-reader:layer-gid-at
@@ -103,8 +111,8 @@
          (height (* tile-height (xmas.tmx-reader:layer-height layer))))
     (make-tmx-renderer
      :width width :height height
-                       :tile-width tile-width :tile-height tile-height
-                       :layer layer :frames frames :map map)))
+     :tile-width tile-width :tile-height tile-height
+     :layer layer :frames frames :map map)))
 
 (defun tmx-renderer-tile-properties (tmx)
   (xmas.tmx-reader:map-tile-properties (tmx-renderer-map tmx)))
@@ -129,7 +137,7 @@
                   (tmx-renderer-layer renderer)
                   (tmx-renderer-frames renderer)))
 
-(defun draw-tmx-renderer-windowed (x y renderer x1 y1 x2 y2)
+(defun draw-tmx-renderer-windowed (x y renderer x1 y1 x2 y2 &optional matrix)
   (let* ((h (tmx-renderer-height renderer))
          (tw (tmx-renderer-tile-width renderer))
          (th (tmx-renderer-tile-height renderer))
@@ -140,4 +148,5 @@
          (ty2 (- height-in-tiles (floor y2 th) 0)))
     (draw-tmx-layer x y tw th
                     (tmx-renderer-layer renderer) (tmx-renderer-frames renderer)
-                    :start-x tx1 :end-x tx2 :start-y ty2 :end-y ty1)))
+                    :start-x tx1 :end-x tx2 :start-y ty2 :end-y ty1
+                    :matrix matrix)))
