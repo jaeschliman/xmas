@@ -56,27 +56,27 @@
    #:apply-node-transform))
 (in-package :xmas.node)
 
-(defclass node ()
-  ((x          :reader   x          :initarg  :x        :type single-float)
-   (y          :reader   y          :initarg  :y        :type single-float)
-   (z-order    :reader   z-order    :initarg  :z-order  :type single-float)
-   (scale-x    :reader   scale-x    :initarg  :scale-x  :type single-float)
-   (scale-y    :reader   scale-y    :initarg  :scale-y  :type single-float)
-   (flip-x     :reader   flip-x     :initarg  :flip-x   :type boolean)
-   (flip-y     :reader   flip-y     :initarg  :flip-y   :type boolean)
-   (skew-x     :reader   skew-x     :initarg  :skew-x   :type single-float)
-   (skew-y     :reader   skew-y     :initarg  :skew-y   :type single-float)
-   (rotation   :reader   rotation   :initarg  :rotation :type single-float)
+(defstruct ivars
+ (x              0.0 :type single-float)
+ (y              0.0 :type single-float)
+ (scale-x        1.0 :type single-float)
+ (scale-y        1.0 :type single-float)
+ (flip-x         nil :type boolean)
+ (flip-y         nil :type boolean)
+ (skew-x         0.0 :type single-float)
+ (skew-y         0.0 :type single-float)
+ (rotation       0.0 :type single-float)
+ (anchor-x       0.0 :type single-float)
+ (anchor-y       0.0 :type single-float)
+ (content-width  0.0 :type single-float)
+ (content-height 0.0 :type single-float))
 
+(defclass node ()
+  ((ivars      :initform (make-ivars))
+   (z-order    :reader   z-order    :initarg  :z-order  :type single-float)
    (color      :accessor color      :initarg  :color)
    (opacity    :accessor opacity    :initarg  :opacity :type single-float)
    (visible    :accessor visible    :initarg  :visible :type boolean)
-
-   (anchor-x       :reader anchor-x       :initarg  :anchor-x :type single-float)
-   (anchor-y       :reader anchor-y       :initarg  :anchor-y :type single-float)
-   (content-width  :reader content-width  :initarg  :content-width  :type single-float)
-   (content-height :reader content-height :initarg  :content-height :type single-float)
-
    (parent               :accessor parent               :initform nil)
    (children             :accessor children             :initform nil)
    (xform                :accessor xform                :initform (xmas.matrix:make-matrix))
@@ -101,16 +101,44 @@
   (setf (xform-dirty-p node) t
         (parent-xform-dirty-p node) t))
 
-(macrolet ((declare-setf-marks-as-dirty ((&rest options) &rest slot-names)
+(macrolet ((declare-ivar-accessors ((&rest options) &rest slot-names)
              (declare (ignore options))
-             `(progn ,@(loop for s in slot-names collect
-                            `(defmethod (setf ,s) (v (object node))
-                               (mark-as-dirty object)
-                               (setf (slot-value object ',s) v))))))
-  (declare-setf-marks-as-dirty
+             `(progn ,@(loop for s in slot-names
+                          for name = (symbolicate 'ivars- s)
+                          collect
+                            `(progn
+                               (defmethod ,s ((self node))
+                                 (,name (slot-value self 'ivars)))
+                               (defmethod (setf ,s) (v (object node))
+                                 (declare (type node object)
+                                          (optimize (speed 3) (safety 1)))
+                                 (mark-as-dirty object)
+                                 (setf (,name (slot-value object 'ivars)) v)))))))
+  (declare-ivar-accessors
    ()
-   x y scale-x scale-y flip-x flip-y skew-x skew-y rotation
+   x y scale-x scale-y flip-x flip-y
+   skew-x skew-y rotation
    anchor-x anchor-y content-width content-height))
+
+(defmethod initialize-instance ((self node) &rest initargs
+                                &key
+                                  x y scale-x scale-y flip-x flip-y
+                                  skew-x skew-y rotation anchor-x anchor-y
+                                  content-width content-height
+                                &allow-other-keys )
+  (declare (ignore initargs)
+           (dynamic-extent initargs))
+  (call-next-method)
+  (macrolet ((set-all (&rest syms)
+               `(progn
+                  ,@(loop for s in syms
+                       for name = (symbolicate 'ivars- s)
+                       collect `(setf (,name ivars) ,s)))))
+    (let ((ivars (slot-value self 'ivars)))
+      (set-all
+       x y scale-x scale-y flip-x flip-y
+       skew-x skew-y rotation
+       anchor-x anchor-y content-width content-height))))
 
 ;;TODO: matrix tests taking anchor-point into acct
 
