@@ -65,20 +65,20 @@
     (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
         (four-corners offs-x offs-y (+ offs-x width) (+ offs-y height) xform)
       (when flip-y
-        (rotatef lly uly)
-        (rotatef llx ulx)
-        (rotatef lry ury)
-        (rotatef lrx urx))
+        (rotatef (values lly llx) (values uly ulx))
+        (rotatef (values lry lrx) (values ury urx)))
       (when flip-x
-        (rotatef llx lrx)
-        (rotatef lly lry)
-        (rotatef ulx urx)
-        (rotatef uly ury))
+        (rotatef (values llx lly) (values lrx lry))
+        (rotatef (values ulx uly) (values urx ury)))
       (if rotated
+          ;; d c
+          ;; a b
           (xmas.render-buffer::%draw-quad
            llx lly lrx lry urx ury ulx uly 
            tx1 ty1
            tx2 ty2)
+          ;; a d
+          ;; b c
           (xmas.render-buffer::%draw-quad
            ulx uly llx lly lrx lry urx ury
            tx1 ty1
