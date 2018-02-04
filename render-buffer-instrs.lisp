@@ -198,40 +198,37 @@
    (bind-texture texture-id)
    (gl:enable-client-state :vertex-array)
    (gl:enable-client-state :texture-coord-array)
-   (%gl:vertex-pointer 2 :float (* 4 2 2) ptr)
-   (%gl:tex-coord-pointer 2 :float (* 4 2 2) (cffi:inc-pointer ptr (* 4 2)))
+   (%gl:vertex-pointer 2 :float (* 4 (+ 2 2)) ptr)
+   (%gl:tex-coord-pointer 2 :float (* 4 (+ 2 2)) (cffi:inc-pointer ptr (* 4 2)))
    (gl:draw-arrays :triangles 0 (/ count 4))
    (gl:disable-client-state :texture-coord-array)
    (gl:disable-client-state :vertex-array)))
+
+(defmacro write-floats! (values &rest floats)
+  (once-only (values)
+    (let ((count (length floats)))
+      `(progn
+         (adjustable-static-vector-reserve-capacity ,values ,count)
+         (with-struct (adjustable-static-vector- vector fill-pointer) ,values
+           (let ((idx (1- fill-pointer))
+                 (vec vector))
+             (progn ,@(loop for f in floats collect
+                           `(setf (aref vec (the fixnum (incf (the fixnum idx))))
+                                  ,f)))
+             (incf fill-pointer ,count)))))))
 
 (defun %draw-quad (llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2)
   (declare (optimize (speed 3) (safety 1))
            (type single-float llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2))
   (let ((values (buffer-values *write-buffer*)))
     (declare (type adjustable-static-vector values))
-    (adjustable-static-vector-reserve-capacity values 16)
-    (with-struct (adjustable-static-vector- vector fill-pointer) values
-      (let ((idx (1- fill-pointer))
-            (vec vector))
-        (declare (type (simple-array single-float) vec)
-                 (type fixnum idx))
-        (setf (aref vec (the fixnum (incf idx))) llx)
-        (setf (aref vec (the fixnum (incf idx))) lly)
-        (setf (aref vec (the fixnum (incf idx))) tx1)
-        (setf (aref vec (the fixnum (incf idx))) ty1)
-        (setf (aref vec (the fixnum (incf idx))) ulx)
-        (setf (aref vec (the fixnum (incf idx))) uly)
-        (setf (aref vec (the fixnum (incf idx))) tx1)
-        (setf (aref vec (the fixnum (incf idx))) ty2)
-        (setf (aref vec (the fixnum (incf idx))) urx)
-        (setf (aref vec (the fixnum (incf idx))) ury)
-        (setf (aref vec (the fixnum (incf idx))) tx2)
-        (setf (aref vec (the fixnum (incf idx))) ty2)
-        (setf (aref vec (the fixnum (incf idx))) lrx)
-        (setf (aref vec (the fixnum (incf idx))) lry)
-        (setf (aref vec (the fixnum (incf idx))) tx2)
-        (setf (aref vec (the fixnum (incf idx))) ty1))
-      (incf fill-pointer 16))))
+    (write-floats! values
+                   ;; b c
+                   ;; a d
+                   llx lly tx1 ty1
+                   ulx uly tx1 ty2
+                   urx ury tx2 ty2
+                   lrx lry tx2 ty1)))
 
 (definstr-batched with-textured-2d-quads (texture-id)
   (:write
@@ -258,8 +255,8 @@
    (bind-texture texture-id)
    (gl:enable-client-state :vertex-array)
    (gl:enable-client-state :texture-coord-array)
-   (%gl:vertex-pointer 2 :float (* 4 2 2) ptr)
-   (%gl:tex-coord-pointer 2 :float (* 4 2 2) (cffi:inc-pointer ptr (* 4 2)))
+   (%gl:vertex-pointer 2 :float (* 4 (+ 2 2)) ptr)
+   (%gl:tex-coord-pointer 2 :float (* 4 (+ 2 2)) (cffi:inc-pointer ptr (* 4 2)))
    (gl:draw-arrays :quads 0 (/ count 4))
    (gl:disable-client-state :texture-coord-array)
    (gl:disable-client-state :vertex-array)))
