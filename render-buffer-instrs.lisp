@@ -233,22 +233,13 @@
 (definstr-batched with-textured-2d-quads (texture-id)
   (:write
    `(flet ((quad (x1 y1 tx1 ty1 x2 y2 tx2 ty2)
-             (write-float! x1)
-             (write-float! y1)
-             (write-float! tx1)
-             (write-float! ty1)
-             (write-float! x1)
-             (write-float! y2)
-             (write-float! tx1)
-             (write-float! ty2)
-             (write-float! x2)
-             (write-float! y2)
-             (write-float! tx2)
-             (write-float! ty2)
-             (write-float! x2)
-             (write-float! y1)
-             (write-float! tx2)
-             (write-float! ty1)))
+             (let ((values (buffer-values *write-buffer*)))
+               (declare (type adjustable-static-vector values))
+               (write-floats! values
+                              x1 y1 tx1 ty1
+                              x1 y2 tx1 ty2
+                              x2 y2 tx2 ty2
+                              x2 y1 tx2 ty1))))
       (declare (dynamic-extent (function quad)))
       ,@body))
   (:read
