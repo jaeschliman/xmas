@@ -193,6 +193,7 @@
   (declare (ignore spawn-point))
   (call-next-method)
   (setf (flip-x cat) t
+        (rotation cat) 0.0
         (velocity-x cat) -100.0
         (velocity-y cat) 0.0)
   (run-action cat (list (rotate-by 1.0 -20.0)
