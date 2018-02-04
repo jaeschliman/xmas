@@ -1025,5 +1025,28 @@
 
 ;; (run-test 'draw-with-xform-1)
 
+(deftest translate-scale-rotate-translate ()
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  started := nil
+  stack := (make-matrix-stack)
+  frame := (get-frame "pickle blink.png")
+  sprite1 := (make-instance 'sprite :x 125.0 :y 125.0
+                            :scale-x 1.2 :scale-y 1.2
+                            :sprite-frame frame)
+  (run-action sprite1 (rotate-by 12.0 360.0) :repeat :forever)
+  (run-action sprite1 (list (scale-x-to 1.0 0.8) (scale-x-to 1.0 1.2))
+              :repeat :forever)
+  (run-action sprite1 (list (scale-y-to 1.0 0.8) (scale-y-to 1.0 1.2))
+              :repeat :forever)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter sprite1))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform sprite1)))
+
+;; (run-test 'translate-scale-rotate-translate)
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
