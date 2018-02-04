@@ -971,5 +971,59 @@
 
 ;; (run-test 'draw-with-xform-0)
 
+(deftest draw-with-xform-1 (:width 500 :height 250)
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  frame := (get-frame "throwcat.png")
+  started := nil
+  root := (make-instance 'node)
+  sprite1 := (make-instance 'sprite :x 175.0 :y 175.0
+                            :rotation 20.0
+                            :sprite-frame frame)
+  sprite2 := (make-instance 'sprite :x 75.0 :y 175.0
+                            :flip-x t
+                            :rotation 20.0
+                            :sprite-frame frame)
+  sprite3 := (make-instance 'sprite :x 175.0 :y 75.0
+                            :rotation 20.0
+                            :sprite-frame frame)
+  sprite4 := (make-instance 'sprite :x 75.0 :y 75.0
+                            :flip-x t
+                            :rotation 20.0
+                            :sprite-frame frame)
+  sprite5 := (make-instance 'sprite :x (+ 250.0 175.0) :y 175.0
+                            :rotation 20.0
+                            :flip-y t
+                            :sprite-frame frame)
+  sprite6 := (make-instance 'sprite :x (+ 250.0 75.0) :y 175.0
+                            :flip-x t
+                            :flip-y t
+                            :rotation 20.0
+                            :sprite-frame frame)
+  sprite7 := (make-instance 'sprite :x (+ 250.0 175.0) :y 75.0
+                            :rotation 20.0
+                            :flip-y t
+                            :sprite-frame frame)
+  sprite8 := (make-instance 'sprite :x (+ 250.0 75.0) :y 75.0
+                            :flip-x t
+                            :flip-y t
+                            :rotation 20.0
+                            :sprite-frame frame)
+  (run-action sprite1 (rotate-by 3.0 360.0) :repeat :forever)
+  (run-action sprite2 (rotate-by 3.0 360.0) :repeat :forever)
+  (run-action sprite5 (rotate-by 3.0 360.0) :repeat :forever)
+  (run-action sprite6 (rotate-by 3.0 360.0) :repeat :forever)
+  (add-children root (list sprite1 sprite2 sprite3 sprite4 sprite5
+                           sprite6 sprite7 sprite8))
+  stack := (make-matrix-stack)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform root)))
+
+;; (run-test 'draw-with-xform-1)
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

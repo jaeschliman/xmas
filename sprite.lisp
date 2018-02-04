@@ -53,35 +53,34 @@
          (flip-y (flip-y self))
          (frame-width (texture-frame-width frame))
          (frame-height (texture-frame-height frame))
-         (width
-          (if (texture-frame-rotated frame) frame-height frame-width))
-         (height
-          (if (texture-frame-rotated frame) frame-width frame-height))
+         (rotated (texture-frame-rotated frame))
+         (width (if rotated frame-height frame-width))
+         (height (if rotated frame-width frame-height))
          (offs-x (* 0.5 (- (content-width self) width)))
          (offs-y (* 0.5 (- (content-height self) height)))
          (tx1 (texture-frame-tx1 frame))
          (tx2 (texture-frame-tx2 frame))
          (ty1 (texture-frame-ty1 frame))
-         (ty2 (texture-frame-ty2 frame))
-         (rotated (texture-frame-rotated frame)))
+         (ty2 (texture-frame-ty2 frame)))
     (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
-        (four-corners offs-x offs-y
-                      (+ offs-x width)
-                      (+ offs-y height)
-                      xform)
+        (four-corners offs-x offs-y (+ offs-x width) (+ offs-y height) xform)
       (when flip-y
         (rotatef lly uly)
-        (rotatef lry ury))
+        (rotatef llx ulx)
+        (rotatef lry ury)
+        (rotatef lrx urx))
       (when flip-x
         (rotatef llx lrx)
-        (rotatef ulx urx))
+        (rotatef lly lry)
+        (rotatef ulx urx)
+        (rotatef uly ury))
       (if rotated
           (xmas.render-buffer::%draw-quad
            llx lly lrx lry urx ury ulx uly 
            tx1 ty1
            tx2 ty2)
           (xmas.render-buffer::%draw-quad
-           llx uly ulx lly urx lry lrx ury
+           ulx uly llx lly lrx lry urx ury
            tx1 ty1
            tx2 ty2)))))
 
