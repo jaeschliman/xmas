@@ -358,23 +358,18 @@
 (declaim (ftype (function (m4 single-float single-float) (values single-float single-float)) matrix-multiply-point-2d))
 
 (defun matrix-multiply-point-2d (matrix x y)
-  (declare (optimize (speed 3) (safety 1)))
+  (declare (optimize (speed 3) (safety 1))
+           (type m4 matrix))
   (let ((m (m4-vector matrix)))
     (declare (type matrix m)
              (single-float x y))
-    (values (the single-float
-                 (+ (the single-float
-                         (* (the single-float x)
-                            (the single-float (aref m 0))))
-                    (the single-float
-                         (* (the single-float y)
-                            (the single-float (aref m 4))))
-                    (the single-float (aref m 12))))
-            (the single-float
-                 (+ (the single-float
-                         (* (the single-float x)
-                            (the single-float (aref m 1))))
-                    (the single-float
-                         (* (the single-float y)
-                            (the single-float (aref m 5))))
-                    (the single-float (aref m 13)))))))
+    (macrolet ((f (x) `(the single-float ,x))
+               (+f (&rest args) `(f (+ ,@(mapcar (lambda (x) `(f ,x)) args))))
+               (*f (a b) `(f (* (f ,a) (f ,b)))))
+      (locally (declare (optimize (speed 3) (safety 0)))
+        (values (+f (*f x (aref m 0))
+                    (*f y (aref m 4))
+                    (aref m 12))
+                (+f (*f x (aref m 1))
+                    (*f y (aref m 5))
+                    (aref m 13)))))))

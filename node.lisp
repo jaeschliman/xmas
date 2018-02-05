@@ -265,22 +265,32 @@
             urx ury
             lrx lry)))
 
+
 (defun four-corners (x1 y1 x2 y2 matrix)
-  (let (llx lly
-        ulx uly
-        urx ury
-        lrx lry)
-    (declare (type single-float x1 y1 x2 y2)
-             (inline matrix-multiply-point-2d))
-    (setf
-     (values llx lly) (matrix-multiply-point-2d matrix x1 y1)
-     (values ulx uly) (matrix-multiply-point-2d matrix x1 y2)
-     (values urx ury) (matrix-multiply-point-2d matrix x2 y2)
-     (values lrx lry) (matrix-multiply-point-2d matrix x2 y1))
-    (values llx lly
-            ulx uly
-            urx ury
-            lrx lry)))
+  (declare (optimize (speed 3) (safety 1))
+           (type single-float x1 y1 x2 y2))
+  (let ((m (xmas.matrix::m4-vector matrix)))
+    (macrolet ((multiply-point-2d (x y)
+                 `(locally (declare (type xmas.matrix::matrix m)
+                                    (single-float ,x ,y))
+                    (macrolet ((f (x) `(the single-float ,x))
+                               (+f (&rest args) `(f (+ ,@(mapcar (lambda (x) `(f ,x)) args))))
+                               (*f (a b) `(f (* (f ,a) (f ,b)))))
+                      (locally (declare (optimize (speed 3) (safety 0)))
+                        (values (+f (*f ,x (aref m 0))
+                                    (*f ,y (aref m 4))
+                                    (aref m 12))
+                                (+f (*f ,x (aref m 1))
+                                    (*f ,y (aref m 5))
+                                    (aref m 13))))))))
+      (multiple-value-bind (llx lly) (multiply-point-2d x1 y1)
+        (multiple-value-bind (ulx uly) (multiply-point-2d x1 y2)
+          (multiple-value-bind (urx ury) (multiply-point-2d x2 y2)
+            (multiple-value-bind (lrx lry) (multiply-point-2d x2 y1)
+              (values llx lly
+                      ulx uly
+                      urx ury
+                      lrx lry))))))))
 
 (defgeneric width (node))
 (defgeneric height (node))
