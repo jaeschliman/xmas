@@ -212,9 +212,12 @@
          (with-struct (adjustable-static-vector- vector fill-pointer) ,values
            (let ((idx (1- fill-pointer))
                  (vec vector))
-             (progn ,@(loop for f in floats collect
-                           `(setf (aref vec (the fixnum (incf (the fixnum idx))))
-                                  ,f)))
+             (declare (type fixnum idx)
+                      (type (simple-array single-float) vec)
+                      (optimize (speed 3) (safety 1)))
+             ,@(loop for f in floats collect
+                    `(setf (aref vec (the fixnum (incf (the fixnum idx))))
+                           ,f))
              (incf fill-pointer ,count)))))))
 
 (defun %draw-quad (llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2)
