@@ -233,8 +233,13 @@
         (m (m4-vector m4)))
     (declare (type matrix o m))
     (locally (declare (optimize (speed 3) (safety 0)))
-      (loop for i from 0 to 15
-         do (setf (aref m (the matrix-index i)) (the single-float (aref o (the matrix-index i))))))))
+      (macrolet ((copy-matrix! ()
+                   `(progn
+                      ,@(loop for i from 0 to 15 collect
+                             `(setf (aref m (the matrix-index ,i))
+                                    (the single-float
+                                         (aref o (the matrix-index ,i))))))))
+        (copy-matrix!)))))
 
 ;;----------------------------------------
 ;; translation
