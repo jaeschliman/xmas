@@ -72,7 +72,9 @@
  (anchor-x       0.0 :type single-float)
  (anchor-y       0.0 :type single-float)
  (content-width  0.0 :type single-float)
- (content-height 0.0 :type single-float))
+ (content-height 0.0 :type single-float)
+ (xform-dirty-p  t :type boolean)
+ (parent-xform-dirty-p t :type boolean))
 
 (defclass node ()
   ((ivars      :initform (make-ivars))
@@ -83,9 +85,7 @@
    (parent               :accessor parent               :initform nil)
    (children             :accessor children             :initform nil)
    (xform                :accessor xform                :initform (xmas.matrix:make-matrix))
-   (xform-dirty-p        :accessor xform-dirty-p        :initform t)
    (parent-xform         :accessor parent-xform         :initform (xmas.matrix:make-matrix))
-   (parent-xform-dirty-p :accessor parent-xform-dirty-p :initform t)
    (running              :accessor running              :initform nil)
    (pending-actions      :accessor pending-actions      :initform nil))
   (:default-initargs
@@ -101,8 +101,13 @@
    :content-width 0.0 :content-height 0.0))
 
 (defun mark-as-dirty (node)
-  (setf (xform-dirty-p node) t
-        (parent-xform-dirty-p node) t))
+  (declare (type node node)
+           (optimize (speed 3) (safety 1)))
+  (let ((ivars (slot-value node 'ivars)))
+    (setf (ivars-xform-dirty-p ivars) t
+          (ivars-parent-xform-dirty-p ivars) t)))
+
+(declaim (inline mark-as-dirty))
 
 (macrolet ((declare-ivar-accessors ((&rest options) &rest slot-names)
              (declare (ignore options))
@@ -111,17 +116,24 @@
                           collect
                             `(progn
                                (defmethod ,s ((self node))
+                                 (declare (type node self)
+                                          (optimize (speed 3) (safety 1)))
                                  (,name (slot-value self 'ivars)))
                                (defmethod (setf ,s) (v (object node))
                                  (declare (type node object)
-                                          (optimize (speed 3) (safety 1)))
-                                 (mark-as-dirty object)
+                                          (optimize (speed 3) (safety 0)))
+
+                                 ,@(unless (or (eq s 'xform-dirty-p)
+                                               (eq s 'parent-xform-dirty-p))
+                                     (list '(mark-as-dirty object)))
                                  (setf (,name (slot-value object 'ivars)) v)))))))
   (declare-ivar-accessors
    ()
    x y scale-x scale-y flip-x flip-y
    skew-x skew-y rotation
-   anchor-x anchor-y content-width content-height))
+   anchor-x anchor-y content-width content-height
+   xform-dirty-p
+   parent-xform-dirty-p))
 
 (defmethod initialize-instance ((self node) &rest initargs
                                 &key
