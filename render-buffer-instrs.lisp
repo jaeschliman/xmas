@@ -207,18 +207,20 @@
 (defmacro write-floats! (values &rest floats)
   (once-only (values)
     (let ((count (length floats)))
-      `(progn
+      `(locally (declare (type adjustable-static-vector ,values))
          (adjustable-static-vector-reserve-capacity ,values ,count)
-         (with-struct (adjustable-static-vector- vector fill-pointer) ,values
-           (let ((idx (1- fill-pointer))
-                 (vec vector))
-             (declare (type fixnum idx)
-                      (type (simple-array single-float) vec)
-                      (optimize (speed 3) (safety 1)))
-             ,@(loop for f in floats collect
-                    `(setf (aref vec (the fixnum (incf (the fixnum idx))))
-                           ,f))
-             (incf fill-pointer ,count)))))))
+         (let ((idx (adjustable-static-vector-fill-pointer ,values))
+               (vec (adjustable-static-vector-vector ,values)))
+           (declare (type array-index idx)
+                    (type single-float ,@(remove-if #'numberp floats))
+                    (type (simple-array single-float) vec)
+                    (optimize (speed 3) (safety 0)))
+           ,@(loop for f in floats
+                for inc upfrom 0
+                collect
+                  `(setf (aref vec (the array-index (+ (the fixnum idx) ,inc)))
+                         (the single-float ,f)))
+           (incf (adjustable-static-vector-fill-pointer ,values) ,count))))))
 
 (defun %draw-quad (llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2)
   (declare (optimize (speed 3) (safety 1))
