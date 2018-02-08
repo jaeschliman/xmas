@@ -5,13 +5,19 @@
                                        :xmas.draw
                                        :xmas.node
                                        :xmas.texture
-                                       :xmas.deftest))
+                                       :xmas.deftest)
+            (:export
+             #:spotlight-node))
 (in-package :xmas.spotlight-node)
 
 
 (defclass spotlight-node (node)
   ((radius :accessor spotlight-node-radius :initarg :radius)
-   (texture :initarg :texture)))
+   (texture :initarg :texture))
+  (:default-initargs
+   :texture (make-texture-from-rgba-vector
+             (make-inverted-circle-image 100 100)
+             100 100)))
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
@@ -100,7 +106,7 @@
   width := 100
   height := 100
   background := (get-texture "./bayarea.png")
-  texture := (make-texture-from-rgba-vector 
+  texture := (make-texture-from-rgba-vector
               (make-inverted-circle-image width height)
               width height)
   mouse-x := 250.0

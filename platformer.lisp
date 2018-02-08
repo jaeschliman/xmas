@@ -1,4 +1,4 @@
-(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.matrix-stack))
+(defpackage :xmas.platformer (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.matrix-stack :xmas.spotlight-node))
 (in-package :xmas.platformer)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -28,7 +28,9 @@
   level
   (root (make-instance 'node))
   initial-level
-  (matrix-stack (make-matrix-stack)))
+  (matrix-stack (make-matrix-stack))
+  (mode :play)
+  spotlight)
 
 (defstruct level
   root
@@ -561,7 +563,7 @@
         (move-sprite-right-if-hitting-tiles-on-left level sprite dt))
 
     (incf (y sprite) (* dt (velocity-y sprite)))
-    (setf standing-on 
+    (setf standing-on
           (if (> (velocity-y sprite) 0)
               (prog1 nil (move-sprite-down-if-hitting-tiles-on-top level sprite dt))
               (move-sprite-up-if-hitting-tiles-on-bottom level sprite dt)))
@@ -862,7 +864,7 @@
       (let ((object-type (car list))
             (plist (rest list)))
         (case object-type
-          (:tile-sprite 
+          (:tile-sprite
            (let* ((tile (aref tile-table (getf plist :gid)))
                   (type (tile-type tile))
                   (initargs (rest (rest plist))))
@@ -982,17 +984,34 @@
   (texture-packer-add-frames-from-file "./res/test.json")
   (add-animation 'pickle-walk (/ 1.0 7.5) '("pickle walk0.png" "pickle walk1.png"))
   (add-animation 'pickle-run (/ 1.0 15) '("pickle walk0.png" "pickle walk1.png"))
-  (with-struct (platformer- level root initial-level)
+  (with-struct (platformer- level root initial-level spotlight)
       self
-    (setf level (get-level initial-level))
-    (add-child root (level-root level))))
+    (setf level (get-level initial-level)
+          spotlight (make-instance 'spotlight-node
+                                   :x 250.0
+                                   :y 250.0
+                                   :radius 250.0
+                                   :content-width 1000.0
+                                   :content-height 1000.0
+                                   :anchor-x 0.5
+                                   :anchor-y 0.5
+                                   :color (vector 0.0 0.0 0.0)
+                                   :z-order 1.0))
+
+    (add-children root (list (level-root level)
+                        spotlight
+                        ))))
 
 (defmethod cl-user::step-contents ((self platformer) dt)
-  (with-struct (platformer- started root level matrix-stack) self
+  (with-struct (platformer- started root level matrix-stack spotlight) self
     (unless started
       (setf started t)
       (on-enter root))
     (update level dt)
+    (let ((player (level-player level))
+          (root   (level-root level)))
+      (setf (x spotlight) (+ (x player) (x root))
+            (y spotlight) (+ (y player) (y root))))
     (clrhash *just-pressed*)
     (let ((*matrix-stack* matrix-stack))
       (visit-with-xform root))
