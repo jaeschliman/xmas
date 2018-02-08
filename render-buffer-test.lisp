@@ -881,24 +881,30 @@
 
 (defun draw-batched-node-quad-with-matrix (node matrix)
   (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
-      (node-four-corners node (apply-node-transform node matrix))
+      (four-corners 0.0 0.0
+                    (content-width node)
+                    (content-height node)
+                    (apply-node-transform node matrix))
     (xmas.render-buffer::%draw-quad llx lly ulx uly urx ury lrx lry
                                     0.0 1.0
                                     1.0 0.0)))
+
 (defvar *consing* 0)
 
 (deftest batched-writes-5 (:width 500 :height 500)
   :tags batched-drawing matrix quad
   :init
-  tex := (get-texture "./bayarea.png")
+  tex := (get-texture "./alien.png")
   started := nil
-  count := 10000
+  count := 25000
   root := (make-instance 'node :x 250.0 :y 250.0
                          :rotation (random 360.0))
+  diameter := (sqrt (+ (* 500.0 500.0) (* 500.0 500.0)))
+  radius := (* diameter 0.5)
   nodes := (loop repeat count collect
                 (make-instance 'node
-                               :x (- (random 500.0) 250.0)
-                               :y (- (random 500.0) 250.0)
+                               :x (- (random diameter) radius)
+                               :y (- (random diameter) radius)
                                :content-width (+ (random 100.0) 50.0)
                                :content-height (+ (random 100.0) 50.0)
                                :anchor-x 0.5 :anchor-y 0.5
@@ -913,17 +919,17 @@
     (on-enter root)
     (map nil 'on-enter nodes))
   (setf consed (ccl::total-bytes-allocated))
-  (loop
-     for node across nodes do
-       (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0)))
   (when-let (id (texture-id tex))
     (xmas.render-buffer::with-textured-2d-quads (id)
       (loop
          with root-transform = (node-transform root)
-         for i from (1- (length nodes)) downto 0 do
+         for i from (1- (length nodes)) downto 0
+         for node = (aref nodes i)
+         do
+           (setf (rotation node) (mod (+ (rotation node) (* dt 100.0)) 360.0))
            (into-matrix (matrix)
              (load-matrix root-transform))
-           (draw-batched-node-quad-with-matrix (aref nodes i) matrix))))
+           (draw-batched-node-quad-with-matrix node matrix))))
   (setf *consing* (- (ccl::total-bytes-allocated) consed))
   ;; :on-event (format t "got event: ~S~%" event)
   )
