@@ -257,26 +257,7 @@
          (>= y 0.0))))
 
 (defmethod node-four-corners ((self node) matrix)
-  (let ((x1 0.0)
-        (y1 0.0)
-        (x2 (content-width self))
-        (y2 (content-height self))
-        llx lly
-        ulx uly
-        urx ury
-        lrx lry)
-    (declare (type single-float x1 y1 x2 y2)
-             (inline matrix-multiply-point-2d))
-    (setf
-     (values llx lly) (matrix-multiply-point-2d matrix x1 y1)
-     (values ulx uly) (matrix-multiply-point-2d matrix x1 y2)
-     (values urx ury) (matrix-multiply-point-2d matrix x2 y2)
-     (values lrx lry) (matrix-multiply-point-2d matrix x2 y1))
-    (values llx lly
-            ulx uly
-            urx ury
-            lrx lry)))
-
+  (four-corners 0.0 0.0 (content-width self) (content-height self) matrix))
 
 (defun four-corners (x1 y1 x2 y2 matrix)
   (declare (optimize (speed 3) (safety 1))
