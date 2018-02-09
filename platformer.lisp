@@ -990,24 +990,25 @@
           spotlight (make-instance 'spotlight-node
                                    :x 250.0
                                    :y 250.0
-                                   :radius 250.0
-                                   :content-width 1000.0
-                                   :content-height 1000.0
+                                   :radius 700.0
+                                   :content-width (* 768.0 2.0)
+                                   :content-height (* 432.0 2.0)
                                    :anchor-x 0.5
                                    :anchor-y 0.5
                                    :color (vector 0.0 0.0 0.0)
+                                   :visible nil
                                    :z-order 1.0))
 
     (add-children root (list (level-root level)
-                        spotlight
-                        ))))
+                        spotlight))))
 
 (defmethod cl-user::step-contents ((self platformer) dt)
-  (with-struct (platformer- started root level matrix-stack spotlight) self
+  (with-struct (platformer- started root level matrix-stack spotlight mode) self
     (unless started
       (setf started t)
       (on-enter root))
-    (update level dt)
+    (when (eq mode :play)
+      (update level dt))
     (let ((player (level-player level))
           (root   (level-root level)))
       (setf (x spotlight) (+ (x player) (x root))
@@ -1016,14 +1017,33 @@
     (let ((*matrix-stack* matrix-stack))
       (visit-with-xform root))
     (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 360.0)
-    (when *next-level*
-      (let ((mgr (level-object-manager level)))
-        (setf (gethash (level-name level) *level-states*) mgr)
-        (game-object-manager-sleep-all mgr))
-      (remove-from-parent (level-root level))
-      (setf level (apply #'get-level *next-level*))
-      (add-child root (level-root level))
-      (setf *next-level* nil))))
+    (case mode
+      (:play
+       (when *next-level*
+         (setf mode :level-exit
+               (visible spotlight) t)
+         (run-action
+          spotlight
+          (list
+           (lerp-slot-to 1.0 'xmas.spotlight-node::radius 0.0)
+           (callfunc
+            (lambda ()
+              (when *next-level*
+                (let ((mgr (level-object-manager level)))
+                  (setf (gethash (level-name level) *level-states*) mgr)
+                  (game-object-manager-sleep-all mgr))
+                (remove-from-parent (level-root level))
+                (setf level (apply #'get-level *next-level*))
+                (add-child root (level-root level))
+                (setf *next-level* nil)
+                (move-camera level dt)
+                (update-object-manager level dt))))
+           (lerp-slot-to 1.0 'xmas.spotlight-node::radius 768.0)
+           (callfunc
+            (lambda ()
+              (setf mode :play
+                    (visible spotlight) nil))))))))))
+
 
 (defmethod cl-user::handle-event ((self platformer) event)
   (let ((info (cdr event)))
@@ -1034,7 +1054,7 @@
       (:keyup   (setf (gethash info *keys*) nil)))))
 
 (cl-user::display-contents (make-platformer :initial-level "dev")
-                           :width (* 1920 0.4)  ;;was: 890
-                           :height (* 1080 0.4) ;;was: 500
+                           :width (* 1920 0.4)  ;;768
+                           :height (* 1080 0.4) ;;432
                            :expandable t
                            :preserve-aspect-ratio t)
