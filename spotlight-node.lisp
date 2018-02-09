@@ -139,4 +139,4 @@
     (:mousemove (setf mouse-x (cadr event)
                       mouse-y (cddr event)))))
 
-(run-test 'spotlight-node)
+;; (run-test 'spotlight-node)
