@@ -922,8 +922,10 @@
           (setf (y player) 100.0)))
 
       ;;should have a 'move-player-to-ground' function
-      (setf (standing-on player)
-            (update-sprite-physics self player (/ 1.0 60.0)))
+      (loop repeat 10 do
+           (setf (standing-on player)
+                 (update-sprite-physics self player (/ 1.0 60.0)))
+           (update-sprite-velocity player (/ 1.0 60.0)))
       (setf *camera-x* (+ (x player) 200)
             *camera-y*  (+ (top player) 300))
       (add-child root background)
