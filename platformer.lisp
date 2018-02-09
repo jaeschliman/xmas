@@ -845,8 +845,13 @@
                       (door "door.png")
                       (platform "platform.png")
                       (blobby "circle-40.png")))
-              (frame (get-frame path)))
-    (apply #'make-instance type :sprite-frame frame initargs)))
+              (frame (get-frame path))
+              (z (case type
+                   ((jewel cat blobby) 1.0)
+                   ((door platform) 0.0))))
+    (apply #'make-instance type
+           :sprite-frame frame :z-order z
+           initargs)))
 
 (defun make-game-object-from-object-info (type initargs)
   (when-let (sprite (make-node-from-object-info type initargs))
@@ -896,7 +901,7 @@
             tmx-node (make-instance 'tmx-node
                                     :tmx tmx)
             player (make-instance 'player
-                                  :z-order 1.0
+                                  :z-order 2.0
                                   :x 50.0
                                   :acceleration-y -100.0
                                   :sprite-frame frame
