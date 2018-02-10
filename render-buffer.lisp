@@ -41,7 +41,7 @@
                        (* 2 (length vector))
                        :element-type element-type))
           (old-vector vector))
-      (map-into new-vector 'identity vector)
+      (replace new-vector vector)
       (setf vector new-vector)
       (static-vectors:free-static-vector old-vector))))
 
@@ -57,6 +57,9 @@
     (static-vector-push item v)))
 
 (defun adjustable-static-vector-reserve-capacity (v count)
+  (declare (optimize (speed 3) (safety 1))
+           (type adjustable-static-vector v)
+           (type fixnum count))
   (with-struct (adjustable-static-vector- vector fill-pointer) v
     (when (< (- (1- (length vector)) fill-pointer) count)
       (%grow-adjustable-static-vector v)
