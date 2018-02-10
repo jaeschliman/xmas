@@ -227,7 +227,7 @@
   mouse-x := -1.0
   mouse-y := -1.0
   mouse-clicked := nil
-  november  := (lfont-from-file "./res/lfont/november.lfont")
+  november  := (xmas.ttf-font:make-font :font "./res/ttf/november.ttf" :size 22)
   tex := (get-texture "wave.png" :wrap :repeat)
   root := (make-instance 'node)
   boat := (make-instance 'boat

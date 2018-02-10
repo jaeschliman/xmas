@@ -41,9 +41,10 @@
   (let ((table (lfont-chars lfont))
         (left  x))
     (loop for char across string
-       for frame = (gethash char table)
+       for (retract advance frame) = (gethash char table)
        when frame do
          (let ((width (texture-frame-width frame))
                (height (texture-frame-height frame)))
+           (decf left (ceiling retract))
            (draw-texture-frame-at frame left y width height)
-           (incf left (+ letter-spacing width))))))
+           (incf left (+ letter-spacing (floor advance)))))))

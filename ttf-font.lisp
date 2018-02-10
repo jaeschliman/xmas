@@ -6,10 +6,27 @@
 (defun font-scale (font size)
   (float (/ size (zpb-ttf:units/em font))))
 
-(defun glyph-width (font size char)
+(defun advance-width (font size char)
   (let ((glyph (zpb-ttf:find-glyph char font))
         (scale (font-scale font size)))
     (* scale (zpb-ttf:advance-width glyph))))
+
+(defun retract-width (font size char)
+  (let* ((scale (font-scale font size))
+         (str (make-array 1 :element-type 'character :initial-element char))
+         (bb  (zpb-ttf:string-bounding-box str font :kerning nil)))
+    (declare (dynamic-extent str))
+    (* scale (zpb-ttf:xmin bb))))
+
+(defun glyph-width (font size char)
+  (let* ((scale (font-scale font size))
+         (str (make-array 1 :element-type 'character :initial-element char))
+         (bb  (zpb-ttf:string-bounding-box str font :kerning nil))
+         (width (- (zpb-ttf:xmax bb) (min (zpb-ttf:xmin bb) 0.0)))
+         (glyph (zpb-ttf:find-glyph char font)))
+    (declare (dynamic-extent str))
+    (* scale (max width (zpb-ttf:advance-width glyph)
+                  ))))
 
 (defun draw-string-glyphs (string font size)
   (vecto:with-graphics-state
@@ -52,8 +69,10 @@
            (loop
               with left = 2.0
               for char across characters
+              for advance = (advance-width font size char)
+              for retract = (retract-width font size char)
               for width = (ceiling (glyph-width font size char)) do
-                (push (list char left 0.0 width height) bounding-boxes)
+                (push (list char left 0.0 width height retract advance) bounding-boxes)
                 (incf left (+ width 4.0)))
            (setf image
                  (vecto-image (:width image-width :height image-height)
@@ -67,6 +86,6 @@
            (table (lfont-chars font)))
       (prog1 font
         (loop for entry in bounding-boxes
-           for (char x y width height) = entry
+           for (char x y width height retract advance) = entry
            for frame = (texture-frame texture x y width height) do
-             (setf (gethash char table) frame))))))
+             (setf (gethash char table) (list retract advance frame)))))))

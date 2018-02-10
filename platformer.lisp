@@ -53,7 +53,7 @@
 (defrunvar *camera-y* 250.0)
 (defrunvar *keys* (make-hash-table :test 'eql))
 (defrunvar *just-pressed* (make-hash-table :test 'eql))
-(defrunvar *font-22* (xmas.lfont-reader:lfont-from-file "./res/lfont/november.lfont"))
+(defrunvar *font-22* (xmas.ttf-font:make-font :font "./res/ttf/november.ttf" :size 22))
 (defrunvar *jewel-count* 0)
 (defrunvar *jewel-count-label* (make-output-string))
 (defrunvar *next-level* nil)
