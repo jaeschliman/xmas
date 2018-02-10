@@ -683,11 +683,11 @@
   font72 := (xmas.ttf-font:make-font :font path :size 72)
   str := "The quick brown fox jumped over the lazy dog."
   :update
-  (lfont-draw-string font10 str 10.0 150.0 :letter-spacing 0.0)
-  (lfont-draw-string font15 str 10.0 200.0 :letter-spacing 0.0)
-  (lfont-draw-string font20 str 10.0 250.0 :letter-spacing 0.0)
-  (lfont-draw-string font30 str 10.0 300.0 :letter-spacing 0.0)
-  (lfont-draw-string font72 str 10.0 350.0 :letter-spacing 0.0))
+  (lfont-draw-string font10 str 10.0 150.0 :letter-spacing 2.0)
+  (lfont-draw-string font15 str 10.0 200.0 :letter-spacing 2.0)
+  (lfont-draw-string font20 str 10.0 250.0 :letter-spacing 3.0)
+  (lfont-draw-string font30 str 10.0 300.0 :letter-spacing 2.0)
+  (lfont-draw-string font72 str 10.0 350.0 :letter-spacing 4.0))
 
 ;; (run-test 'dynamic-text-rendering)
 

@@ -7,9 +7,14 @@
   (float (/ size (zpb-ttf:units/em font))))
 
 (defun advance-width (font size char)
-  (let ((glyph (zpb-ttf:find-glyph char font))
-        (scale (font-scale font size)))
-    (* scale (zpb-ttf:advance-width glyph))))
+  (let* ((glyph (zpb-ttf:find-glyph char font))
+        (scale (font-scale font size))
+        (str (make-array 1 :element-type 'character :initial-element char))
+        (bb  (zpb-ttf:string-bounding-box str font :kerning nil)))
+    (declare (dynamic-extent str))
+    (if (eq char #\Space)
+        (* scale (zpb-ttf:advance-width glyph))
+        (* scale (min (zpb-ttf:advance-width glyph) (zpb-ttf:xmax bb))))))
 
 (defun retract-width (font size char)
   (let* ((scale (font-scale font size))
