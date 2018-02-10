@@ -41,7 +41,7 @@
                        (* 2 (length vector))
                        :element-type element-type))
           (old-vector vector))
-      (replace new-vector vector)
+      (replace new-vector old-vector)
       (setf vector new-vector)
       (static-vectors:free-static-vector old-vector))))
 
