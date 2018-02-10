@@ -288,13 +288,6 @@
   (let ((c (color node)) (a (opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
-(defmethod draw ((self image))
-  (draw-node-color self)
-  (let ((texture (texture self)))
-    (xmas.draw:draw-texture-at texture 0.0 0.0
-                               (texture-width texture)
-                               (texture-height texture))))
-
 (defun %draw-texture-at (tex x y matrix)
   (let ((tx1 0.0) (tx2 1.0)
         (ty1 1.0) (ty2 0.0))
@@ -324,31 +317,12 @@
          (y (- (* pct range) (* range 0.5))))
     (- y)))
 
-(defmethod draw ((self background-image))
-  (draw-node-color self)
-  (let* ((texture (texture self)))
-    (xmas.draw:draw-texture-at texture 0.0 (background-image-y-position self)
-                               (texture-width texture)
-                               (texture-height texture))))
-
 (defmethod draw-with-xform ((self background-image) xform)
   (draw-node-color self)
   (when-let* ((texture (texture self))
               (id (texture-id texture)))
     (xmas.render-buffer::with-textured-2d-quads (id)
       (%draw-texture-at texture 0.0 (background-image-y-position self) xform))))
-
-(defmethod draw ((self horizontal-scroller-image))
-  (draw-node-color self)
-  (let* ((texture (texture self))
-         (width (texture-width texture))
-         (height (texture-height texture))
-         (speed (slot-value self 'speed))
-         (offs-y (background-image-y-position self))
-         (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
-    (xmas.draw:draw-texture-at texture (- offs-x width) offs-y width height)
-    (xmas.draw:draw-texture-at texture offs-x           offs-y width height)
-    (xmas.draw:draw-texture-at texture (+ offs-x width) offs-y width height)))
 
 (defmethod draw-with-xform ((self horizontal-scroller-image) xform)
   (draw-node-color self)
@@ -363,21 +337,6 @@
         (%draw-texture-at texture (- offs-x width) offs-y xform)
         (%draw-texture-at texture offs-x           offs-y xform)
         (%draw-texture-at texture (+ offs-x width) offs-y xform)))))
-
-(defmethod draw ((self tmx-node))
-  (let* ((r (tmx self))
-         (x (/ (xmas.tmx-renderer:tmx-renderer-width r) 2.0))
-         (y (/ (xmas.tmx-renderer:tmx-renderer-height r) 2.0))
-         (x-offs (* *display-width* 0.6))
-         (y-offs (* *display-height* 0.6))
-         (x1 (- *camera-x* x-offs))
-         (x2 (+ *camera-x* x-offs))
-         (y1 (- *camera-y* y-offs))
-         (y2 (+ *camera-y* y-offs)))
-    (xmas.tmx-renderer:draw-tmx-renderer-windowed
-     x y r
-     x1 y1
-     x2 y2)))
 
 (defmethod draw-with-xform ((self tmx-node) xform)
   (let* ((r (tmx self))
@@ -1044,7 +1003,8 @@
                 (add-child root (level-root level))
                 (setf *next-level* nil)
                 (move-camera level dt)
-                (update-object-manager level dt))))
+                (update-object-manager level dt)
+                (setf mode :level-enter))))
            (lerp-slot-to 1.0 'xmas.spotlight-node::radius 768.0)
            (callfunc
             (lambda ()
