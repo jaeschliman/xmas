@@ -75,7 +75,8 @@
   (float-idx 0 :type array-index)
   (u32-values (make-adjustable-static-vector :element-type '(unsigned-byte 32)))
   (u32-idx 0 :type array-index)
-  )
+  (u8-values (make-adjustable-static-vector :element-type '(unsigned-byte 8)))
+  (u8-idx 0 :type array-index))
 
 (defmethod print-object ((self buffer) stream)
   (print-unreadable-object (self stream :identity t)
@@ -86,7 +87,7 @@
   (free-adjustable-static-vector (buffer-float-values buffer))
   (free-adjustable-static-vector (buffer-batch-counts buffer))
   (free-adjustable-static-vector (buffer-u32-values buffer))
-  )
+  (free-adjustable-static-vector (buffer-u8-values buffer)))
 
 ;; (defun make-buffer (&key (size 1024))
 ;;   (make-array size :element-type t :adjustable t :fill-pointer 0))
@@ -140,13 +141,17 @@
 (defun write-u32! (val)
   (static-vector-push-extend val (buffer-u32-values *write-buffer*)))
 
+(defun write-u8! (val)
+  (static-vector-push-extend val (buffer-u8-values *write-buffer*)))
+
 (defun current-write-position ()
   (adjustable-static-vector-fill-pointer (buffer-float-values *write-buffer*)))
 
 (defmacro write-position (type)
   (let ((accessor (ecase type
                     (:float 'buffer-float-values)
-                    (:u32   'buffer-u32-values))))
+                    (:u32   'buffer-u32-values)
+                    (:u8    'buffer-u8-values))))
     `(adjustable-static-vector-fill-pointer (,accessor *write-buffer*))))
 
 (defun current-read-pointer () ;;TODO: rename to current-float-read-pointer
@@ -158,7 +163,8 @@
   (multiple-value-bind (accessor index width-in-bytes)
       (ecase type
         (:float (values 'buffer-float-values 'buffer-float-idx 4))
-        (:u32   (values 'buffer-u32-values 'buffer-u32-idx 4)))
+        (:u32   (values 'buffer-u32-values 'buffer-u32-idx 4))
+        (:u8    (values 'buffer-u8-values 'buffer-u8-idx 1)))
     `(let ((vec (adjustable-static-vector-vector (,accessor *read-buffer*)))
            (pos (,index *read-buffer*)))
        (static-vectors:static-vector-pointer vec :offset (* pos ,width-in-bytes)))))
@@ -167,6 +173,7 @@
   (let ((b *read-buffer*))
     (setf (buffer-float-idx b) 0
           (buffer-u32-idx b) 0
+          (buffer-u8-idx b) 0
           (buffer-batch-counts-idx b) 0)))
 
 (defun reset-write-buffer! ()
@@ -174,6 +181,7 @@
     (setf (fill-pointer (buffer-instrs b)) 0
           (adjustable-static-vector-fill-pointer (buffer-float-values b)) 0
           (adjustable-static-vector-fill-pointer (buffer-u32-values b)) 0
+          (adjustable-static-vector-fill-pointer (buffer-u8-values b)) 0
           (adjustable-static-vector-fill-pointer (buffer-batch-counts b)) 0)))
 
 (defmacro with-writes-to-render-buffer ((buffer) &body body)
@@ -203,6 +211,12 @@
           (buffer-u32-idx *read-buffer*))
     (incf (buffer-u32-idx *read-buffer*))))
 
+(defun read-u8! ()
+  (prog1 (aref
+          (adjustable-static-vector-vector (buffer-u8-values *read-buffer*))
+          (buffer-u8-idx *read-buffer*))
+    (incf (buffer-u8-idx *read-buffer*))))
+
 (defun read-count! ()
   (prog1 (aref
           (adjustable-static-vector-vector (buffer-batch-counts *read-buffer*))
@@ -212,17 +226,25 @@
 (defun call-with-batched-writes (instruction fn)
   (write-instr! instruction)
   (let ((float-start (write-position :float))
-        (u32-start   (write-position :u32)))
+        (u32-start   (write-position :u32))
+        (u8-start    (write-position :u8)))
     (unwind-protect (funcall fn)
       (write-count! (- (write-position :float) float-start))
-      (write-count! (- (write-position :u32) u32-start)))))
+      (write-count! (- (write-position :u32) u32-start))
+      (write-count! (- (write-position :u8) u8-start)))))
 
 (defun call-with-batched-read-pointer (fn)
   (let* ((float-count (read-count!))
          (u32-count (read-count!))
+         (u8-count (read-count!))
          (float-ptr (read-pointer :float))
-         (u32-ptr (read-pointer :u32)))
-    (unwind-protect (funcall fn float-count float-ptr u32-count u32-ptr)
+         (u32-ptr (read-pointer :u32))
+         (u8-ptr (read-pointer :u8)))
+    (unwind-protect (funcall
+                     fn
+                     float-count float-ptr
+                     u32-count u32-ptr
+                     u8-count u8-ptr)
       (incf (buffer-float-idx *read-buffer*) float-count)
       (incf (buffer-u32-idx *read-buffer*) u32-count))))
 
@@ -235,10 +257,14 @@
 (defmacro with-batched-read-pointer ((float-count
                                       float-ptr
                                       u32-count
-                                      u32-ptr) &body body)
+                                      u32-ptr
+                                      u8-count
+                                      u8-ptr) &body body)
   (with-gensyms (fn)
-    `(let ((,fn (lambda (,float-count ,float-ptr ,u32-count ,u32-ptr)
-                  (declare (ignorable ,float-count ,float-ptr ,u32-count ,u32-ptr))
+    `(let ((,fn (lambda (,float-count ,float-ptr ,u32-count ,u32-ptr ,u8-count ,u8-ptr)
+                  (declare (ignorable ,float-count ,float-ptr
+                                      ,u32-count ,u32-ptr
+                                      ,u8-count ,u8-ptr))
                   ,@body)))
        (declare (dynamic-extent ,fn))
        (call-with-batched-read-pointer ,fn))))
@@ -257,7 +283,8 @@
          (var (first arg)))
     (ecase type
       (:float `(write-float! (coerce ,var 'single-float)))
-      (:u32   `(write-u32! ,var)))))
+      (:u32   `(write-u32! ,var))
+      (:u8    `(write-u8! ,var)))))
 
 (defun arg-to-macro-write-form (arg)
  (let* ((arg (ensure-list arg))
@@ -265,7 +292,8 @@
          (var (first arg)))
     (ecase type
       (:float ``(write-float! (coerce ,,var 'single-float)))
-      (:u32   ``(write-u32! ,,var)))) )
+      (:u32   ``(write-u32! ,,var))
+      (:u8    ``(write-u8! ,,var)))))
 
 (defun arg-to-let-binding (arg)
   (let* ((arg (ensure-list arg))
@@ -273,7 +301,8 @@
          (var (first arg)))
     (ecase type
       (:float `(,var (read!)))
-      (:u32   `(,var (read-u32!))))))
+      (:u32   `(,var (read-u32!)))
+      (:u8    `(,var (read-u8!))))))
 
 (defmacro definstr (name (&rest args) &body body)
   (let ((instr-name (symbolicate '%instr- name))
@@ -317,7 +346,9 @@
             (with-batched-writes (,,instr) ,,@(cdr (assoc :write body)))))
        (defun ,instr-name ()
          (let ,(mapcar #'arg-to-let-binding write-args)
-           (with-batched-read-pointer (float-count float-ptr u32-count u32-ptr)
+           (with-batched-read-pointer (float-count float-ptr
+                                       u32-count u32-ptr
+                                       u8-count u8-ptr)
              ,@(cdr (assoc :read body)))))
        (vector-push-extend #',instr-name *instr-table*))))
 
