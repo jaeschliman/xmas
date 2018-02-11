@@ -201,17 +201,37 @@
     (vector-push-extend fn *instr-table*)
     (incf *instr-counter*)))
 
+(defun arg-to-write-form (arg)
+  (let* ((arg (ensure-list arg))
+         (type (or (second arg) :float))
+         (var (first arg)))
+    (ecase type
+      (:float `(write-float! (coerce ,var 'single-float))))))
+
+(defun arg-to-macro-write-form (arg)
+ (let* ((arg (ensure-list arg))
+         (type (or (second arg) :float))
+         (var (first arg)))
+    (ecase type
+      (:float ``(write-float! (coerce ,,var 'single-float))))) )
+
+(defun arg-to-let-binding (arg)
+  (let* ((arg (ensure-list arg))
+         (type (or (second arg) :float))
+         (var (first arg)))
+    (ecase type
+      (:float `(,var (read!))))))
+
 (defmacro definstr (name (&rest args) &body body)
   (let ((instr-name (symbolicate '%instr- name))
         (instr *instr-counter*))
     (incf *instr-counter*)
     `(progn
-       (defun ,name ,args
+       (defun ,name ,(mapcar #'ensure-car args)
          (write-instr! ,instr)
-         ,@(loop for arg in args collect
-                `(write-float! (coerce ,arg 'single-float))))
+         ,@(loop for arg in args collect (arg-to-write-form arg)))
        (defun ,instr-name ()
-         (let ,(loop for arg in args collect `(,arg (read!)))
+         (let ,(loop for arg in args collect (arg-to-let-binding arg))
            ,@body))
        (vector-push-extend #',instr-name *instr-table*))))
 
@@ -234,15 +254,16 @@
 
 (defmacro definstr-batched (name write-args &body body)
   (let ((instr-name (symbolicate '%instr- name))
-        (instr *instr-counter*))
+        (instr *instr-counter*)
+        (var-names (mapcar #'ensure-car write-args)))
     (incf *instr-counter*)
     `(progn
-       (defmacro ,name (,write-args &body body) ;;TODO: use args
+       (defmacro ,name (,var-names &body body) ;;TODO: use args
          `(progn
-            ,,@(mapcar (lambda (v) ``(write-float! (coerce ,,v 'single-float))) write-args)
+            ,,@(mapcar #'arg-to-macro-write-form write-args)
             (with-batched-writes (,,instr) ,,@(cdr (assoc :write body)))))
        (defun ,instr-name ()
-         (let ,(mapcar (lambda (v) `(,v (read!))) write-args)
+         (let ,(mapcar #'arg-to-let-binding write-args)
            (with-batched-read-pointer (count ptr)
              ,@(cdr (assoc :read body)))))
        (vector-push-extend #',instr-name *instr-table*))))
