@@ -69,7 +69,8 @@
 
 (defstruct buffer
   (instrs (make-adjustable-vector :element-type 'fixnum))
-  (float-values (make-adjustable-static-vector :element-type 'single-float)))
+  (float-values (make-adjustable-static-vector :element-type 'single-float))
+  (float-idx 0 :type array-index))
 
 (defmethod print-object ((self buffer) stream)
   (print-unreadable-object (self stream :identity t)
@@ -85,8 +86,6 @@
 
 (defvar *read-buffer* nil)
 (defvar *write-buffer* nil)
-
-(defvar *pc* 0)
 
 (defstruct render-buffer
   (read-buffer  (make-buffer))
@@ -135,10 +134,13 @@
   (setf (aref (adjustable-static-vector-vector (buffer-float-values *write-buffer*)) index)
         (coerce val 'single-float)))
 
-(defun current-read-pointer ()
+(defun current-read-pointer () ;;TODO: rename to current-float-read-pointer
   (let ((vec (adjustable-static-vector-vector (buffer-float-values *read-buffer*)))
-        (pos *pc*))
+        (pos (buffer-float-idx *read-buffer*)))
     (static-vectors:static-vector-pointer vec :offset (* pos 4))))
+
+(defun reset-read-buffer! ()
+  (setf (buffer-float-idx *read-buffer*) 0))
 
 (defun reset-write-buffer! ()
   (setf (fill-pointer (buffer-instrs *write-buffer*)) 0
@@ -155,14 +157,15 @@
   (once-only (buffer)
     `(progn
        (maybe-swap-read-buffer! ,buffer)
-       (let ((*read-buffer* (render-buffer-read-buffer ,buffer))
-             (*pc* 0))
+       (let ((*read-buffer* (render-buffer-read-buffer ,buffer)))
+         (reset-read-buffer!)
          ,@body))))
 
-(defun read! ()
+(defun read! () ;;TODO: rename to read-float!
   (prog1 (aref
-          (adjustable-static-vector-vector (buffer-float-values *read-buffer*)) *pc*)
-    (incf *pc*)))
+          (adjustable-static-vector-vector (buffer-float-values *read-buffer*))
+          (buffer-float-idx *read-buffer*))
+    (incf (buffer-float-idx *read-buffer*))))
 
 (defun call-with-batched-writes (instruction fn)
   (write-instr! instruction)
@@ -175,7 +178,8 @@
   (let* ((count (ceiling (read!)))
          (ptr   (current-read-pointer)))
     (unwind-protect (funcall fn count ptr)
-      (incf *pc* (1- count))))) ;;TODO: not 100% on this 1-, but it works...
+      ;;TODO: not 100% on this 1-, but it works...
+      (incf (buffer-float-idx *read-buffer*) (1- count)))))
 
 (defmacro with-batched-writes ((instr) &body body)
   (with-gensyms (fn)
@@ -244,9 +248,7 @@
        (vector-push-extend #',instr-name *instr-table*))))
 
 (defun run! ()
-  (unwind-protect
-       (loop
-          for instr across (buffer-instrs *read-buffer*)
-          for fn = (aref *instr-table* instr)
-          do (funcall fn))
-    (setf *pc* 0)))
+  (loop
+     for instr across (buffer-instrs *read-buffer*)
+     for fn = (aref *instr-table* instr)
+     do (funcall fn)))
