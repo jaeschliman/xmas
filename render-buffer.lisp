@@ -197,6 +197,12 @@
           (buffer-float-idx *read-buffer*))
     (incf (buffer-float-idx *read-buffer*))))
 
+(defun read-u32! ()
+  (prog1 (aref
+          (adjustable-static-vector-vector (buffer-u32-values *read-buffer*))
+          (buffer-u32-idx *read-buffer*))
+    (incf (buffer-u32-idx *read-buffer*))))
+
 (defun read-count! ()
   (prog1 (aref
           (adjustable-static-vector-vector (buffer-batch-counts *read-buffer*))
@@ -231,7 +237,9 @@
                                       u32-count
                                       u32-ptr) &body body)
   (with-gensyms (fn)
-    `(let ((,fn (lambda (,float-count ,float-ptr ,u32-count ,u32-ptr) ,@body)))
+    `(let ((,fn (lambda (,float-count ,float-ptr ,u32-count ,u32-ptr)
+                  (declare (ignorable ,float-count ,float-ptr ,u32-count ,u32-ptr))
+                  ,@body)))
        (declare (dynamic-extent ,fn))
        (call-with-batched-read-pointer ,fn))))
 
@@ -248,21 +256,24 @@
          (type (or (second arg) :float))
          (var (first arg)))
     (ecase type
-      (:float `(write-float! (coerce ,var 'single-float))))))
+      (:float `(write-float! (coerce ,var 'single-float)))
+      (:u32   `(write-u32! ,var)))))
 
 (defun arg-to-macro-write-form (arg)
  (let* ((arg (ensure-list arg))
          (type (or (second arg) :float))
          (var (first arg)))
     (ecase type
-      (:float ``(write-float! (coerce ,,var 'single-float))))) )
+      (:float ``(write-float! (coerce ,,var 'single-float)))
+      (:u32   ``(write-u32! ,,var)))) )
 
 (defun arg-to-let-binding (arg)
   (let* ((arg (ensure-list arg))
          (type (or (second arg) :float))
          (var (first arg)))
     (ecase type
-      (:float `(,var (read!))))))
+      (:float `(,var (read!)))
+      (:u32   `(,var (read-u32!))))))
 
 (defmacro definstr (name (&rest args) &body body)
   (let ((instr-name (symbolicate '%instr- name))
