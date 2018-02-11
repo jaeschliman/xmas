@@ -225,7 +225,7 @@
 (defun %draw-quad (llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2)
   (declare (optimize (speed 3) (safety 1))
            (type single-float llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2))
-  (let ((values (buffer-values *write-buffer*)))
+  (let ((values (buffer-float-values *write-buffer*)))
     (declare (type adjustable-static-vector values))
     (write-floats! values
                    ;; b c
@@ -238,7 +238,7 @@
 (definstr-batched with-textured-2d-quads (texture-id)
   (:write
    `(flet ((quad (x1 y1 tx1 ty1 x2 y2 tx2 ty2)
-             (let ((values (buffer-values *write-buffer*)))
+             (let ((values (buffer-float-values *write-buffer*)))
                (declare (type adjustable-static-vector values))
                (write-floats! values
                               x1 y1 tx1 ty1

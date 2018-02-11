@@ -69,7 +69,7 @@
 
 (defstruct buffer
   (instrs (make-adjustable-vector :element-type 'fixnum))
-  (values (make-adjustable-static-vector :element-type 'single-float)))
+  (float-values (make-adjustable-static-vector :element-type 'single-float)))
 
 (defmethod print-object ((self buffer) stream)
   (print-unreadable-object (self stream :identity t)
@@ -77,7 +77,7 @@
 
 (defun release-buffer (buffer)
   (format t "releasing buffer: ~S~%" buffer)
-  (free-adjustable-static-vector (buffer-values buffer)))
+  (free-adjustable-static-vector (buffer-float-values buffer)))
 
 
 ;; (defun make-buffer (&key (size 1024))
@@ -123,26 +123,26 @@
 (declaim (inline %write-float-on))
 
 (defun write-float! (val)
-  (%write-float-on val (buffer-values *write-buffer*)))
+  (%write-float-on val (buffer-float-values *write-buffer*)))
 
 (defun write-instr! (val)
   (vector-push-extend val (buffer-instrs *write-buffer*)))
 
 (defun current-write-position ()
-  (adjustable-static-vector-fill-pointer (buffer-values *write-buffer*)))
+  (adjustable-static-vector-fill-pointer (buffer-float-values *write-buffer*)))
 
 (defun write-float-at-index! (val index)
-  (setf (aref (adjustable-static-vector-vector (buffer-values *write-buffer*)) index)
+  (setf (aref (adjustable-static-vector-vector (buffer-float-values *write-buffer*)) index)
         (coerce val 'single-float)))
 
 (defun current-read-pointer ()
-  (let ((vec (adjustable-static-vector-vector (buffer-values *read-buffer*)))
+  (let ((vec (adjustable-static-vector-vector (buffer-float-values *read-buffer*)))
         (pos *pc*))
     (static-vectors:static-vector-pointer vec :offset (* pos 4))))
 
 (defun reset-write-buffer! ()
   (setf (fill-pointer (buffer-instrs *write-buffer*)) 0
-        (adjustable-static-vector-fill-pointer (buffer-values *write-buffer*)) 0))
+        (adjustable-static-vector-fill-pointer (buffer-float-values *write-buffer*)) 0))
 
 (defmacro with-writes-to-render-buffer ((buffer) &body body)
   (once-only (buffer)
@@ -161,7 +161,7 @@
 
 (defun read! ()
   (prog1 (aref
-          (adjustable-static-vector-vector (buffer-values *read-buffer*)) *pc*)
+          (adjustable-static-vector-vector (buffer-float-values *read-buffer*)) *pc*)
     (incf *pc*)))
 
 (defun call-with-batched-writes (instruction fn)
