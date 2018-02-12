@@ -253,6 +253,24 @@
                    urx ury tx2 ty2
                    lrx lry tx2 ty1)))
 
+(defun %draw-quad-color (r g b a)
+  (declare (optimize (speed 3) (safety 1))
+           (type single-float r g b a))
+  (flet ((c (c) (floor (* c 255.0))))
+    (declare (dynamic-extent #'c))
+    (let ((r (c r))
+          (g (c g))
+          (b (c b))
+          (a (c a)))
+      (declare (type (unsigned-byte 8) r g b a))
+      (let ((buff (buffer-u8-values *write-buffer*)))
+        (declare (type adjustable-static-vector buff))
+        (write-u8s! buff
+                    r g b a
+                    r g b a
+                    r g b a
+                    r g b a)))))
+
 (definstr-batched with-textured-2d-quads ((texture-id :u32))
   (:write
    `(flet ((quad (x1 y1 tx1 ty1 x2 y2 tx2 ty2)

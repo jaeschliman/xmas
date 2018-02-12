@@ -937,7 +937,7 @@
 ;; (run-test 'batched-writes-5)
 
 (deftest batched-writes-6 (:width 500 :height 500)
-  :tags batched-drawing matrix quad
+  :tags batched-drawing matrix quad color
   :init
   tex := (get-texture "./bayarea.png")
   :update
@@ -959,6 +959,28 @@
          255 255 0   255)))))
 
 ;; (run-test 'batched-writes-6)
+
+(deftest batched-writes-7 (:width 500 :height 500)
+  :tags batched drawing quad color sprites
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  stack := (make-matrix-stack)
+  sprite1 := (make-instance 'sprite :x 150.0 :y 250.0
+                            :sprite-frame (get-frame "pickle.png")
+                            :color (vector 1.0 1.0 0.0))
+  sprite2 := (make-instance 'sprite :x 250.0 :y 250.0
+                            :sprite-frame (get-frame "pickle.png")
+                            :color (vector 0.0 1.0 0.0))
+  sprite3 := (make-instance 'sprite :x 350.0 :y 250.0
+                            :sprite-frame (get-frame "pickle.png")
+                            :color (vector 0.0 1.0 1.0))
+  root := (make-instance 'node)
+  (add-children root (list sprite1 sprite2 sprite3))
+  :update
+  (let ((*matrix-stack* stack))
+    (visit-with-xform root)))
+
+;; (run-test 'batched-writes-7)
 
 (deftest draw-with-xform-0 (:width 500 :height 250)
   :init

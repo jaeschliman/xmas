@@ -87,6 +87,8 @@
 (defmethod draw-with-xform ((self sprite) xform)
   (when-let* ((frame (sprite-frame self))
               (id (texture-id (texture-frame-texture frame))))
-    (draw-node-color self)
-    (xmas.render-buffer::with-textured-2d-quads (id)
+    (xmas.render-buffer::with-colored-textured-2d-quads (id)
+      (let ((c (color self)))
+        (xmas.render-buffer::%draw-quad-color
+         (svref c 0) (svref c 1) (svref c 2) (opacity self)))
      (%draw-sprite self frame xform))))
