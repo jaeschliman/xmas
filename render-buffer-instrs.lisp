@@ -222,6 +222,24 @@
                          (the single-float ,f)))
            (incf (adjustable-static-vector-fill-pointer ,values) ,count))))))
 
+(defmacro write-u8s! (values &rest bytes)
+  (once-only (values)
+    (let ((count (length bytes)))
+      `(locally (declare (type adjustable-static-vector ,values))
+         (adjustable-static-vector-reserve-capacity ,values ,count)
+         (let ((idx (adjustable-static-vector-fill-pointer ,values))
+               (vec (adjustable-static-vector-vector ,values)))
+           (declare (type array-index idx)
+                    (type (unsigned-byte 8) ,@(remove-if #'numberp bytes))
+                    (type (simple-array (unsigned-byte 8)) vec)
+                    (optimize (speed 3) (safety 1)))
+           ,@(loop for b in bytes
+                for inc upfrom 0
+                collect
+                  `(setf (aref vec (the array-index (+ (the fixnum idx) ,inc)))
+                         (the (unsigned-byte 8) ,b)))
+           (incf (adjustable-static-vector-fill-pointer ,values) ,count))))))
+
 (defun %draw-quad (llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2)
   (declare (optimize (speed 3) (safety 1))
            (type single-float llx lly ulx uly urx ury lrx lry tx1 ty1 tx2 ty2))
@@ -254,6 +272,22 @@
    (%gl:vertex-pointer 2 :float (* 4 (+ 2 2)) float-ptr)
    (%gl:tex-coord-pointer 2 :float (* 4 (+ 2 2))
                           (cffi:inc-pointer float-ptr (* 4 2)))
+   (gl:draw-arrays :quads 0 (/ float-count 4))
+   (gl:disable-client-state :texture-coord-array)
+   (gl:disable-client-state :vertex-array)))
+
+(definstr-batched with-colored-textured-2d-quads ((texture-id :u32))
+  (:write
+   `(progn ,@body))
+  (:read
+   (bind-texture texture-id)
+   (gl:enable-client-state :vertex-array)
+   (gl:enable-client-state :texture-coord-array)
+   (gl:enable-client-state :color-array)
+   (%gl:vertex-pointer 2 :float (* 4 (+ 2 2)) float-ptr)
+   (%gl:tex-coord-pointer 2 :float (* 4 (+ 2 2))
+                          (cffi:inc-pointer float-ptr (* 4 2)))
+   (%gl:color-pointer 4 :unsigned-byte 0 u8-ptr)
    (gl:draw-arrays :quads 0 (/ float-count 4))
    (gl:disable-client-state :texture-coord-array)
    (gl:disable-client-state :vertex-array)))

@@ -936,6 +936,30 @@
 
 ;; (run-test 'batched-writes-5)
 
+(deftest batched-writes-6 (:width 500 :height 500)
+  :tags batched-drawing matrix quad
+  :init
+  tex := (get-texture "./bayarea.png")
+  :update
+  (when-let (id (texture-id tex))
+    (xmas.render-buffer::with-colored-textured-2d-quads (id)
+      (xmas.render-buffer::%draw-quad 0.0 0.0
+                                      10.0 400.0
+                                      400.0 400.0
+                                      400.0 10.0
+                                      0.0 1.0
+                                      1.0 0.0)
+      (let ((buff (xmas.render-buffer::buffer-u8-values
+                   xmas.render-buffer::*write-buffer*)))
+        (xmas.render-buffer::write-u8s!
+         buff
+         255 0   0   255
+         0   255 0   255
+         0   0   255 255
+         255 255 0   255)))))
+
+;; (run-test 'batched-writes-6)
+
 (deftest draw-with-xform-0 (:width 500 :height 250)
   :init
   (texture-packer-add-frames-from-file "./res/test.json")
@@ -1053,6 +1077,8 @@
     (visit-with-xform sprite1)))
 
 ;; (run-test 'translate-scale-rotate-translate)
+
+
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
