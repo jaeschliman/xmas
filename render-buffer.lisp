@@ -246,7 +246,8 @@
                      u32-count u32-ptr
                      u8-count u8-ptr)
       (incf (buffer-float-idx *read-buffer*) float-count)
-      (incf (buffer-u32-idx *read-buffer*) u32-count))))
+      (incf (buffer-u32-idx *read-buffer*) u32-count)
+      (incf (buffer-u8-idx *read-buffer*) u8-count))))
 
 (defmacro with-batched-writes ((instr) &body body)
   (with-gensyms (fn)
