@@ -290,4 +290,5 @@
    (%gl:color-pointer 4 :unsigned-byte 0 u8-ptr)
    (gl:draw-arrays :quads 0 (/ float-count 4))
    (gl:disable-client-state :texture-coord-array)
-   (gl:disable-client-state :vertex-array)))
+   (gl:disable-client-state :vertex-array)
+   (gl:disable-client-state :color-array)))
