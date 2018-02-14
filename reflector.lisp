@@ -1,28 +1,54 @@
-(defpackage :xmas.reflector (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.draw :xmas.lfont-reader :xmas.deftest))
+(defpackage :xmas.reflector (:use :cl :alexandria :xmas.node :xmas.sprite :xmas.action :xmas.texture :xmas.texture-packer :xmas.display :xmas.animation-manager :xmas.qtree :xmas.game-object :xmas.draw :xmas.lfont-reader :xmas.deftest :xmas.matrix-stack))
 (in-package :xmas.reflector)
 
 (defun draw-node-color (node)
   (let ((c (color node)) (a (opacity node)))
     (xmas.render-buffer::set-color (svref c 0) (svref c 1) (svref c 2) a)))
 
+(defclass batch-node (node) ())
+
+(defmethod visit-with-xform ((self batch-node))
+  (xmas.render-buffer::with-colored-textured-2d-quads (0)
+    (call-next-method)))
+
 (defclass reflector-node (node)
   ((reflection-count :initarg :reflection-count :initform 4)))
 
 (defmethod visit ((self reflector-node))
- (let* ((count (slot-value self 'reflection-count))
-        (rot (/ 360.0 count))
-        (original-rotation (rotation self)))
-      (loop repeat count 
-           for i upfrom 0 do
-           (setf (rotation self) (+ original-rotation (* i rot)))
-           (call-next-method))
-      (setf (rotation self) original-rotation)))
+  (let* ((count (slot-value self 'reflection-count))
+         (rot (/ 360.0 count))
+         (original-rotation (rotation self)))
+    (loop repeat count 
+       for i upfrom 0 do
+         (setf (rotation self) (+ original-rotation (* i rot)))
+         (call-next-method))
+    (setf (rotation self) original-rotation)))
+
+(defmethod visit-with-xform ((self reflector-node))
+  (let* ((count (slot-value self 'reflection-count))
+         (rot (/ 360.0 count))
+         (original-rotation (rotation self)))
+    (loop repeat count 
+       for i upfrom 0 do
+         (setf (rotation self) (+ original-rotation (* i rot)))
+         (call-next-method))
+    (setf (rotation self) original-rotation)))
 
 (defclass rect (node) ())
 
 (defmethod draw ((self rect))
   (draw-node-color self)
   (xmas.render-buffer::draw-rect 0 0 (content-width self) (content-height self)))
+
+(defmethod draw-with-xform ((self rect) xform)
+  (let ((c (color self)))
+        (xmas.render-buffer::%draw-quad-color
+         (svref c 0) (svref c 1) (svref c 2) (opacity self)))
+  (multiple-value-bind (llx lly ulx uly urx ury lrx lry)
+      (four-corners 0.0 0.0 (content-width self) (content-height self) xform)
+    (xmas.render-buffer::%draw-quad
+     ulx uly llx lly lrx lry urx ury
+     0.0 1.0 1.0 0.0)))
 
 (defun make-rect (x y colors)
   (let ((big (make-instance 'rect :content-width 20.0 :content-height 20.0
@@ -78,6 +104,8 @@
 (deftest reflector-node (:width 500 :height 500 :should-clear nil)
   :init
   started := nil
+  stack := (make-matrix-stack)
+  batch := (make-instance 'batch-node)
   root := (make-instance 'reflector-node :x 250.0 :y 250.0 :reflection-count 5)
   wash := (make-instance 'rect :content-width 500.0 :content-height 500.0 :color (vector 0.3 0.3 0.3) :opacity (/ 1.0 10.0))
   colors := (circular-list
@@ -103,13 +131,15 @@
   (run-action r3 (rotate-by 3.0 -360) :repeat :forever)
   (run-action root (rotate-by 3.0 -360) :repeat :forever)
   (add-children root (list wash r1 r2 r3))
+  (add-child batch root)
   :update
   (unless started
     (setf started t)
-    (on-enter root))
-  (visit root))
+    (on-enter batch))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform batch)))
 
-(run-test 'reflector-node)
+;; (run-test 'reflector-node)
 
 (when nil
   (cl-user::with-current-window-contents (self)
