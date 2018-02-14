@@ -353,7 +353,8 @@
                                 :preserve-aspect-ratio preserve-aspect-ratio
                                 :should-clear should-clear
                                 :closed-hook *display-closed-hook*))
-         (texture-manager (xmas.texture:make-texture-manager :display result)))
+         (texture-manager (xmas.texture:make-texture-manager :display result))
+         (cancel-display nil))
     (setf (xmas.display:display-texture-manager result)
           texture-manager)
     (progmain (*package*)
@@ -390,15 +391,25 @@
                 (call-with-contents
                  contents
                  (lambda ()
-                   (contents-will-mount contents result)
-                   (mount-contents contents result)))
+                   (restart-case
+                       (contents-will-mount contents result) 
+                     (cancel-display ()
+                       :report "Cancel this display."
+                       (setf cancel-display t))
+                     (ignore-error ()
+                       :report "Ignore this error."
+                       nil))
+                   (unless cancel-display
+                     (mount-contents contents result))))
                 (loop for cons in bindings do
                      (setf (cdr cons) (symbol-value (car cons)))))))
-          (#/setLevel: w 100)
-          (#/makeFirstResponder: w glview)
-          (#/makeKeyAndOrderFront: w nil)
-          (setf *current-window* w))))
-
+          (if cancel-display
+              (#/close w)
+              (progn
+                (#/setLevel: w 100)
+                (#/makeFirstResponder: w glview)
+                (#/makeKeyAndOrderFront: w nil)
+                (setf *current-window* w))))))
     result))
 
 (defun call-with-current-window-contents (fn)

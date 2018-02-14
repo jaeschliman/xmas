@@ -19,21 +19,30 @@
             (loop do
                  (loop for event = (queues:qpop queue)
                     while event
-                    do (funcall event-handler event))
+                    do
+                      (restart-case
+                          (funcall event-handler event)
+                        (handle-next-event ()
+                          :report "Handle the next event."
+                          nil)))
                  (unless first-step
                    (setf dt (/ (- (get-internal-real-time) start)
                                unit)))
                  (setf
                   first-step nil
                   start (get-internal-real-time))
-                 (funcall function
-                          ;; not sure what's going on yet, but using dt
-                          ;; appears to give stuttering...
-                          ;; just hardcoding the step appears to give smoother
-                          ;; results...
-                           dt
-                          ;; step
-                          )
+                 (restart-case
+                     (funcall function
+                              ;; not sure what's going on yet, but using dt
+                              ;; appears to give stuttering...
+                              ;; just hardcoding the step appears to give smoother
+                              ;; results...
+                              dt
+                              ;; step
+                              )
+                   (skip-this-frame ()
+                     :report "Skip this frame."
+                     nil))
                  (setf end (get-internal-real-time))
                  (let ((elapsed (/ (- end start) unit)))
                    (setf wait (- step (mod elapsed step))))

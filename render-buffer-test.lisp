@@ -1101,6 +1101,69 @@
 ;; (run-test 'translate-scale-rotate-translate)
 
 
+(deftest error-in-init ()
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  started := nil
+  stack := (make-matrix-stack)
+  frame := (get-frame "pickle blink.png")
+  sprite1 := (make-instance 'sprite :x 125.0 :y 125.0
+                            :scale-x 1.2 :scale-y 1.2
+                            :sprite-frame frame)
+  (run-action sprite1 (rotate-by 12.0 360.0) :repeat :forever)
+  (error "Whoops.")
+  :update
+  (unless started
+    (setf started t)
+    (on-enter sprite1))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform sprite1)))
+
+;; (run-test 'error-in-init)
+
+(deftest error-in-frame ()
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  started := nil
+  stack := (make-matrix-stack)
+  frame := (get-frame "pickle blink.png")
+  sprite1 := (make-instance 'sprite :x 125.0 :y 125.0
+                            :scale-x 1.2 :scale-y 1.2
+                            :sprite-frame frame)
+  (run-action sprite1 (rotate-by 12.0 360.0) :repeat :forever)
+  counter := 0
+  :update
+  (unless started
+    (setf started t)
+    (on-enter sprite1))
+  (incf counter)
+  (when (= counter 20) (error "Whoops."))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform sprite1)))
+
+;; (run-test 'error-in-frame)
+
+(deftest error-in-event-handler ()
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  started := nil
+  stack := (make-matrix-stack)
+  frame := (get-frame "pickle blink.png")
+  sprite1 := (make-instance 'sprite :x 125.0 :y 125.0
+                            :scale-x 1.2 :scale-y 1.2
+                            :sprite-frame frame)
+  (run-action sprite1 (rotate-by 12.0 360.0) :repeat :forever)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter sprite1))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform sprite1))
+  :on-event
+  (case (car event)
+    (:click (error "Whoops."))))
+
+;; (run-test 'error-in-event-handler)
 
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")
