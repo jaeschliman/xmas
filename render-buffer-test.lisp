@@ -1165,5 +1165,41 @@
 
 ;; (run-test 'error-in-event-handler)
 
+(deftest batch-node-test-0 (:width 500 :height 500)
+  :init
+  (texture-packer-add-frames-from-file "./res/test.json")
+  frame := (get-frame "pickle blink.png")
+  texture := (texture-frame-texture frame)
+  started := nil
+  root := (make-instance 'sprite-batch-node :texture texture)
+  stack := (make-matrix-stack)
+  sprite1 := (make-instance 'sprite :x 125.0 :y 125.0
+                            :scale-x 1.2 :scale-y 1.2
+                            :sprite-frame frame)
+  frame-names := (circular-list "pickle.png" "pickle blink.png"
+                                 "throwcat.png" "jewel.png")
+  count := 5000
+  sprites := (loop repeat count collect
+                  (let ((s (make-instance 'sprite
+                                 :x (random 500.0)
+                                 :y (random 500.0)
+                                 :rotation (random 360.0)
+                                 :scale-x (+ 0.8 (random 0.4))
+                                 :scale-y (+ 0.8 (random 0.4))
+                                 :sprite-frame (get-frame (pop frame-names))
+                                 )))
+                    (run-action s (rotate-by (+ 3.0 (random 6.0))
+                                             360.0) :repeat :forever)
+                    s))
+  (add-children root sprites)
+  :update
+  (unless started
+    (setf started t)
+    (on-enter root))
+  (let ((*matrix-stack* stack))
+    (visit-with-xform root)))
+
+;; (run-test 'batch-node-test-0)
+
 (read-tilemap "./res/platformer/infinite.tmx")
 (read-tilemap "./res/platformer/dev.tmx")

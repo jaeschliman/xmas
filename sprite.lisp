@@ -3,14 +3,26 @@
              #:sprite
              #:sprite-frame
              #:stop-animation
-             #:run-animation))
+             #:run-animation
+             #:sprite-batch-node))
 (in-package :xmas.sprite)
+
+(defvar *rendering-under-batch-node* nil)
 
 (defclass sprite (node)
   ((sprite-frame :accessor sprite-frame :initarg :sprite-frame))
   (:default-initargs
    :anchor-x 0.5 :anchor-y 0.5
    :content-width 0.0 :content-height 0.0))
+
+(defclass sprite-batch-node (node)
+  ((texture :reader texture :initarg :texture)))
+
+(defmethod visit-with-xform ((self sprite-batch-node))
+  (when-let ((id (texture-id (texture self))))
+    (let ((*rendering-under-batch-node* t))
+      (xmas.render-buffer::with-colored-textured-2d-quads (id)
+        (call-next-method)))))
 
 (defmethod initialize-instance ((self sprite)
                                 &key sprite-frame content-width content-height
@@ -49,6 +61,9 @@
            (type texture-frame frame)
            (type xmas.matrix::m4 xform)
            (optimize (speed 3) (safety 1)))
+  (let ((c (color self)))
+    (xmas.render-buffer::%draw-quad-color
+     (svref c 0) (svref c 1) (svref c 2) (opacity self)))
   (let* ((flip-x (flip-x self))
          (flip-y (flip-y self))
          (frame-width (texture-frame-width frame))
@@ -87,8 +102,7 @@
 (defmethod draw-with-xform ((self sprite) xform)
   (when-let* ((frame (sprite-frame self))
               (id (texture-id (texture-frame-texture frame))))
-    (xmas.render-buffer::with-colored-textured-2d-quads (id)
-      (let ((c (color self)))
-        (xmas.render-buffer::%draw-quad-color
-         (svref c 0) (svref c 1) (svref c 2) (opacity self)))
-     (%draw-sprite self frame xform))))
+    (if *rendering-under-batch-node*
+        (%draw-sprite self frame xform)
+        (xmas.render-buffer::with-colored-textured-2d-quads (id)
+          (%draw-sprite self frame xform)))))
