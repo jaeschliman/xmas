@@ -184,6 +184,27 @@
    (gl:draw-arrays :triangles 0 (/ float-count 2))
    (gl:disable-client-state :vertex-array)))
 
+(definstr-batched with-colored-2d-triangle-fan ()
+  (:write
+   `(flet ((vert (x y r g b a)
+             (write-float! x)
+             (write-float! y)
+             (write-u8! r)
+             (write-u8! g)
+             (write-u8! b)
+             (write-u8! a)))
+      (declare (dynamic-extent (function vert)))
+      ,@body))
+  (:read
+   (gl:enable-client-state :vertex-array)
+   (gl:enable-client-state :color-array)
+   (%gl:vertex-pointer 2 :float (* 4 2) float-ptr)
+   (%gl:color-pointer 4 :unsigned-byte 0 u8-ptr)
+   (gl:draw-arrays :triangle-fan 0 (/ float-count 2))
+   (gl:disable-client-state :vertex-array)
+   (gl:disable-client-state :color-array)))
+
+
 (definstr-batched with-textured-2d-triangles ((texture-id :u32))
   (:write
    `(flet ((vert (x y tx ty)
