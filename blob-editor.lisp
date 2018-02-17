@@ -82,12 +82,14 @@
       (let ((p (aref vector 0)))
         (v (p-x p) (p-y p) 255 0 0 255)))))
 
-(defun draw-points (vector)
+(defun draw-blob (vector)
   (cond
     ((> (length vector) 3)
      (draw-blob-catmull-romm vector))
     ((> (length vector) 2)
-     (draw-blob-simple vector)))
+     (draw-blob-simple vector))))
+
+(defun draw-points (vector)
   (loop for p across vector do
        (draw-circle (p-x p) (p-y p) 10.0 255 255 255 128)))
 
@@ -122,13 +124,25 @@
              (<= (dsq p) 100.0)))
     (find-if #'close-enough vector)))
 
+(defun adjustable-vector-remove-1 (item vector)
+  (when-let (idx (position item vector))
+    (cond ((= (length vector) 1)
+           (setf (fill-pointer vector) 0))
+          (t
+           (rotatef (aref vector idx)
+                    (aref vector (1- (length vector))))
+           (decf (fill-pointer vector))))))
+
 (deftest blob-editor (:width 800 :height 800)
   :init
   dragging := nil
   curr-point := nil
-  points := (make-array 1024 :element-type 'p :adjustable t :fill-pointer 0)
+  points := (make-array 16 :element-type 'p :adjustable t :fill-pointer 0)
+  draw-points := t
   :update
-  (draw-points points)
+  (draw-blob points)
+  (when draw-points
+    (draw-points points))
   (when curr-point
     (draw-curr-point curr-point))
   :on-event
@@ -147,6 +161,13 @@
        (setf curr-point (maybe-find-curr-point points (cadr event) (cddr event)))))
     (:click (let ((x (cadr event))
                   (y (cddr event)))
-              (setf points (add-point points x y))))))
+              (setf points (add-point points x y))))
+    (:keypress
+     (case (cdr event)
+       (#\t (setf draw-points (not draw-points)))
+       (#\x (when curr-point
+              (adjustable-vector-remove-1 curr-point points)
+              (setf points (resort-points points)
+                    curr-point nil)))))))
 
 (run-test 'blob-editor)
