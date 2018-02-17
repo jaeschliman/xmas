@@ -850,11 +850,13 @@
                        tile-table background object-manager)
       self
     (let* ((frame (get-frame "pickle.png"))
+           (sprite-node (make-instance 'sprite-batch-node
+                                       :texture (texture-frame-texture frame)))
            (already-loaded-objects (not (null game-object-manager))))
       (setf root (make-instance 'node)
             object-manager (or game-object-manager
                                (make-game-object-manager))
-            (game-object-manager-sprite-node object-manager) root
+            (game-object-manager-sprite-node object-manager) sprite-node
             background background-node
             tmx (xmas.tmx-renderer:tmx-renderer-from-file tmx-file)
             tmx-node (make-instance 'tmx-node
@@ -894,7 +896,8 @@
             *camera-y*  (+ (top player) 300))
       (add-child root background)
       (add-child root tmx-node)
-      (add-child root player))))
+      (add-child root sprite-node)
+      (add-child sprite-node player))))
 
 (defmethod update ((self level) dt)
   (with-struct (level- player object-manager ) self
