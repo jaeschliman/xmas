@@ -93,6 +93,19 @@
   (loop for p across vector do
        (draw-circle (p-x p) (p-y p) 10.0 255 255 255 128)))
 
+(defun lerp-points (a b result amt)
+  (setf (p-x result) (+ (* amt (p-x a)) (* (- 1.0 amt) (p-x b)))
+        (p-y result) (+ (* amt (p-y a)) (* (- 1.0 amt) (p-y b)))))
+
+(defun draw-blob-lerp (a b scratch amt)
+  (do () ((>= (length scratch) (length a)))
+    (vector-push-extend (make-p :x 0.0 :y 0.0) scratch))
+  (setf (fill-pointer scratch) (length a))
+  (assert (= (length a) (length b) (length scratch)))
+  (loop for i below (length a) do
+       (lerp-points (aref a i) (aref b i) (aref scratch i) amt))
+  (draw-blob scratch))
+
 (defun draw-curr-point (p)
   (draw-circle (p-x p) (p-y p) 8.0 0 128 255 255))
 
@@ -124,23 +137,45 @@
              (<= (dsq p) 100.0)))
     (find-if #'close-enough vector)))
 
+(defun adjustable-vector-remove-at-index (idx vector)
+  (cond ((= (length vector) 1)
+         (setf (fill-pointer vector) 0))
+        (t
+         (rotatef (aref vector idx)
+                  (aref vector (1- (length vector))))
+         (decf (fill-pointer vector)))))
+
 (defun adjustable-vector-remove-1 (item vector)
   (when-let (idx (position item vector))
-    (cond ((= (length vector) 1)
-           (setf (fill-pointer vector) 0))
-          (t
-           (rotatef (aref vector idx)
-                    (aref vector (1- (length vector))))
-           (decf (fill-pointer vector))))))
+    (adjustable-vector-remove-at-index idx vector)))
 
 (deftest blob-editor (:width 800 :height 800)
   :init
   dragging := nil
   curr-point := nil
-  points := (make-array 16 :element-type 'p :adjustable t :fill-pointer 0)
+  frames := (make-array 2 :adjustable t)
+  curr-frame := 0
+  (map-into frames
+            (lambda (_)
+              (declare (ignore _))
+              (make-array 16 :element-type 'p :adjustable t :fill-pointer 0))
+            frames)
+  points := (aref frames curr-frame)
   draw-points := t
+  lerp-points := (make-array 16 :element-type 'p :adjustable t :fill-pointer 0)
+  step := 0
   :update
-  (draw-blob points)
+  (incf step (* dt 30.0))
+  (when (> step 100.0)
+    (setf step (- step 100.0)
+          curr-frame (mod (1+ curr-frame) (length frames))
+          curr-point nil
+          points (aref frames curr-frame)))
+  (draw-blob-lerp
+   (aref frames curr-frame)
+   (aref frames (mod (1+ curr-frame) (length frames)))
+   lerp-points
+   (* step 0.01))
   (when draw-points
     (draw-points points))
   (when curr-point
@@ -157,17 +192,31 @@
              (p-y curr-point) (cddr event)
              points (resort-points points))))
     (:mousemove
-     (unless dragging
+     (unless nil
        (setf curr-point (maybe-find-curr-point points (cadr event) (cddr event)))))
     (:click (let ((x (cadr event))
                   (y (cddr event)))
-              (setf points (add-point points x y))))
+              (map-into frames (lambda (points)
+                                 (add-point points x y))
+                        frames)
+              (setf points (aref frames curr-frame))))
     (:keypress
      (case (cdr event)
        (#\t (setf draw-points (not draw-points)))
        (#\x (when curr-point
-              (adjustable-vector-remove-1 curr-point points)
-              (setf points (resort-points points)
-                    curr-point nil)))))))
+              (when-let (idx (position curr-point points))
+                (map-into frames (lambda (points)
+                                   (adjustable-vector-remove-at-index idx points)
+                                   (resort-points points))
+                          frames))
+              (setf curr-point nil)))
+       (:left
+        (setf curr-point nil
+              curr-frame (mod (1- curr-frame) (length frames))
+              points (aref frames curr-frame)))
+       (:right
+        (setf curr-point nil
+              curr-frame (mod (1+ curr-frame) (length frames))
+              points (aref frames curr-frame)))))))
 
 (run-test 'blob-editor)
