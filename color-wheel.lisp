@@ -20,20 +20,26 @@
        (4.0 5.0 x 0.0 c)
        (5.0 6.0 c 0.0 x)))))
 
-(defun draw-color-wheel (x y radius)
+(defun lerp (a b amt)
+  (+ (* amt a) (* (- 1.0 amt) b)))
+
+(defun draw-color-wheel (x y radius offset-1 offset-2)
   (let* ((count 360)
          (2pi (load-time-value (coerce (* 2.0 pi) 'single-float)))
          (step (/ 2pi count))
-         (deg-step (/ 360.0 count)))
+         (pct-step (/ 1.0 count)))
     (xmas.render-buffer::with-colored-2d-triangle-fan ()
       (macrolet ((v (x y r g b a)
                    `(xmas.render-buffer::vert ,x ,y ,r ,g ,b ,a)))
         (v x y 255 255 255 255)
         (loop repeat (1+ count)
            with angle = 2pi
-           with degrees = 360.0
+           with pct = 1.0
            for x1 = (+ x (* (sin angle) radius))
-           for y1 = (+ y (* (cos angle) radius)) do
+           for y1 = (+ y (* (cos angle) radius))
+           for pos = (mod (+ pct (* -1.0 offset-1) ) 1.0)
+           for degrees = (* 360.0 (mod (+ offset-2 (ease :in-out-quad pos)) 1.0))
+           do
              (multiple-value-bind (r g b) (hsv-to-rgb degrees 1.0 1.0)
                (setf
                  r (floor (* r 255.0))
@@ -41,11 +47,17 @@
                  b (floor (* b 255.0)))
                (v x1 y1 r g b 255))
              (decf angle step)
-             (decf degrees deg-step))))))
+             (decf pct pct-step))))))
 
 (deftest color-wheel (:width 500 :height 500)
   :init
+  step := 0.0
+  step2 := 0.0
   :update
-  (draw-color-wheel 250.0 250.0 250.0))
+  (incf step (* dt 5.0))
+  (setf step (mod step 100.0))
+  (incf step2 (* dt 7.5))
+  (setf step2 (mod step2 100.0))
+  (draw-color-wheel 250.0 250.0 250.0 (* step 0.01) (* step2 0.01) ))
 
 (run-test 'color-wheel)
