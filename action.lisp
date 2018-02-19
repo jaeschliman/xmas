@@ -34,7 +34,8 @@
    #:move-to
    #:lerp-slot-to
    #:hue-cycle
-   #:blink))
+   #:blink
+   #:ease))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -213,9 +214,15 @@
           (funcall (ease-function self) time)))
 
 (defvar *easing-functions* (make-hash-table :test 'eq))
+(defvar *easing-function-functions* (make-hash-table :test 'eq))
 
 (defun find-easing-function (keyword)
   (gethash keyword *easing-functions*))
+
+(defmacro ease (name value)
+  (let ((fname (gethash name *easing-function-functions*)))
+    (unless fname (error "unkown easing function: ~S" name))
+    `(,fname ,value)))
 
 (macrolet ((defease (name (var) &body body)
              (let ((easefn (symbolicate '%ease- name))
@@ -223,6 +230,7 @@
                    (lookup-name (intern (symbol-name name) :keyword)))
                `(progn
                   (setf (gethash ,lookup-name *easing-functions*) ',fname)
+                  (setf (gethash ,lookup-name *easing-function-functions*) ',easefn)
                   (defun ,easefn (,var) (coerce (progn,@body) 'single-float))
                   (defun ,fname (action)
                     (make-ease :duration (finite-time-action-duration action)
