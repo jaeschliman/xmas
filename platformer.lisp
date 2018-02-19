@@ -208,6 +208,20 @@
   (setf (velocity-x blobby) -100.0
         (velocity-y blobby) 0.0))
 
+(defmethod wake-sprite ((jewel jewel) spawn-point)
+  (declare (ignore spawn-point))
+  (call-next-method)
+  (unless (children jewel)
+    (let ((image (make-instance 'sprite
+                                :sprite-frame (get-frame "jewel.png")
+                                :scale-x 0.95
+                                :scale-y 0.95
+                                :x (* 0.5 (content-width jewel))
+                                :y (* 0.5 (content-height jewel))
+                                :opacity 0.8)))
+      (add-child jewel image)))
+  (run-action jewel (hue-cycle 1.25) :repeat :forever))
+
 (defgeneric update-sprite (sprite level dt)
   (:method (sprite level dt)
     (declare (ignore sprite level dt))))
@@ -799,7 +813,7 @@
 
 (defun make-node-from-object-info (type initargs)
   (when-let* ((path (case type
-                      (jewel "jewel.png")
+                      (jewel "jewel-grey.png")
                       (cat "throwcat.png")
                       (door "door.png")
                       (platform "platform.png")

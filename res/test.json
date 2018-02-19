@@ -37,8 +37,17 @@
 	"pivot": {"x":0.5,"y":0.5}
 },
 {
-	"filename": "jewel.png",
+	"filename": "jewel-grey.png",
 	"frame": {"x":113,"y":207,"w":24,"h":38},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":38},
+	"sourceSize": {"w":24,"h":38},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "jewel.png",
+	"frame": {"x":139,"y":207,"w":24,"h":38},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":38},
@@ -146,7 +155,7 @@
 },
 {
 	"filename": "tomato chunk 2.png",
-	"frame": {"x":139,"y":207,"w":13,"h":16},
+	"frame": {"x":165,"y":207,"w":13,"h":16},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":13,"h":16},
@@ -178,6 +187,6 @@
 	"format": "RGBA8888",
 	"size": {"w":331,"h":248},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:1c00068174a94c30460f02bce7f376f4:ed38c237296c37b9dd7ce04d9c2c6599:02ab132358d6d8b512e80119463a8329$"
+	"smartupdate": "$TexturePacker:SmartUpdate:97f3de9b8e8b22c46422a66522467b4f:51ea711e648786ae62dd931adf28ef09:02ab132358d6d8b512e80119463a8329$"
 }
 }
