@@ -935,8 +935,9 @@
       ((string= name "dev")
        (init-level level
                 :background-node (make-instance
-                                  'background-image
-                                  :texture (get-texture "./res/platformer/sky2.png"))
+                                  'horizontal-scroller-image
+                                  :speed 0.3
+                                  :texture (get-texture "./res/platformer/pinko-with-clouds.png"))
                 :tmx-file "./res/platformer/dev.tmx"
                 :start-position start-position
                 :game-object-manager manager))
