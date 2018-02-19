@@ -58,6 +58,9 @@
   (setf step (mod step 100.0))
   (incf step2 (* dt 7.5))
   (setf step2 (mod step2 100.0))
-  (draw-color-wheel 250.0 250.0 250.0 (* step 0.01) (* step2 0.01) ))
+  (draw-color-wheel (+ 125.0 250.0) (+ 125.0 250.0) 177.0 (* step 0.01) (* step2 0.01))
+  (draw-color-wheel (+ 125.0   0.0) (+ 125.0   0.0) 177.0 (* step2 0.01) (* step2 0.01))
+  (draw-color-wheel (+ 125.0 250.0) (+ 125.0   0.0) 177.0 (* step2 0.01) (* step 0.01))
+  (draw-color-wheel (+ 125.0   0.0) (+ 125.0 250.0) 177.0 (* step 0.01) (* step 0.01)))
 
 (run-test 'color-wheel)
