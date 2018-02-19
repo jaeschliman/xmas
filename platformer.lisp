@@ -134,7 +134,8 @@
 (defclass player (actor)
   ((can-jump :accessor can-jump :initform nil)
    (jump-power :accessor jump-power :initform 100.0)
-   (jumping :accessor jumping :initform nil))
+   (jumping :accessor jumping :initform nil)
+   (hit :initform nil))
   (:default-initargs :collision-kind 'player))
 
 (defclass jewel (game-sprite) ()
@@ -157,6 +158,18 @@
   ((level :initarg :level)
    (marker :initarg :marker))
   (:default-initargs :collision-kind 'geometry))
+
+(defmethod player-collision (player (blobby blobby))
+  (declare (ignore blobby))
+  (unless (slot-value player 'hit)
+    (setf (slot-value player 'hit) t
+          (opacity player) 0.8)
+    (run-action player
+                (list
+                 (blink 2.0 0.12)
+                 (callfunc (lambda ()
+                             (setf (slot-value player 'hit) nil
+                                   (opacity player) 1.0)))))))
 
 (defmethod player-collision (player (jewel jewel))
   (declare (ignore player))
