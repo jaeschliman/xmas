@@ -110,7 +110,7 @@
         (content-height self) (texture-height texture)))
 
 (defclass background-image (image)
-  ())
+  ((speed :initform 1.0)))
 
 (defclass horizontal-scroller-image (image)
   ((speed :initarg :speed))
