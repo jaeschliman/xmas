@@ -32,7 +32,8 @@
    #:scale-x-to
    #:scale-y-to
    #:move-to
-   #:lerp-slot-to))
+   #:lerp-slot-to
+   #:hue-cycle))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -407,6 +408,42 @@
 
 (defact tint-to (duration r g b)
   (make-tint-to :duration duration :r r :g g :b b))
+
+(defun hsv-to-rgb (h s v)
+  (let* ((chroma (* v s))
+         (c chroma)
+         (hprime (mod (/ h 60.0) 6.0))
+         (x (* chroma (- 1.0 (abs (- (mod hprime 2.0) 1.0)))))
+         (m (- v chroma)))
+    (macrolet ((cases (&rest cases) 
+                 `(cond ,@(loop for (lower upper r g b) in cases collect
+                               `((and (<= ,lower hprime) (< hprime ,upper))
+                                 (values (+ m ,r) (+ m ,g) (+ m ,b))))
+                        (t (values m m m)))))
+      (cases
+       (0.0 1.0 c x 0.0)
+       (1.0 2.0 x c 0.0)
+       (2.0 3.0 0.0 c x)
+       (3.0 4.0 0.0 x c)
+       (4.0 5.0 x 0.0 c)
+       (5.0 6.0 c 0.0 x)))))
+
+(defstruct (hue-cycle (:include finite-time-action))
+  color)
+
+(defmethod start-with-target ((self hue-cycle) target)
+  (call-next-method)
+  (setf (hue-cycle-color self) (xmas.node:color target)))
+
+(defmethod update ((self hue-cycle) time)
+  (multiple-value-bind (r g b) (hsv-to-rgb (* time 360.0) 1.0 1.0)
+    (let ((c (hue-cycle-color self)))
+      (setf (svref c 0) r
+            (svref c 1) g
+            (svref c 2) b))))
+
+(defact hue-cycle (duration)
+  (make-hue-cycle :duration duration))
 
 (defstruct (lerp-slot-to (:include finite-time-action))
   slot-name
