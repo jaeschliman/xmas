@@ -111,9 +111,8 @@
 
 (defclass background-image (image) ())
 
-(defclass horizontal-scroller-image (image)
-  ((speed :initarg :speed))
-  (:default-initargs :speed 1.0))
+(defclass parallax-layer (node)
+  ((layers :initarg :layers)))
 
 (defclass physics ()
   ((velocity-x :accessor velocity-x :initarg :velocity-x)
@@ -334,37 +333,37 @@
     (xmas.render-buffer::with-textured-2d-quads (id)
       (%draw-texture-at texture 0.0 0.0 xform))))
 
-(defun background-image-y-position (self speed)
-  (let* ((ispeed (/ 1.0 speed))
-         (height (* *level-height* ispeed))
-         (range (- (height self) *display-height*))
+(defun background-image-y-position (y image-height scale)
+  (let* ((iscale (/ 1.0 scale))
+         (full-height (- (* *level-height* iscale) *display-height*))
          (dh/2 (* 0.5 *display-height*))
-         (min-y dh/2)
-         (max-y (- height dh/2))
-         (pct (clamp (/ (- (y self) min-y) (- max-y min-y)) 0.0 1.0))
-         (y (- (* pct range) (* range 0.5))))
-    (- y)))
+         (pct-y (/ y full-height)))
+    (- (+ dh/2 (* pct-y (- image-height *display-height*))))))
 
 (defmethod draw-with-xform ((self background-image) xform)
   (draw-node-color self)
   (when-let* ((texture (texture self))
               (id (texture-id texture)))
-    (xmas.render-buffer::with-textured-2d-quads (id)
-      (%draw-texture-at texture 0.0 (background-image-y-position self 1.0) xform))))
+    (let ((y (background-image-y-position (y self) (height self) 1.0)))
+      (xmas.render-buffer::with-textured-2d-quads (id)
+        (%draw-texture-at texture 0.0 (+ y (* 0.5 (content-height self))) xform)))))
 
-(defmethod draw-with-xform ((self horizontal-scroller-image) xform)
-  (draw-node-color self)
-  (when-let* ((texture (texture self))
-              (id (texture-id texture)))
+(defun draw-tiled-background-image-with-position-and-speed (texture x y speed xform)
+  (when-let* ((id (texture-id texture)))
     (xmas.render-buffer::with-textured-2d-quads (id)
-      (let* ((texture (texture self))
-             (width (texture-width texture))
-             (speed (slot-value self 'speed))
-             (offs-y (background-image-y-position self speed))
-             (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
+      (let* ((width (texture-width texture))
+             (height (texture-height texture))
+             (offs-y (background-image-y-position y height speed))
+             (offs-x (+ (* width -0.5) (- width (mod (* speed x) width)))))
         (%draw-texture-at texture (- offs-x width) offs-y xform)
         (%draw-texture-at texture offs-x           offs-y xform)
         (%draw-texture-at texture (+ offs-x width) offs-y xform)))))
+
+(defmethod draw-with-xform ((self parallax-layer) xform)
+  (draw-node-color self)
+  (loop for (texture . speed) in (slot-value self 'layers) do
+       (draw-tiled-background-image-with-position-and-speed
+        texture (x self) (y self) speed xform)))
 
 (defmethod draw-with-xform ((self tmx-node) xform)
   (let* ((r (tmx self))
@@ -945,32 +944,34 @@
                    (gethash name *level-states*))))
     (cond
       ((string= name "dev")
-       (init-level level
-                :background-node (make-instance
-                                  'horizontal-scroller-image
-                                  :speed 0.3
-                                  :texture (get-texture "./res/platformer/pinko-with-clouds.png"))
-                :tmx-file "./res/platformer/dev.tmx"
-                :start-position start-position
-                :game-object-manager manager))
+       (let ((bg (get-texture "./res/platformer/pinko-with-clouds.png")))
+         (init-level level
+                     :background-node
+                     (make-instance
+                      'parallax-layer
+                      :layers `((,bg . 0.3)))
+                     :tmx-file "./res/platformer/dev.tmx"
+                     :start-position start-position
+                     :game-object-manager manager)))
       ((string= name "cave")
        (init-level level
                    :background-node
                    (make-instance
-                    'horizontal-scroller-image
-                    :speed 0.5
-                    :texture (get-texture "./res/platformer/cave.png"))
-                :tmx-file "./res/platformer/cave.tmx"
-                :start-position start-position
-                :game-object-manager manager))
+                    'parallax-layer
+                    :layers `((,(get-texture "./res/platformer/cave/0.png") . 0.2)
+                              (,(get-texture "./res/platformer/cave/1.png") . 0.4)
+                              (,(get-texture "./res/platformer/cave/2.png") . 0.6)))
+                   :tmx-file "./res/platformer/cave.tmx"
+                   :start-position start-position
+                   :game-object-manager manager))
       ((string= name "infinite")
        (init-level level
-                :background-node (make-instance
-                                  'background-image
-                                  :texture (get-texture "./res/platformer/sky2.png"))
-                :tmx-file "./res/platformer/infinite.tmx"
-                :start-position start-position
-                :game-object-manager manager)))
+                   :background-node (make-instance
+                                     'background-image
+                                     :texture (get-texture "./res/platformer/sky2.png"))
+                   :tmx-file "./res/platformer/infinite.tmx"
+                   :start-position start-position
+                   :game-object-manager manager)))
     level))
 
 (defmethod cl-user::contents-will-mount ((self platformer) display)
