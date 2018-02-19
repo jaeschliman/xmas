@@ -33,7 +33,8 @@
    #:scale-y-to
    #:move-to
    #:lerp-slot-to
-   #:hue-cycle))
+   #:hue-cycle
+   #:blink))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -444,6 +445,21 @@
 
 (defact hue-cycle (duration)
   (make-hue-cycle :duration duration))
+
+(defstruct (blink (:include finite-time-action))
+  blink-duration)
+
+(defmethod update ((self blink) time)
+  (setf (xmas.node:visible (blink-target self))
+        (evenp (floor time (blink-blink-duration self)))))
+
+(defmethod stop ((self blink))
+  (call-next-method)
+  (let ((it (blink-target self)))
+    (setf (xmas.node:visible it) t)))
+
+(defact blink (duration blink-duration)
+  (make-blink :duration duration :blink-duration (/ blink-duration duration)))
 
 (defstruct (lerp-slot-to (:include finite-time-action))
   slot-name
