@@ -109,8 +109,7 @@
   (setf (content-width self) (texture-width texture)
         (content-height self) (texture-height texture)))
 
-(defclass background-image (image)
-  ((speed :initform 1.0)))
+(defclass background-image (image) ())
 
 (defclass horizontal-scroller-image (image)
   ((speed :initarg :speed))
@@ -335,8 +334,8 @@
     (xmas.render-buffer::with-textured-2d-quads (id)
       (%draw-texture-at texture 0.0 0.0 xform))))
 
-(defun background-image-y-position (self)
-  (let* ((ispeed (/ 1.0 (slot-value self 'speed)))
+(defun background-image-y-position (self speed)
+  (let* ((ispeed (/ 1.0 speed))
          (height (* *level-height* ispeed))
          (range (- (height self) *display-height*))
          (dh/2 (* 0.5 *display-height*))
@@ -351,7 +350,7 @@
   (when-let* ((texture (texture self))
               (id (texture-id texture)))
     (xmas.render-buffer::with-textured-2d-quads (id)
-      (%draw-texture-at texture 0.0 (background-image-y-position self) xform))))
+      (%draw-texture-at texture 0.0 (background-image-y-position self 1.0) xform))))
 
 (defmethod draw-with-xform ((self horizontal-scroller-image) xform)
   (draw-node-color self)
@@ -361,7 +360,7 @@
       (let* ((texture (texture self))
              (width (texture-width texture))
              (speed (slot-value self 'speed))
-             (offs-y (background-image-y-position self))
+             (offs-y (background-image-y-position self speed))
              (offs-x (+ (* width -0.5) (- width (mod (* speed (x self)) width)))))
         (%draw-texture-at texture (- offs-x width) offs-y xform)
         (%draw-texture-at texture offs-x           offs-y xform)
