@@ -96,6 +96,7 @@
          (draw-circle (p-x p) (p-y p) 10.0 255 255 (if toggle 255 128) 128))))
 
 (defun lerp (a b amt)
+  (setf amt (ease :in-out-sine amt))
   (+ (* amt a) (* (- 1.0 amt) b)))
 
 (defun lerp-points (a b result amt)
