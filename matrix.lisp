@@ -125,44 +125,39 @@
    (mref/unwrapped m 1 1) sy))
 
 
-;;this method gets called ALOT -- could use some optimizing.
 ;;cat o into m
 (defun cat-matrix/unwrapped (o m)
   (let ((tmp (make-array 16 :initial-element 0.0 :element-type 'single-float)))
-    (declare ;;arggggh
-     (optimize (speed 3) (safety 0) (compilation-speed 0))
-     (dynamic-extent tmp)
-     (type matrix m o tmp))
+    (declare (optimize (speed 3) (safety 0) (compilation-speed 0))
+             (dynamic-extent tmp)
+             (type matrix m o tmp))
     (macrolet
-        ((@ (m col row)
-             `(the single-float
-                   (aref (the matrix ,m)
-                         (the matrix-index
-                              (+ (the subscript ,row)
-                                 (the fixnum (* (the subscript ,col) 4)))))))
-         (*f (a b)
-           `(the single-float (* (the single-float ,a)
-                                 (the single-float ,b)))))
-      (loop for col from 0 to 3
-         for e = (@ o col 0)
-         for f = (@ o col 1)
-         for g = (@ o col 2)
-         for h = (@ o col 3) do
-           ;; attempt a cache-friendly inner loop...
-           (loop for row from 0 to 3
-              for a = (@ m 0 row)
-              for b = (@ m 1 row)
-              for c = (@ m 2 row)
-              for d = (@ m 3 row) do
-                (setf (@ tmp col row)
-                      (the single-float
-                           (+ (*f a e)
-                              (*f b f)
-                              (*f c g)
-                              (*f d h))))))
-      ;;but that means we need to copy out
-      (loop for i below 16 do
-           (setf (aref m i) (aref tmp i))))))
+        ((f (x) `(the single-float ,x))
+         (@ (m col row) `(f (aref (the matrix ,m) ,(+ row (* col 4)))))
+         (*f (a b) `(f (* (f ,a) (f ,b))))
+         (iter-row (col row)
+           `(setf (@ tmp ,col ,row)
+                  (f (+ (*f (@ m 0 ,row) e)
+                        (*f (@ m 1 ,row) f)
+                        (*f (@ m 2 ,row) g)
+                        (*f (@ m 3 ,row) h)))))
+         (iter-col (col) `(let ((e  (@ o ,col 0))
+                                (f  (@ o ,col 1))
+                                (g  (@ o ,col 2))
+                                (h  (@ o ,col 3)))
+                            (declare (type single-float e f g h))
+                            (iter-row ,col 0)
+                            (iter-row ,col 1)
+                            (iter-row ,col 2)
+                            (iter-row ,col 3)))
+         (save-result ()
+           `(progn ,@(loop for i below 16 collect
+                          `(setf (aref m ,i) (aref tmp ,i))))))
+      (iter-col 0)
+      (iter-col 1)
+      (iter-col 2)
+      (iter-col 3)
+      (save-result))))
 
 (defstruct m4 (vector (make-m4/unwrapped) :type matrix))
 
