@@ -70,8 +70,7 @@
 
 (defmethod add-children ((parent node) child-nodes)
   (let ((*adding-children* t))
-    (dolist (child child-nodes)
-      (add-child parent child))
+    (map nil (lambda (child) (add-child parent child)) child-nodes)
     (setf (children parent) (stable-sort (children parent) #'< :key #'z-order))))
 
 (defmethod remove-from-parent ((child node))
