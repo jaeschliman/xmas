@@ -35,7 +35,8 @@
    #:lerp-slot-to
    #:hue-cycle
    #:blink
-   #:ease))
+   #:ease
+   #:hue-cycle-with-offset))
 (in-package :xmas.action)
 
 (defmacro with-struct ((prefix &rest slots) var &body body)
@@ -453,6 +454,20 @@
 
 (defact hue-cycle (duration)
   (make-hue-cycle :duration duration))
+
+(defstruct (hue-cycle-with-offset (:include hue-cycle))
+  offset)
+
+(defmethod update ((self hue-cycle-with-offset) time)
+  (let ((time (mod (+ time (hue-cycle-with-offset-offset self)) 1.0)))
+    (multiple-value-bind (r g b) (hsv-to-rgb (* time 360.0) 1.0 1.0)
+      (let ((c (hue-cycle-color self)))
+        (setf (svref c 0) r
+              (svref c 1) g
+              (svref c 2) b)))))
+
+(defact hue-cycle-with-offset (duration offset)
+  (make-hue-cycle-with-offset :duration duration :offset offset))
 
 (defstruct (blink (:include finite-time-action))
   blink-duration)
