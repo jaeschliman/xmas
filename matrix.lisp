@@ -159,6 +159,35 @@
       (iter-col 3)
       (save-result))))
 
+;;version of cat-matrix that does not use a tmp matrix.
+;;need tests for this.
+(defun cat-matrix/unwrapped/no-tmp-matrix (o m)
+  (declare (optimize (speed 3) (safety 0) (compilation-speed 0))
+           (type matrix m o))
+  (macrolet
+      ((f (x) `(the single-float ,x))
+       (@ (m col row) `(f (aref (the matrix ,m) ,(+ row (* col 4)))))
+       (*f (a b) `(f (* (f ,a) (f ,b))))
+       (iter-col (col row)
+         `(setf (@ m ,col ,row)
+                (f (+ (*f a (@ o ,col 0))
+                      (*f b (@ o ,col 1))
+                      (*f c (@ o ,col 2))
+                      (*f d (@ o ,col 3))))))
+       (iter-row (row)
+         `(let ((a (@ m 0 ,row))
+                (b (@ m 1 ,row))
+                (c (@ m 2 ,row))
+                (d (@ m 3 ,row)))
+            (iter-col 0 ,row)
+            (iter-col 1 ,row)
+            (iter-col 2 ,row)
+            (iter-col 3 ,row))))
+    (iter-row 0)
+    (iter-row 1)
+    (iter-row 2)
+    (iter-row 3)))
+
 (defstruct m4 (vector (make-m4/unwrapped) :type matrix))
 
 (defvar *current-matrix* nil)
