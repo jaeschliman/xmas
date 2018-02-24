@@ -15,10 +15,10 @@
         (i (ring-buffer-index r)))
   (setf (ring-buffer-index r) (mod (1- i) (length v)))))
 
-(defun ring-buffer-last-element (r)
+(defun ring-buffer-first-element (r)
   (let ((v (ring-buffer-vector r))
         (i (ring-buffer-index r)))
-    (svref v (mod (1- i) (length v)))))
+    (svref v i)))
 
 (defun ring-buffer-do (r fn)
   (let ((v (ring-buffer-vector r))
@@ -52,7 +52,7 @@
                 'sprite
                 :scale-x 0.2
                 :scale-y 0.2
-                :sprite-frame (get-frame "star-32.png") ))
+                :sprite-frame (get-frame "star-32.png")))
           'vector))
 
 (defun update-stars (stars sprites dt)
@@ -115,12 +115,12 @@
     (make-ring-buffer :vector vec)))
 
 (defun update-ship-trails (ship trails ring-buffer)
-  (let* ((p (ring-buffer-last-element ring-buffer))
+  (ring-buffer-retract ring-buffer)
+  (let* ((p (ring-buffer-first-element ring-buffer))
          (i 0))
     (setf (p-x p) (x ship)
           (p-y p) (y ship)
           (p-r p) (rotation ship))
-    (ring-buffer-retract ring-buffer)
     (do-ring-buffer (p ring-buffer)
       (let ((sprite (svref trails i)))
         (setf (x sprite) (p-x p)
