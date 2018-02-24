@@ -134,9 +134,12 @@
   (declare (ignorable node))
   (call-next-method)
   (with-struct (run-sequence- item0 duration split prev) self
-    (setf
-     split (/ (finite-time-action-duration item0) duration)
-     prev -1)
+    (flet ((get-duration (item)
+           (let ((d (finite-time-action-duration item)))
+             (if (= d 0.0) single-float-epsilon d))))
+      (setf
+       split (/ (get-duration item0) duration)
+       prev -1))
     (when (= split 0.0) (setf split single-float-epsilon))
     (when (= split 1.0) (setf split (- 1.0 single-float-epsilon))))) 
 
@@ -173,12 +176,15 @@
 (defun sequence-2 (item0 item1)
   (assert item0)
   (assert item1)
-  (let ((duration (+ (finite-time-action-duration item0)
-                     (finite-time-action-duration item1))))
-    (setf duration (if (= duration 0.0) (* 2.0 single-float-epsilon) duration))
-    (make-run-sequence :item0 item0
-                       :item1 item1
-                       :duration duration)))
+  (flet ((get-duration (item)
+           (let ((d (finite-time-action-duration item)))
+             (if (= d 0.0) single-float-epsilon d))))
+    (let ((duration (+ (get-duration item0)
+                       (get-duration item1))))
+      (setf duration (if (= duration 0.0) (* 2.0 single-float-epsilon) duration))
+      (make-run-sequence :item0 item0
+                         :item1 item1
+                         :duration duration))))
 
 (defun run-sequence (&rest items)
   (declare (dynamic-extent items))
