@@ -186,10 +186,13 @@
 
 (defmacro with-writes-to-render-buffer ((buffer) &body body)
   (once-only (buffer)
-    `(let ((*write-buffer* (render-buffer-write-buffer ,buffer)))
-       (reset-write-buffer!)
-       (unwind-protect (progn ,@body)
-         (swap-write-buffer! ,buffer)))))
+    (with-gensyms (unwound)
+      `(let ((*write-buffer* (render-buffer-write-buffer ,buffer))
+             (,unwound t))
+         (reset-write-buffer!)
+         (unwind-protect (progn ,@body (setf ,unwound nil))
+           (unless ,unwound
+             (swap-write-buffer! ,buffer)))))))
 
 (defmacro with-reads-from-render-buffer ((buffer) &body body)
   (once-only (buffer)
