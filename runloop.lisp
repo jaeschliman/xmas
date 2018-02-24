@@ -14,6 +14,7 @@
       (lambda ()
         (progv (mapcar 'car bindings) (mapcar 'cdr bindings)
           (let ((dt step) start end wait (first-step t)
+                handled-error
                 (unit internal-time-units-per-second))
             (declare (ignorable dt))
             (loop do
@@ -24,10 +25,13 @@
                           (funcall event-handler event)
                         (handle-next-event ()
                           :report "Handle the next event."
-                          nil)))
+                          (setf handled-error t))))
                  (unless first-step
                    (setf dt (/ (- (get-internal-real-time) start)
                                unit)))
+                 (when handled-error
+                   (setf dt step
+                         handled-error nil))
                  (setf
                   first-step nil
                   start (get-internal-real-time))
@@ -42,6 +46,7 @@
                               )
                    (skip-this-frame ()
                      :report "Skip this frame."
+                     (setf handled-error t)
                      nil))
                  (setf end (get-internal-real-time))
                  (let ((elapsed (/ (- end start) unit)))
