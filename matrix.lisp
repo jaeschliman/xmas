@@ -253,10 +253,9 @@
            (type matrix m)
            (optimize (speed 3) (safety 0)))
   (macrolet ((@ (x y) `(aref m ,(+ y (* x 4))))
-             (*f (a b) `(the single-float (* (the single-float ,a)
-                                             (the single-float ,b))))
-             (+f (a b) `(the single-float (+ (the single-float ,a)
-                                             (the single-float ,b)))))
+             (f (x) `(the single-float ,x))
+             (*f (a b) `(f (* (f ,a) (f ,b))))
+             (+f (a b) `(f (+ (f ,a) (f ,b)))))
     (setf (@ 3 0) (+f (@ 3 0) (+f (*f (@ 0 0) x) (*f (@ 1 0) y))))
     (setf (@ 3 1) (+f (@ 3 1) (+f (*f (@ 0 1) x) (*f (@ 1 1) y))))
     (setf (@ 3 2) (+f (@ 3 2) (+f (*f (@ 0 2) x) (*f (@ 1 2) y))))))
@@ -276,8 +275,8 @@
 ;; b = a * -s + b * cs
 ;; e = e * cs + f * s
 ;; f = e * -s + f * cs
-;; i = i * cs + j * s  ;; may possibly be ignored for 2d (not sure)
-;; j = i * -s + j * cs ;; may possibly be ignored for 2d (not sure)
+;; i = i * cs + j * s  ;; may be ignored for 2d
+;; j = i * -s + j * cs ;; may be ignored for 2d
 ;; m and n can be ignored
 
 (defun rotate/unwrapped (deg m)
@@ -299,7 +298,7 @@
     (declare (type single-float s cs -s))
     (macrolet ((@ (x y) `(aref m ,(+ y (* x 4))))
                (*f (a b) `(the single-float (* (the single-float ,a)
-                                               (the single-float ,b)))) 
+                                               (the single-float ,b))))
                (+f (a b) `(the single-float (+ (the single-float ,a)
                                                (the single-float ,b)))) )
       (locally (declare (optimize (speed 3) (safety 0)))
@@ -312,11 +311,7 @@
            (@ 0 0) (+f (*f a cs) (*f b s))
            (@ 0 1) (+f (*f e cs) (*f f s))
            (@ 1 0) (+f (*f a -s) (*f b cs))
-           (@ 1 1) (+f (*f e -s) (*f f cs))
-           ;;TODO: can these next two be ignored?
-           ;; (@ 0 2) (+ (* (@ 0 2) cs) (* (@ 1 2) s))
-           ;; (@ 1 2) (+ (* (@ 0 2) -s) (* (@ 1 2) cs))
-           ))))))
+           (@ 1 1) (+f (*f e -s) (*f f cs))))))))
 
 (defun rotate (deg)
   (unless (or (= deg 0.0)
@@ -335,28 +330,28 @@
 ;; b = sy * b
 ;; e = sx * e
 ;; f = sy * f
-;; i = sx * i
-;; j = sy * j
+;; i = sx * i ;; may be ignored for 2d
+;; j = sy * j ;; may be ignored for 2d
 (defun scale/unwrapped (sx sy m)
   (declare (type single-float sx sy)
            (type matrix m)
            (optimize (speed 3) (safety 1)))
   (macrolet ((@ (x y) `(aref m ,(+ y (* x 4))))
-             (*= (where what)
-               `(setf ,where (the single-float (* ,what ,where)))))
+             (f (x) `(the single-float ,x))
+             (*f (a b) `(f (* (f ,a) (f ,b))))
+             (*= (where what) `(setf ,where (*f ,what ,where))))
     (*= (@ 0 0) sx)
     (*= (@ 0 1) sx)
-    (*= (@ 0 2) sx)
     (*= (@ 1 0) sy)
-    (*= (@ 1 1) sy)
-    (*= (@ 1 2) sy)))
+    (*= (@ 1 1) sy)))
 
 (defun scale (sx sy)
   (unless (= sx sy 1.0)
     (scale/unwrapped sx sy (m4-vector *current-matrix*))))
 
-(declaim (ftype (function (m4 single-float single-float) (values single-float single-float)) matrix-multiply-point-2d))
-
+(declaim (ftype (function (m4 single-float single-float)
+                          (values single-float single-float))
+                matrix-multiply-point-2d))
 (defun matrix-multiply-point-2d (matrix x y)
   (declare (optimize (speed 3) (safety 1))
            (type m4 matrix))
