@@ -60,11 +60,11 @@
      for star = (aref stars i)
      for sprite = (aref sprites i) do
        (let* ((pct (/ (star-distance star) 300.0))
-              (speed (lerp 20.0 1.0 pct))
+              (speed (lerp pct 1.0 20.0))
               (dist (mod (+ (star-distance star) (* dt speed 20.0)) 300.0))
               (pct (/ dist 300.0))
               (angle (mod (+ (star-angle star) dt) 2pif))
-              (scale (lerp 1.5 0.15 pct)))
+              (scale (lerp pct 0.15 1.5)))
          (declare (type single-float pct speed dist angle dt)
                   (optimize (speed 3) (safety 1)))
          (setf

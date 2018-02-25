@@ -46,9 +46,6 @@
                (list slot (list (symbolicate prefix slot) var)))
        ,@body)))
 
-(defun lerp (from to pct)
-  (+ (* from (- 1.0 pct)) (* to pct)))
-
 (defstruct action
   target
   running)
@@ -245,7 +242,7 @@
                                :inner action))))))
   (defease linear (time) time)
   (defease in-sine (time)
-    (1+ (* -1 (cos (* time (/ pi 2.0))))))
+    (1+ (* -1.0 (cos (* time (/ pi 2.0))))))
   (defease out-sine (time)
     (sin (* time (/ pi 2.0))))
   (defease in-out-sine (time)
@@ -253,7 +250,7 @@
   (defease in-quad (time)
     (* time time))
   (defease out-quad (time)
-    (* -1 time (- time 2.0)))
+    (* -1.0 time (- time 2.0)))
   (defease in-out-quad (time)
     (setf time (* 2.0 time))
     (if (< time 1.0)
@@ -326,7 +323,7 @@
                       `(setf (,property-name (,target self))
                              (+ (,init self) (* (,delta self) time)))
                       `(setf (,property-name (,target self))
-                             (lerp (,init self) (,tgt self) time)))))
+                             (lerp time (,init self) (,tgt self))))))
          (defact ,name (duration ,@(mapcar 'second descs))
            (,make :duration duration
                   ,@(loop for desc in descs
@@ -418,9 +415,9 @@
   (let* ((target (tint-to-target self))
          (c (xmas.node:color target)))
     (with-struct (tint-to- start-r start-g start-b r g b) self
-      (setf (svref c 0) (lerp start-r r time)
-            (svref c 1) (lerp start-g g time)
-            (svref c 2) (lerp start-b b time)))))
+      (setf (svref c 0) (lerp time start-r r)
+            (svref c 1) (lerp time start-g g)
+            (svref c 2) (lerp time start-b b)))))
 
 (defact tint-to (duration r g b)
   (make-tint-to :duration duration :r r :g g :b b))
@@ -510,9 +507,9 @@
   (let ((target (lerp-slot-to-target self))
         (slot (lerp-slot-to-slot-name self)))
     (setf (slot-value target slot)
-          (lerp (lerp-slot-to-initial-value self)
-                (lerp-slot-to-target-value self)
-                time))))
+          (lerp time
+                (lerp-slot-to-initial-value self)
+                (lerp-slot-to-target-value self)))))
 
 (defact lerp-slot-to (duration slot-name target-value)
   (make-lerp-slot-to :duration duration

@@ -95,13 +95,9 @@
          (setf toggle (not toggle))
          (draw-circle (p-x p) (p-y p) 10.0 255 255 (if toggle 255 128) 128))))
 
-(defun lerp (a b amt)
-  (setf amt (ease :in-out-sine amt))
-  (+ (* amt a) (* (- 1.0 amt) b)))
-
 (defun lerp-points (a b result amt)
-  (setf (p-x result) (lerp (p-x a) (p-x b) amt)
-        (p-y result) (lerp (p-y a) (p-y b) amt)))
+  (setf (p-x result) (lerp amt (p-x a) (p-x b))
+        (p-y result) (lerp amt (p-y a) (p-y b))))
 
 (defun draw-blob-lerp (a b scratch amt)
   (do () ((>= (length scratch) (length a)))

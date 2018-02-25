@@ -20,9 +20,6 @@
        (4.0 5.0 x 0.0 c)
        (5.0 6.0 c 0.0 x)))))
 
-(defun lerp (a b amt)
-  (+ (* amt a) (* (- 1.0 amt) b)))
-
 (defun draw-color-wheel (x y radius offset-1 offset-2)
   (let* ((count 360)
          (2pi (load-time-value (coerce (* 2.0 pi) 'single-float)))
