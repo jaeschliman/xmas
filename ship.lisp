@@ -8,7 +8,8 @@
 (defstruct p
   (x 0.0 :type single-float)
   (y 0.0 :type single-float)
-  (r 0.0 :type single-float))
+  (r 0.0 :type single-float)
+  (s 0.0 :type single-float))
 
 (defun ring-buffer-retract (r)
   (let ((v (ring-buffer-vector r))
@@ -36,6 +37,13 @@
   ((angle :accessor angle :initform 0.0)
    (distance :accessor distance :initform 200.0)))
 
+(defun ship-scale (ship)
+  (* 0.5 (scale-y ship)))
+
+(defun (setf ship-scale) (v ship)
+  (setf (scale-x ship) (* 1.5 v)
+        (scale-y ship) (* 2.0 v)))
+
 (defconstant pif (coerce pi 'single-float))
 (defconstant 2pif (* 2.0 pif))
 
@@ -48,11 +56,7 @@
           'vector))
 (defun make-star-sprites (count)
   (coerce (loop repeat count collect
-               (make-instance
-                'sprite
-                :scale-x 0.2
-                :scale-y 0.2
-                :sprite-frame (get-frame "star-32.png")))
+               (make-instance 'sprite :sprite-frame (get-frame "star-32.png")))
           'vector))
 
 (defun update-stars (stars sprites dt)
@@ -60,11 +64,12 @@
      for star = (aref stars i)
      for sprite = (aref sprites i) do
        (let* ((pct (/ (star-distance star) 300.0))
-              (speed (lerp pct 1.0 20.0))
+              (speed (lerp (ease :in-sine pct) 1.0 20.0))
               (dist (mod (+ (star-distance star) (* dt speed 20.0)) 300.0))
               (pct (/ dist 300.0))
-              (angle (mod (+ (star-angle star) dt) 2pif))
-              (scale (lerp pct 0.15 1.5)))
+              (rot (lerp (ease :out-quad pct) -0.5 1.0))
+              (angle (mod (+ (star-angle star) (* dt rot)) 2pif))
+              (scale (lerp (ease :in-sine pct) 0.15 1.5)))
          (declare (type single-float pct speed dist angle dt)
                   (optimize (speed 3) (safety 1)))
          (setf
@@ -91,12 +96,14 @@
   (setf (angle ship) (radians-angle-from-center mouse-x mouse-y)))
 
 (defun update-ship-position (ship)
+  (setf (distance ship) (clamp (distance ship) 75.0 200.0))
   (multiple-value-bind (x y)
       (project-ship-position (angle ship) (distance ship))
     (setf (x ship) x
           (y ship) y
           (rotation ship)
-          (+ 180.0 (rad->sprite-deg (radians-angle-from-center x y))))))
+          (+ 180.0 (rad->sprite-deg (radians-angle-from-center x y)))
+          (ship-scale ship) (/ (distance ship) (* 1.5 125.0)))))
 
 (defun make-trails (count)
   (coerce
@@ -120,13 +127,18 @@
          (i 0))
     (setf (p-x p) (x ship)
           (p-y p) (y ship)
-          (p-r p) (rotation ship))
+          (p-r p) (rotation ship)
+          (p-s p) (ship-scale ship))
     (do-ring-buffer (p ring-buffer)
       (let ((sprite (svref trails i)))
         (setf (x sprite) (p-x p)
               (y sprite) (p-y p)
               (rotation sprite) (p-r p)
+              (ship-scale sprite) (p-s p)
               i (1+ i))))))
+
+(defun speed-for-ship-distance (distance)
+  (lerp (ease :in-quad (/ distance 150.0)) 120.0 360.0))
 
 (deftest ship (:width 500 :height 500)
   :init
@@ -154,6 +166,8 @@
   star-count := 300
   stars := (make-stars star-count)
   star-sprites := (make-star-sprites star-count)
+  (loop for sprite across star-sprites do
+       (run-action sprite (rotate-by 1.0 360.0) :repeat :forever))
   trail-count := 30
   trails := (make-trails trail-count)
   ring-buffer := (make-trails-ring-buffer trail-count)
@@ -170,13 +184,19 @@
     (mouse-moved (update-ship-position-from-mouse mouse-x mouse-y ship))
     ((gethash :left keys)  (decf (angle ship) (* 3.0 dt)))
     ((gethash :right keys) (incf (angle ship) (* 3.0 dt))))
+  (cond
+    ((gethash :up keys)
+     (decf (distance ship) (* (speed-for-ship-distance (distance ship)) dt)))
+    ((gethash :down keys)
+     (incf (distance ship) (* (speed-for-ship-distance (distance ship)) dt))))
   (update-ship-position ship) 
   (unless ring-buffer-initialized
     (setf ring-buffer-initialized t)
     (do-ring-buffer (p ring-buffer)
       (setf (p-x p) (x ship)
             (p-y p) (y ship)
-            (p-r p) (rotation ship))))
+            (p-r p) (rotation ship)
+            (p-s p) (ship-scale ship))))
   (update-ship-trails ship trails ring-buffer)
   (let ((*matrix-stack* stack))
     (visit-with-xform root))
