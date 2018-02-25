@@ -33,9 +33,15 @@
        (declare (dynamic-extent ,lambda))
        (ring-buffer-do ,buffer ,lambda))))
 
-(defclass ship (node)
-  ((angle :accessor angle :initform 0.0)
-   (distance :accessor distance :initform 200.0)))
+(defclass positioned-sprite (sprite)
+  ((angle :accessor angle :initform 0.0 :initarg :angle)
+   (distance :accessor distance :initform 200.0 :initarg :distance)))
+
+(defclass ship (positioned-sprite)
+  ())
+
+(defclass bolt (positioned-sprite)
+  ())
 
 (defun ship-scale (ship)
   (* 0.5 (scale-y ship)))
@@ -140,6 +146,39 @@
 (defun speed-for-ship-distance (distance)
   (lerp (ease :in-quad (/ distance 150.0)) 120.0 360.0))
 
+(defun adjustable-array-remove-unordered (array idx)
+  (rotatef (aref array idx) (aref array (1- (length array))))
+  (decf (fill-pointer array)))
+
+(defun move-bolts (bolts dt)
+  (let ((removes nil))
+    (loop for bolt across bolts
+       for idx upfrom 0
+       for dist = (speed-for-ship-distance (distance bolt))
+       do
+         (decf (distance bolt) (* 2.0 dist dt))
+         (if (<= (distance bolt) 10.0)
+             (push idx removes)
+             (multiple-value-bind (x y)
+                 (project-ship-position (angle bolt) (distance bolt))
+               (setf (x bolt) x
+                     (y bolt) y
+                     (rotation bolt)
+                     (+ 180.0 (rad->sprite-deg (radians-angle-from-center x y)))
+                     (ship-scale bolt) (/ (distance bolt) (* 1.5 125.0))))))
+    (dolist (idx removes)
+      (remove-from-parent (aref bolts idx))
+      (adjustable-array-remove-unordered bolts idx))))
+
+(defun add-bolt (sprites ship bolts)
+  (let ((bolt (make-instance 'bolt
+                             :sprite-frame (get-frame "bolt.png")
+                             :angle (angle ship)
+                             :distance (distance ship))))
+    (run-action bolt (hue-cycle-with-offset 0.1 (random 1.0)) :repeat :forever)
+    (vector-push-extend bolt bolts)
+    (add-child sprites bolt)))
+
 (deftest ship (:width 500 :height 500)
   :init
   (texture-packer-add-frames-from-file "./res/ship/sprites.json")
@@ -163,6 +202,7 @@
            :x 250.0 :y 100.0
            :scale-x 1.5 :scale-y 2.0
            :sprite-frame (get-frame "triangle-32.png"))
+  bolts := (make-array 16 :adjustable t :fill-pointer 0)
   star-count := 300
   stars := (make-stars star-count)
   star-sprites := (make-star-sprites star-count)
@@ -190,6 +230,9 @@
     ((gethash :down keys)
      (incf (distance ship) (* (speed-for-ship-distance (distance ship)) dt))))
   (update-ship-position ship) 
+  (when (gethash #\s keys)
+    (add-bolt root ship bolts))
+  (move-bolts bolts dt)
   (unless ring-buffer-initialized
     (setf ring-buffer-initialized t)
     (do-ring-buffer (p ring-buffer)
