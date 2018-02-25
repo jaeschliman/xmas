@@ -41,7 +41,8 @@
   ())
 
 (defclass bolt (positioned-sprite)
-  ())
+  ((rotation-speed :accessor rotation-speed :initarg :rotation-speed)
+   (forward-speed :accessor forward-speed :initarg :forward-speed)))
 
 (defun ship-scale (ship)
   (* 0.5 (scale-y ship)))
@@ -55,7 +56,8 @@
 
 (defstruct star
   (angle    (random 2pif)  :type single-float)
-  (distance (random 200.0) :type single-float))
+  (distance (random 200.0) :type single-float)
+  (max-scale (+ 0.5 (random 1.0)) :type single-float))
 
 (defun make-stars (count)
   (coerce (loop repeat count collect (make-star))
@@ -75,7 +77,7 @@
               (pct (/ dist 300.0))
               (rot (lerp (ease :out-quad pct) -0.5 1.0))
               (angle (mod (+ (star-angle star) (* dt rot)) 2pif))
-              (scale (lerp (ease :in-sine pct) 0.15 1.5)))
+              (scale (* (star-max-scale star) (lerp (ease :in-sine pct) 0.15 1.0))))
          (declare (type single-float pct speed dist angle dt)
                   (optimize (speed 3) (safety 1)))
          (setf
@@ -156,7 +158,8 @@
        for idx upfrom 0
        for dist = (speed-for-ship-distance (distance bolt))
        do
-         (decf (distance bolt) (* 2.0 dist dt))
+         (incf (angle bolt) (* (rotation-speed bolt) dt))
+         (decf (distance bolt) (* (forward-speed bolt) dist dt))
          (if (<= (distance bolt) 10.0)
              (push idx removes)
              (multiple-value-bind (x y)
@@ -173,13 +176,54 @@
 (defun add-bolt (sprites ship bolts)
   (let ((bolt (make-instance 'bolt
                              :sprite-frame (get-frame "bolt.png")
+                             :rotation-speed 0.0
+                             :forward-speed 2.0
                              :angle (angle ship)
                              :distance (distance ship))))
-    (run-action bolt (hue-cycle-with-offset 0.1 (random 1.0)) :repeat :forever)
+    (run-action bolt (hue-cycle-with-offset 0.05 (random 1.0)) :repeat :forever)
     (vector-push-extend bolt bolts)
     (add-child sprites bolt)))
 
-(deftest ship (:width 500 :height 500)
+(defvar *star-bolt-hue* 0.0)
+
+(defun add-star-bolt (sprites ship bolts)
+  (let* ((bolt (make-instance 'bolt
+                              :sprite-frame (get-frame "star-32.png")
+                              :rotation-speed 4.0
+                              :forward-speed 0.10 
+                              :angle (angle ship)
+                              :distance (distance ship)))
+         (rot (random 360.0))
+         (sub (make-instance 'sprite
+                             :sprite-frame (get-frame "star-32.png")
+                             :rotation rot
+                             :x 16.0 :y 16.0
+                             :scale-x 0.75 :scale-y 0.75
+                             :anchor-x 1.0 :anchor-y 1.25)) 
+         (sub2 (make-instance 'sprite
+                             :sprite-frame (get-frame "star-32.png")
+                             :rotation (mod (+ 180.0 rot) 360.0)
+                             :x 16.0 :y 16.0
+                             :scale-x 0.75 :scale-y 0.75
+                             :anchor-x 1.0 :anchor-y 1.25))
+         (hue *star-bolt-hue*)
+         (hue2 (mod (+ hue 0.005) 1.0))
+         (cycle-len 0.25))
+    (setf *star-bolt-hue* (mod (+ 0.005 *star-bolt-hue*) 1.0))
+    (run-action sub (rotate-by 0.5 360.0) :repeat :forever)
+    (run-action sub (hue-cycle-with-offset  cycle-len hue2) :repeat :forever)
+    (run-action sub2 (rotate-by 0.5 -360.0) :repeat :forever)
+    (run-action sub2 (hue-cycle-with-offset  cycle-len hue2) :repeat :forever)
+    (run-action sub2 (list (move-by 0.3 10.0 10.0)
+                           (move-by 0.3 -10.0 -10.0))
+                :repeat :forever)
+    (run-action bolt (hue-cycle-with-offset cycle-len hue) :repeat :forever)
+    (add-child bolt sub)
+    (add-child bolt sub2)
+    (vector-push-extend bolt bolts)
+    (add-child sprites bolt)))
+
+(deftest ship (:width 500 :height 500 :expandable t :preserve-aspect-ratio t)
   :init
   (texture-packer-add-frames-from-file "./res/ship/sprites.json")
   stack := (make-matrix-stack)
@@ -188,6 +232,7 @@
                                    (get-frame "soft-ball-32.png")))
   started := nil
   keys := (make-hash-table :test 'eql)
+  just-pressed := (make-hash-table :test 'eql)
   mouse-x := 250.0
   mouse-y := 0.0
   mouse-moved := nil
@@ -203,7 +248,7 @@
            :scale-x 1.5 :scale-y 2.0
            :sprite-frame (get-frame "triangle-32.png"))
   bolts := (make-array 16 :adjustable t :fill-pointer 0)
-  star-count := 300
+  star-count := 600
   stars := (make-stars star-count)
   star-sprites := (make-star-sprites star-count)
   (loop for sprite across star-sprites do
@@ -232,6 +277,8 @@
   (update-ship-position ship) 
   (when (gethash #\s keys)
     (add-bolt root ship bolts))
+  (when (gethash #\a just-pressed)
+    (add-star-bolt root ship bolts))
   (move-bolts bolts dt)
   (unless ring-buffer-initialized
     (setf ring-buffer-initialized t)
@@ -244,12 +291,16 @@
   (let ((*matrix-stack* stack))
     (visit-with-xform root))
   (setf mouse-moved nil)
+  (clrhash just-pressed)
   :on-event
   (case (car event)
     (:mousemove (setf mouse-x (cadr event)
                       mouse-y (cddr event)
                       mouse-moved t))
-    (:keydown (setf (gethash (cdr event) keys) t))
-    (:keyup   (setf (gethash (cdr event) keys) nil))))
+    (:keydown
+     (unless (gethash (cdr event) keys)
+       (setf (gethash (cdr event) just-pressed) t))
+     (setf (gethash (cdr event) keys) t))
+    (:keyup (setf (gethash (cdr event) keys) nil))))
 
 (run-test 'ship)
