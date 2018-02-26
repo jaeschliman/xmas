@@ -103,15 +103,20 @@
 (defun update-ship-position-from-mouse (mouse-x mouse-y ship)
   (setf (angle ship) (radians-angle-from-center mouse-x mouse-y)))
 
+(defun scale-for-distance (distance)
+  ;; changing this to :linear ease gives a more predictable effect,
+  ;; but I like how dramatic the change is with :in-sine
+  (max 0.001 (* 0.8 (ease :in-sine (/ (- distance 20.0) 125.0)))) )
+
 (defun update-ship-position (ship)
-  (setf (distance ship) (clamp (distance ship) 75.0 200.0))
+  (setf (distance ship) (clamp (distance ship) 50.0 200.0))
   (multiple-value-bind (x y)
       (project-ship-position (angle ship) (distance ship))
     (setf (x ship) x
           (y ship) y
           (rotation ship)
           (+ 180.0 (rad->sprite-deg (radians-angle-from-center x y)))
-          (ship-scale ship) (/ (distance ship) (* 1.5 125.0)))))
+          (ship-scale ship) (scale-for-distance (distance ship)))))
 
 (defun make-trails (count)
   (coerce
@@ -168,7 +173,7 @@
                      (y bolt) y
                      (rotation bolt)
                      (+ 180.0 (rad->sprite-deg (radians-angle-from-center x y)))
-                     (ship-scale bolt) (/ (distance bolt) (* 1.5 125.0))))))
+                     (ship-scale bolt) (* 1.2 (scale-for-distance (distance bolt)))))))
     (dolist (idx removes)
       (remove-from-parent (aref bolts idx))
       (adjustable-array-remove-unordered bolts idx))))
