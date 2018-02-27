@@ -231,7 +231,7 @@
                                 :y (* 0.5 (content-height jewel))
                                 :opacity 0.8)))
       (add-child jewel image)))
-  (run-action jewel (hue-cycle 1.25) :repeat :forever))
+  (run-action jewel (hue-cycle-with-offset 1.25 (random 1.0)) :repeat :forever))
 
 (defgeneric update-sprite (sprite level dt)
   (:method (sprite level dt)
