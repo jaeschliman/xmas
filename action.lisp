@@ -459,18 +459,24 @@
   (make-hue-cycle :duration duration))
 
 (defstruct (hue-cycle-with-offset (:include hue-cycle))
-  offset)
+  offset
+  saturation
+  value)
 
 (defmethod update ((self hue-cycle-with-offset) time)
   (let ((time (mod (+ time (hue-cycle-with-offset-offset self)) 1.0)))
-    (multiple-value-bind (r g b) (hsv-to-rgb (* time 360.0) 1.0 1.0)
+    (multiple-value-bind (r g b)
+        (hsv-to-rgb (* time 360.0)
+                    (hue-cycle-with-offset-saturation self)
+                    (hue-cycle-with-offset-value self))
       (let ((c (hue-cycle-color self)))
         (setf (svref c 0) r
               (svref c 1) g
               (svref c 2) b)))))
 
-(defact hue-cycle-with-offset (duration offset)
-  (make-hue-cycle-with-offset :duration duration :offset offset))
+(defact hue-cycle-with-offset (duration offset &optional (saturation 1.0) (value 1.0))
+  (make-hue-cycle-with-offset :duration duration :offset offset
+                              :saturation saturation :value value))
 
 (defstruct (blink (:include finite-time-action))
   blink-duration)
