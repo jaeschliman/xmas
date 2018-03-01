@@ -86,8 +86,8 @@
                    (vecto:translate 0.0 vertical-padding)
                    (draw-string-glyphs characters font size))))
       (zpb-ttf:close-font-loader font))
-    (let* ((font (make-lfont))
-           (texture (make-texture-from-rgba-vector image image-width image-height))
+    (let* ((texture (make-texture-from-rgba-vector image image-width image-height))
+           (font (make-lfont :texture texture))
            (table (lfont-chars font)))
       (prog1 font
         (loop for entry in bounding-boxes
