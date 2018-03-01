@@ -1014,8 +1014,10 @@
             (y spotlight) (+ (y player) (y root))))
     (clrhash *just-pressed*)
     (let ((*matrix-stack* matrix-stack))
-      (visit-with-xform root))
-    (xmas.lfont-reader:lfont-draw-string *font-22* *jewel-count-label* 20.0 360.0)
+      (visit-with-xform root)
+      (with-pushed-matrix (matrix)
+        (xmas.lfont-reader:draw-string
+         *font-22* *jewel-count-label* 20.0 360.0 matrix)))
     (case mode
       (:play
        (when *next-level*
