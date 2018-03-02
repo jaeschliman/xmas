@@ -1017,7 +1017,11 @@
       (visit-with-xform root)
       (with-pushed-matrix (matrix)
         (xmas.lfont-reader:draw-string
-         *font-22* *jewel-count-label* 20.0 360.0 matrix)))
+         *font-22* *jewel-count-label* 20.0 360.0 matrix
+         :r 0.2 :g 0.2 :b 0.2 :letter-spacing 2.0)
+        (xmas.lfont-reader:draw-string
+         *font-22* *jewel-count-label* 18.0 361.0 matrix
+         :r 0.8 :g 0.5 :b 1.0 :letter-spacing 2.0)))
     (case mode
       (:play
        (when *next-level*
